@@ -11,6 +11,7 @@ export default function App() {
       <div className="w-full max-w-[900px]">
         <Routes>
           <Route path="/" element={<LoginPage />} />
+          <Route path="/admin" element={<LoginPage />} />
           <Route path="/dashboard" element={<SecDashboard />} />
           <Route path="/report" element={<ReportPage />} />
           <Route path="/summary" element={<SummaryPage />} />
