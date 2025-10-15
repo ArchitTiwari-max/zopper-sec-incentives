@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import CameraScanner from '@/components/CameraScanner'
 import { motion } from 'framer-motion'
 import { FaBarcode, FaStore, FaMobileAlt, FaListAlt, FaRupeeSign, FaIdBadge } from 'react-icons/fa'
 import { getAuth } from '@/lib/auth'
@@ -107,7 +108,16 @@ export function SecDashboard() {
               <FaBarcode /> Scan
             </button>
           </div>
-          {scanning && <div className="mt-2 text-xs text-gray-500">Camera scanner placeholder</div>}
+          {scanning && (
+            <CameraScanner
+              onDetected={(value, parsed) => {
+                const imei = parsed ?? value
+                if (imei) setImei(imei)
+                setScanning(false)
+              }}
+              onClose={() => setScanning(false)}
+            />
+          )}
         </div>
 
         <p className="text-xs italic text-gray-500">Any incorrect sales reported will impact your future incentives.</p>

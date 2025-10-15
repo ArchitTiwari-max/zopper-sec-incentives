@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/camerascanner.tsx","./src/lib/auth.ts","./src/pages/admindashboard.tsx","./src/pages/login.tsx","./src/pages/report.tsx","./src/pages/secdashboard.tsx","./src/pages/summary.tsx","./src/utils/scanner.ts"],"version":"5.9.3"}
