@@ -1,15 +1,20 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import CameraScanner from '@/components/CameraScanner'
 import { motion } from 'framer-motion'
-import { FaBarcode, FaStore, FaMobileAlt, FaListAlt, FaRupeeSign, FaIdBadge } from 'react-icons/fa'
+import { FaBarcode, FaStore, FaMobileAlt, FaListAlt, FaRupeeSign, FaIdBadge, FaSpinner } from 'react-icons/fa'
 import { getAuth } from '@/lib/auth'
 import { useNavigate } from 'react-router-dom'
-
-const PLAN_PRICES: Record<string, number> = {
-  Silver: 99,
-  Gold: 199,
-  Platinum: 299,
-}
+import { 
+  fetchStores, 
+  fetchSamsungSKUs, 
+  fetchPlansForSKU, 
+  fetchPlanPrice,
+  formatPlanType,
+  formatPrice,
+  type Store, 
+  type SamsungSKU, 
+  type Plan 
+} from '@/lib/api'
 
 export function SecDashboard() {
   const auth = getAuth()
@@ -17,12 +22,96 @@ export function SecDashboard() {
   const [store, setStore] = useState('')
   const [device, setDevice] = useState('')
   const [planType, setPlanType] = useState('')
-  const planPrice = useMemo(() => (planType ? PLAN_PRICES[planType] : 0), [planType])
+  const [planPrice, setPlanPrice] = useState(0)
   const [imei, setImei] = useState('')
   const [showToast, setShowToast] = useState(false)
   const [scanning, setScanning] = useState(false)
   const navigate = useNavigate()
+  
+  // State for API data
+  const [stores, setStores] = useState<Store[]>([])
+  const [samsungSKUs, setSamsungSKUs] = useState<SamsungSKU[]>([])
+  const [availablePlans, setAvailablePlans] = useState<Plan[]>([])
+  const [loading, setLoading] = useState({
+    stores: false,
+    skus: false,
+    plans: false,
+    price: false
+  })
 
+  // Load stores on component mount
+  useEffect(() => {
+    const loadStores = async () => {
+      setLoading(prev => ({ ...prev, stores: true }))
+      const response = await fetchStores()
+      if (response.success) {
+        setStores(response.data)
+      } else {
+        console.error('Failed to load stores:', response.error)
+      }
+      setLoading(prev => ({ ...prev, stores: false }))
+    }
+    loadStores()
+  }, [])
+  
+  // Load Samsung SKUs on component mount
+  useEffect(() => {
+    const loadSKUs = async () => {
+      setLoading(prev => ({ ...prev, skus: true }))
+      const response = await fetchSamsungSKUs()
+      if (response.success) {
+        setSamsungSKUs(response.data)
+      } else {
+        console.error('Failed to load Samsung SKUs:', response.error)
+      }
+      setLoading(prev => ({ ...prev, skus: false }))
+    }
+    loadSKUs()
+  }, [])
+  
+  // Load plans when device changes
+  useEffect(() => {
+    if (device) {
+      const loadPlans = async () => {
+        setLoading(prev => ({ ...prev, plans: true }))
+        const response = await fetchPlansForSKU(device)
+        if (response.success) {
+          setAvailablePlans(response.data)
+        } else {
+          console.error('Failed to load plans:', response.error)
+          setAvailablePlans([])
+        }
+        setLoading(prev => ({ ...prev, plans: false }))
+      }
+      loadPlans()
+    } else {
+      setAvailablePlans([])
+    }
+    // Reset plan selection when device changes
+    setPlanType('')
+    setPlanPrice(0)
+  }, [device])
+  
+  // Load plan price when both device and plan type are selected
+  useEffect(() => {
+    if (device && planType) {
+      const loadPlanPrice = async () => {
+        setLoading(prev => ({ ...prev, price: true }))
+        const response = await fetchPlanPrice(device, planType)
+        if (response.success) {
+          setPlanPrice(response.data.price)
+        } else {
+          console.error('Failed to load plan price:', response.error)
+          setPlanPrice(0)
+        }
+        setLoading(prev => ({ ...prev, price: false }))
+      }
+      loadPlanPrice()
+    } else {
+      setPlanPrice(0)
+    }
+  }, [device, planType])
+  
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     setShowToast(true)
@@ -48,11 +137,21 @@ export function SecDashboard() {
           <label className="block text-sm font-medium mb-1">Store Name</label>
           <div className="relative">
             <FaStore className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <select value={store} onChange={(e) => setStore(e.target.value)} className="w-full pl-10 pr-3 py-3 border rounded-2xl">
-              <option value="" disabled>Select store</option>
-              <option>Store A</option>
-              <option>Store B</option>
-              <option>Store C</option>
+            {loading.stores && <FaSpinner className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />}
+            <select 
+              value={store} 
+              onChange={(e) => setStore(e.target.value)} 
+              className="w-full pl-10 pr-10 py-3 border rounded-2xl"
+              disabled={loading.stores}
+            >
+              <option value="" disabled>
+                {loading.stores ? 'Loading stores...' : 'Select store'}
+              </option>
+              {stores.map((storeItem) => (
+                <option key={storeItem.id} value={storeItem.id}>
+                  {storeItem.storeName} - {storeItem.city}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -61,11 +160,21 @@ export function SecDashboard() {
           <label className="block text-sm font-medium mb-1">Device Name</label>
           <div className="relative">
             <FaMobileAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <select value={device} onChange={(e) => setDevice(e.target.value)} className="w-full pl-10 pr-3 py-3 border rounded-2xl">
-              <option value="" disabled>Select device</option>
-              <option>Device X</option>
-              <option>Device Y</option>
-              <option>Device Z</option>
+            {loading.skus && <FaSpinner className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />}
+            <select 
+              value={device} 
+              onChange={(e) => setDevice(e.target.value)} 
+              className="w-full pl-10 pr-10 py-3 border rounded-2xl"
+              disabled={loading.skus}
+            >
+              <option value="" disabled>
+                {loading.skus ? 'Loading devices...' : 'Select device'}
+              </option>
+              {samsungSKUs.map((sku) => (
+                <option key={sku.id} value={sku.id}>
+                  {sku.Category} - {sku.ModelName}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -74,11 +183,19 @@ export function SecDashboard() {
           <label className="block text-sm font-medium mb-1">Plan Type</label>
           <div className="relative">
             <FaListAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <select value={planType} onChange={(e) => setPlanType(e.target.value)} className="w-full pl-10 pr-3 py-3 border rounded-2xl">
-              <option value="" disabled>Select plan</option>
-              {Object.keys(PLAN_PRICES).map((p) => (
-                <option key={p} value={p}>
-                  {p}
+            {loading.plans && <FaSpinner className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />}
+            <select 
+              value={planType} 
+              onChange={(e) => setPlanType(e.target.value)} 
+              className="w-full pl-10 pr-10 py-3 border rounded-2xl"
+              disabled={loading.plans || !device}
+            >
+              <option value="" disabled>
+                {!device ? 'Select device first' : loading.plans ? 'Loading plans...' : 'Select plan'}
+              </option>
+              {availablePlans.map((plan) => (
+                <option key={plan.id} value={plan.planType}>
+                  {formatPlanType(plan.planType)} - {formatPrice(plan.price)}
                 </option>
               ))}
             </select>
@@ -89,7 +206,13 @@ export function SecDashboard() {
           <label className="block text-sm font-medium mb-1">Plan Price</label>
           <div className="relative">
             <FaRupeeSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input readOnly value={planPrice || ''} className="w-full pl-10 pr-3 py-3 border rounded-2xl bg-gray-100" />
+            {loading.price && <FaSpinner className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />}
+            <input 
+              readOnly 
+              value={loading.price ? 'Loading price...' : planPrice ? formatPrice(planPrice) : ''} 
+              className="w-full pl-10 pr-10 py-3 border rounded-2xl bg-gray-100" 
+              placeholder="Select device and plan to see price"
+            />
           </div>
         </div>
 
