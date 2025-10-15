@@ -2,57 +2,88 @@ import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { utils, writeFileXLSX } from 'xlsx'
 
-const mockData = [
-  { date: '2025-10-01', plan: 'Silver', units: 3, incentive: 297 },
-  { date: '2025-10-05', plan: 'Gold', units: 2, incentive: 398 },
-  { date: '2025-10-08', plan: 'Platinum', units: 1, incentive: 299 },
+// Incentive rates inferred from examples: 2*200 + 3*250 = 1150; 1*200 + 2*250 = 700
+const ADLD_RATE = 200
+const COMBO_RATE = 250
+
+type DayRow = {
+  date: string // ISO (YYYY-MM-DD)
+  adld: number
+  combo: number
+}
+
+const dailyData: DayRow[] = [
+  { date: '2025-10-15', adld: 2, combo: 3 }, // 5 units, ₹1150
+  { date: '2025-10-16', adld: 1, combo: 2 }, // 3 units, ₹700
 ]
+
+function calcIncentive(adld: number, combo: number) {
+  return adld * ADLD_RATE + combo * COMBO_RATE
+}
 
 export function SummaryPage() {
   const totals = useMemo(() => {
-    const totalIncentive = mockData.reduce((s, r) => s + r.incentive, 0)
+    const totalUnits = dailyData.reduce((s, r) => s + r.adld + r.combo, 0)
+    const totalIncentive = dailyData.reduce((s, r) => s + calcIncentive(r.adld, r.combo), 0)
     const paid = Math.round(totalIncentive * 0.6)
-    return { totalIncentive, paid, net: totalIncentive - paid }
+    return { totalUnits, totalIncentive, paid, net: totalIncentive - paid }
   }, [])
 
   const downloadExcel = () => {
-    const ws = utils.json_to_sheet(mockData)
+    const rows = dailyData.map((r) => ({
+      Date: formatDayMon(r.date),
+      'Plan Type (ADLD)': r.adld,
+      'Plan Type (Combo)': r.combo,
+      'Total Units Sold': r.adld + r.combo,
+      'Incentive Earned': calcIncentive(r.adld, r.combo),
+    }))
+    const ws = utils.json_to_sheet(rows)
     const wb = utils.book_new()
-    utils.book_append_sheet(wb, ws, 'Summary')
-    writeFileXLSX(wb, 'incentive-summary.xlsx')
+    utils.book_append_sheet(wb, ws, 'Incentive Summary')
+    writeFileXLSX(wb, 'sec-incentive-summary.xlsx')
   }
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
-      <h2 className="text-lg font-semibold mb-3">Your Incentive Summary</h2>
+      <h2 className="text-lg font-semibold mb-3">Incentive Summary (ADLD & Combo)</h2>
 
       <div className="overflow-hidden rounded-2xl border">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr className="text-left">
               <th className="p-3">Date</th>
-              <th className="p-3">Plan Type</th>
-              <th className="p-3">Total Units</th>
+              <th className="p-3">Plan Type (ADLD)</th>
+              <th className="p-3">Plan Type (Combo)</th>
+              <th className="p-3">Total Units Sold</th>
               <th className="p-3">Incentive Earned</th>
             </tr>
           </thead>
           <tbody>
-            {mockData.map((r, i) => (
-              <tr key={i} className="border-t">
-                <td className="p-3">{formatDateOnly(r.date)}</td>
-                <td className="p-3">{r.plan}</td>
-                <td className="p-3">{r.units}</td>
-                <td className="p-3">₹{r.incentive}</td>
-              </tr>
-            ))}
+            {dailyData.map((r, i) => {
+              const total = r.adld + r.combo
+              const incentive = calcIncentive(r.adld, r.combo)
+              return (
+                <tr key={i} className="border-t">
+                  <td className="p-3 whitespace-nowrap">{formatDayMon(r.date)}</td>
+                  <td className="p-3">{r.adld}</td>
+                  <td className="p-3">{r.combo}</td>
+                  <td className="p-3">{total}</td>
+                  <td className="p-3">₹{incentive.toLocaleString('en-IN')}</td>
+                </tr>
+              )
+            })}
+            {dailyData.length === 0 && (
+              <tr><td className="p-6 text-center text-gray-500" colSpan={5}>No records</td></tr>
+            )}
           </tbody>
         </table>
       </div>
 
       <div className="grid grid-cols-1 gap-3 mt-4">
-        <GradientCard title="Total Incentive Earned" value={`₹${totals.totalIncentive}`} />
-        <GradientCard title="Incentive Paid (Gift Voucher)" value={`₹${totals.paid}`} />
-        <GradientCard title="Net Available Incentive" value={`₹${totals.net}`} />
+        <GradientCard title="Total Units Sold" value={`${totals.totalUnits}`} />
+        <GradientCard title="Total Incentive Earned" value={`₹${totals.totalIncentive.toLocaleString('en-IN')}`} />
+        <GradientCard title="Incentive Paid (Gift Voucher)" value={`₹${totals.paid.toLocaleString('en-IN')}`} />
+        <GradientCard title="Net Available Incentive" value={`₹${totals.net.toLocaleString('en-IN')}`} />
       </div>
 
       <div className="mt-4 flex gap-2">
@@ -72,12 +103,8 @@ function GradientCard({ title, value }: { title: string; value: string }) {
   )
 }
 
-function formatDateOnly(s: string) {
-  // Accepts 'YYYY-MM-DD'; returns 'dd mm yyyy'
+function formatDayMon(s: string) {
   const d = new Date(s)
   if (isNaN(d.getTime())) return s
-  const dd = String(d.getDate()).padStart(2, '0')
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const yyyy = d.getFullYear()
-  return `${dd} ${mm} ${yyyy}`
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
 }

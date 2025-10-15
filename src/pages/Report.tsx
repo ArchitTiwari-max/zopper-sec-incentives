@@ -1,19 +1,16 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 
-interface Row {
+// New day-wise data structure matching the sheet: columns ADLD and Combo
+interface DayRow {
   date: string // ISO
-  plan: 'Silver' | 'Gold' | 'Platinum'
-  price: number
-  units: number
-  incentive: number
+  adld: number
+  combo: number
 }
 
-const rowsSeed: Row[] = [
-  { date: '2025-10-15', plan: 'Gold', price: 999, units: 12, incentive: 2400 },
-  { date: '2025-10-12', plan: 'Silver', price: 499, units: 7, incentive: 700 },
-  { date: '2025-10-10', plan: 'Platinum', price: 1499, units: 3, incentive: 900 },
-  { date: '2025-10-01', plan: 'Gold', price: 999, units: 5, incentive: 1000 },
+const rowsSeed: DayRow[] = [
+  { date: '2025-10-15', adld: 2, combo: 3 }, // 5 units, 1150
+  { date: '2025-10-16', adld: 1, combo: 2 }, // 3 units, 700
 ]
 
 function formatDayMonYear(iso: string) {
@@ -22,79 +19,90 @@ function formatDayMonYear(iso: string) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+const ADLD_RATE = 200
+const COMBO_RATE = 250
+const calcIncentive = (r: DayRow) => r.adld * ADLD_RATE + r.combo * COMBO_RATE
+
 export function ReportPage() {
-  const [planFilter, setPlanFilter] = useState<string>('')
+  // Keep filters: search and sort toggle (no plan filter)
   const [q, setQ] = useState('')
   const [sortDesc, setSortDesc] = useState(true)
 
-  const plans = ['Silver', 'Gold', 'Platinum'] as const
-
   const filtered = useMemo(() => {
-    const byPlan = (r: Row) => (!planFilter || r.plan === planFilter)
-    const byQuery = (r: Row) => {
-      const text = `${r.plan} ${r.price}`.toLowerCase()
+    const byQuery = (r: DayRow) => {
+      const text = `${formatDayMonYear(r.date)} ${r.adld} ${r.combo}`.toLowerCase()
       return !q || text.includes(q.toLowerCase())
     }
-    const sorted = [...rowsSeed].sort((a, b) => (sortDesc ? +new Date(b.date) - +new Date(a.date) : +new Date(a.date) - +new Date(b.date)))
-    return sorted.filter(r => byPlan(r) && byQuery(r))
-  }, [planFilter, q, sortDesc])
+    const sorted = [...rowsSeed].sort((a, b) =>
+      sortDesc ? +new Date(b.date) - +new Date(a.date) : +new Date(a.date) - +new Date(b.date)
+    )
+    return sorted.filter(byQuery)
+  }, [q, sortDesc])
 
   const totals = useMemo(() => {
-    const totalUnits = filtered.reduce((s, r) => s + r.units, 0)
-    const totalIncentive = filtered.reduce((s, r) => s + r.incentive, 0)
-    const paid = Math.round(totalIncentive * 0.6)
+    const totalUnits = filtered.reduce((s, r) => s + r.adld + r.combo, 0)
+    const totalIncentive = filtered.reduce((s, r) => s + calcIncentive(r), 0)
+    const paid = Math.min(1000, totalIncentive)
     return { totalUnits, totalIncentive, paid, net: totalIncentive - paid }
   }, [filtered])
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card scroll-smooth">
-      <h2 className="text-lg font-semibold">Your Plan Sales</h2>
+      <h2 className="text-lg font-semibold">Reporting</h2>
 
       <div className="flex flex-col sm:flex-row gap-2 mt-3">
         <input
           className="flex-1 px-3 py-2 border rounded-2xl"
-          placeholder="Search Plan (e.g., Gold 999)"
+          placeholder="Search (e.g., 15 Oct)"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <select className="px-3 py-2 border rounded-2xl" value={planFilter} onChange={(e) => setPlanFilter(e.target.value)}>
-          <option value="">All Plans</option>
-          {plans.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
         <button onClick={() => setSortDesc(s => !s)} className="button-gradient px-4 py-2">Sort by Date {sortDesc ? '↓' : '↑'}</button>
       </div>
 
       <div className="mt-3 overflow-auto rounded-2xl border">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr className="text-left">
-              <th className="p-3">Date</th>
-              <th className="p-3">Plan Type</th>
-              <th className="p-3">Total Units Sold</th>
-              <th className="p-3">Incentive Earned</th>
+          <thead>
+            <tr className="bg-gray-50 text-left">
+              <th className="p-3 align-bottom" rowSpan={2}>Date</th>
+              <th className="p-3 text-center" colSpan={2}>Plan Type</th>
+              <th className="p-3 align-bottom" rowSpan={2}>Total Units Sold</th>
+              <th className="p-3 align-bottom" rowSpan={2}>Incentive Earned</th>
+            </tr>
+            <tr className="bg-gray-50 text-left">
+              <th className="p-3">ADLD</th>
+              <th className="p-3">Combo</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((r, i) => (
-              <tr key={i} className="border-t hover:bg-gray-50">
-                <td className="p-3 whitespace-nowrap">{formatDayMonYear(r.date)}</td>
-                <td className="p-3">{`${r.plan} ${r.price}`}</td>
-                <td className="p-3">{r.units}</td>
-                <td className="p-3">₹{r.incentive.toLocaleString('en-IN')}</td>
-              </tr>
-            ))}
+            {filtered.map((r, i) => {
+              const totalUnits = r.adld + r.combo
+              const incentive = calcIncentive(r)
+              return (
+                <tr key={i} className="border-t hover:bg-gray-50">
+                  <td className="p-3 whitespace-nowrap">{formatDayMonYear(r.date).replace(/\s\d{4}$/, '')}</td>
+                  <td className="p-3">{r.adld}</td>
+                  <td className="p-3">{r.combo}</td>
+                  <td className="p-3">{totalUnits}</td>
+                  <td className="p-3">{incentive}</td>
+                </tr>
+              )
+            })}
             {filtered.length === 0 && (
-              <tr><td className="p-6 text-center text-gray-500" colSpan={4}>No records</td></tr>
+              <tr><td className="p-6 text-center text-gray-500" colSpan={5}>No records</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 mt-4">
-        <GradientCard title="Total Units Sold" value={`${totals.totalUnits}`} />
-        <GradientCard title="Total Incentive Earned" value={`₹${totals.totalIncentive}`} />
-        <GradientCard title="Incentive Paid (Gift Voucher)" value={`₹${totals.paid}`} />
-        <GradientCard title="Net Available Incentive" value={`₹${totals.net}`} />
+      <div className="mt-6">
+        <div className="text-sm font-medium mb-2">Payout</div>
+        <div className="grid grid-cols-1 gap-3">
+          <GradientCard title="Total Units Sold" value={`${totals.totalUnits}`} />
+          <GradientCard title="Total Incentive Earned" value={`₹${totals.totalIncentive}`} />
+          <GradientCard title="Incentive Paid (Gift Voucher)" value={`₹${totals.paid}`} />
+          <GradientCard title="Net Available Incentive" value={`₹${totals.net}`} />
+        </div>
       </div>
     </motion.div>
   )

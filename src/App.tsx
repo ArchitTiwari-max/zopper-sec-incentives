@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage } from './pages/Login'
 import { ReportPage } from './pages/Report'
-import { SummaryPage } from './pages/Summary'
 import { AdminDashboard } from './pages/AdminDashboard'
 import { SecDashboard } from './pages/SecDashboard'
 
@@ -14,7 +13,6 @@ export default function App() {
           <Route path="/admin" element={<LoginPage />} />
           <Route path="/dashboard" element={<SecDashboard />} />
           <Route path="/report" element={<ReportPage />} />
-          <Route path="/summary" element={<SummaryPage />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
