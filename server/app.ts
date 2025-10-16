@@ -10,6 +10,12 @@ const prisma = new PrismaClient()
 const PORT = process.env.PORT || 3001
 const JWT_SECRET = process.env.JWT_SECRET
 
+// Check if JWT_SECRET is properly configured
+if (!JWT_SECRET) {
+  console.error('❌ CRITICAL: JWT_SECRET environment variable is not set!')
+  process.exit(1)
+}
+
 // Middleware
 app.use(cors({ credentials: true, origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'] }))
 app.use(express.json())
@@ -233,15 +239,26 @@ app.post('/api/auth/verify-otp', async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign(
-      {
-        userId: secUser.id,
-        role: 'sec',
-        phone: secUser.phone
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    )
+    console.log(`🔐 Generating JWT for user ${secUser.id}, phone: ${phone}`)
+    let token
+    try {
+      token = jwt.sign(
+        {
+          userId: secUser.id,
+          role: 'sec',
+          phone: secUser.phone
+        },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      )
+      console.log(`✅ JWT token generated successfully for ${phone}`)
+    } catch (jwtError) {
+      console.error(`❌ JWT signing failed for ${phone}:`, jwtError)
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to generate authentication token'
+      })
+    }
 
     console.log(`✅ SEC with phone ${secUser.phone} logged in successfully`)
     res.json({
