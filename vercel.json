@@ -3,7 +3,7 @@
   "outputDirectory": "dist",
   "functions": {
     "server/app.ts": {
-      "runtime": "nodejs18.x"
+      "runtime": "@vercel/node@3.0.14"
     }
   },
   "rewrites": [
