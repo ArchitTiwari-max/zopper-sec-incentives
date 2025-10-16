@@ -1,9 +1,7 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
   "functions": {
     "server/app.ts": {
-      "runtime": "@vercel/node@3.0.14"
+      "runtime": "@vercel/node"
     }
   },
   "rewrites": [
