@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { FaWhatsapp, FaPhone } from 'react-icons/fa'
-import { setAuth, getAuth } from '@/lib/auth'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function LoginPage() {
   const location = useLocation()
+  const { login, isAuthenticated, isAdmin, isSEC } = useAuth()
   const [mode, setMode] = useState<'sec' | 'admin'>(() => (location.pathname === '/admin' ? 'admin' : 'sec'))
 
   // SEC state
@@ -18,59 +19,118 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
 
   const [loading, setLoading] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
-    const auth = getAuth()
-    if (auth?.role === 'admin') navigate('/admin/dashboard', { replace: true })
-    else if (auth?.role === 'sec') navigate('/dashboard', { replace: true })
-  }, [navigate])
+    if (isAuthenticated) {
+      if (isAdmin) navigate('/admin/dashboard', { replace: true })
+      else if (isSEC) navigate('/dashboard', { replace: true })
+    }
+  }, [isAuthenticated, isAdmin, isSEC, navigate])
 
   // SEC handlers
-  const sendOtp = () => {
-    if (!/^\d{10}$/.test(phone)) return alert('Enter a valid 10-digit phone number')
+  const sendOtp = async () => {
+    if (!/^\d{10}$/.test(phone)) {
+      setToast({ message: 'Enter a valid 10-digit phone number', type: 'error' })
+      return
+    }
+
     setLoading(true)
-    setTimeout(() => {
-      setOtpSent(true)
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        setOtpSent(true)
+        setToast({ message: 'OTP sent to your WhatsApp!', type: 'success' })
+      } else {
+        setToast({ message: data.message || 'Failed to send OTP', type: 'error' })
+      }
+    } catch (error) {
+      console.error('Error sending OTP:', error)
+      setToast({ message: 'Network error. Please try again.', type: 'error' })
+    } finally {
       setLoading(false)
-      setToast('OTP sent on WhatsApp')
-      setTimeout(() => setToast(null), 1500)
-    }, 600)
+      setTimeout(() => setToast(null), 3000)
+    }
   }
 
-  const verifyOtp = () => {
-    if (otp.length < 4) return alert('Enter the OTP')
+  const verifyOtp = async () => {
+    if (otp.length < 4) {
+      setToast({ message: 'Enter the complete OTP', type: 'error' })
+      return
+    }
+
     setLoading(true)
-    setTimeout(() => {
-      const token = `mock-jwt-${Date.now()}`
-      setAuth({ token, role: 'sec', phone, secId: 'SEC12345' })
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        const authData = {
+          token: data.token,
+          role: 'sec' as const,
+          user: data.user
+        }
+        login(authData)
+        setToast({ message: 'Login successful!', type: 'success' })
+        setTimeout(() => navigate('/dashboard', { replace: true }), 1000)
+      } else {
+        setToast({ message: data.message || 'Invalid OTP', type: 'error' })
+      }
+    } catch (error) {
+      console.error('Error verifying OTP:', error)
+      setToast({ message: 'Network error. Please try again.', type: 'error' })
+    } finally {
       setLoading(false)
-      setToast('Logged in successfully')
-      setTimeout(() => {
-        setToast(null)
-        navigate('/dashboard', { replace: true })
-      }, 600)
-    }, 600)
+      setTimeout(() => setToast(null), 3000)
+    }
   }
 
   // Admin handler
-  const adminLogin = () => {
-    if (!username || !password) return alert('Enter username and password')
+  const adminLogin = async () => {
+    if (!username || !password) {
+      setToast({ message: 'Enter username and password', type: 'error' })
+      return
+    }
+
     setLoading(true)
-    setTimeout(() => {
-      const ok = username.toLowerCase() === 'admin' && password === 'admin123'
-      if (!ok) {
-        setLoading(false)
-        setToast('Invalid credentials')
-        setTimeout(() => setToast(null), 1500)
-        return
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        const authData = {
+          token: data.token,
+          role: 'admin' as const,
+          user: data.user
+        }
+        login(authData)
+        setToast({ message: 'Login successful!', type: 'success' })
+        setTimeout(() => navigate('/admin/dashboard', { replace: true }), 1000)
+      } else {
+        setToast({ message: data.message || 'Invalid credentials', type: 'error' })
       }
-      const token = `admin-mock-jwt-${Date.now()}`
-      setAuth({ token, role: 'admin', phone: 'NA' })
+    } catch (error) {
+      console.error('Error in admin login:', error)
+      setToast({ message: 'Network error. Please try again.', type: 'error' })
+    } finally {
       setLoading(false)
-      navigate('/admin/dashboard', { replace: true })
-    }, 500)
+      setTimeout(() => setToast(null), 3000)
+    }
   }
 
   return (
@@ -153,8 +213,14 @@ export function LoginPage() {
       )}
 
       {toast && (
-        <div className="fixed inset-x-0 bottom-6 flex justify-center">
-          <div className="bg-red-100 text-red-700 px-4 py-2 rounded-full shadow">{toast}</div>
+        <div className="fixed inset-x-0 bottom-6 flex justify-center z-50">
+          <div className={`px-4 py-2 rounded-full shadow-lg ${
+            toast.type === 'success' 
+              ? 'bg-green-100 text-green-700' 
+              : 'bg-red-100 text-red-700'
+          }`}>
+            {toast.message}
+          </div>
         </div>
       )}
     </motion.div>

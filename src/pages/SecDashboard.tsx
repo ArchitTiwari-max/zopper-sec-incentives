@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import CameraScanner from '@/components/CameraScanner'
+import { ProfileModal } from '@/components/ProfileModal'
 import { motion } from 'framer-motion'
-import { FaBarcode, FaStore, FaMobileAlt, FaListAlt, FaRupeeSign, FaIdBadge, FaSpinner } from 'react-icons/fa'
-import { getAuth } from '@/lib/auth'
+import { FaBarcode, FaStore, FaMobileAlt, FaListAlt, FaRupeeSign, FaIdBadge, FaSpinner, FaSignOutAlt } from 'react-icons/fa'
+import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import { isSECUser, SECAuthData } from '@/lib/auth'
 import { 
   fetchStores, 
   fetchSamsungSKUs, 
@@ -17,8 +19,12 @@ import {
 } from '@/lib/api'
 
 export function SecDashboard() {
-  const auth = getAuth()
-  const secId = auth?.secId ?? 'SEC12345'
+  const { auth, logout, user, updateUser } = useAuth()
+  const navigate = useNavigate()
+  
+  const secUser = user && isSECUser(user) ? user : null
+  const secId = secUser?.secId || null
+  const displayName = secUser?.name || `User (${secUser?.phone})`
   const [store, setStore] = useState('')
   const [device, setDevice] = useState('')
   const [planType, setPlanType] = useState('')
@@ -26,7 +32,17 @@ export function SecDashboard() {
   const [imei, setImei] = useState('')
   const [showToast, setShowToast] = useState(false)
   const [scanning, setScanning] = useState(false)
-  const navigate = useNavigate()
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  
+  const handleLogout = () => {
+    logout()
+    navigate('/', { replace: true })
+  }
+  
+  const handleProfileUpdated = (updatedUser: SECAuthData) => {
+    // Update the auth context with new user data
+    updateUser(updatedUser)
+  }
   
   // State for API data
   const [stores, setStores] = useState<Store[]>([])
@@ -36,7 +52,8 @@ export function SecDashboard() {
     stores: false,
     skus: false,
     plans: false,
-    price: false
+    price: false,
+    submit: false
   })
 
   // Load stores on component mount
@@ -112,24 +129,106 @@ export function SecDashboard() {
     }
   }, [device, planType])
   
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setShowToast(true)
-    setTimeout(() => setShowToast(false), 1500)
+    
+    // Validate required fields
+    if (!store || !device || !planType || !imei) {
+      alert('Please fill in all fields')
+      return
+    }
+    
+    if (!auth?.token) {
+      alert('Authentication required')
+      return
+    }
+    
+    setLoading(prev => ({ ...prev, submit: true }))
+    
+    try {
+      const response = await fetch('http://localhost:3001/api/reports/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${auth.token}`
+        },
+        body: JSON.stringify({
+          storeId: store,
+          samsungSKUId: device,
+          planId: availablePlans.find(p => p.planType === planType)?.id,
+          imei: imei.trim()
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        // Reset form
+        setStore('')
+        setDevice('')
+        setPlanType('')
+        setPlanPrice(0)
+        setImei('')
+        
+        setShowToast(true)
+        setTimeout(() => setShowToast(false), 3000)
+        
+        // Show incentive earned
+        if (data.data.incentiveEarned > 0) {
+          alert(`Report submitted successfully! You earned ₹${data.data.incentiveEarned} incentive.`)
+        }
+      } else {
+        alert(`Error: ${data.message}`)
+      }
+    } catch (error) {
+      console.error('Error submitting report:', error)
+      alert('Network error. Please try again.')
+    } finally {
+      setLoading(prev => ({ ...prev, submit: false }))
+    }
   }
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
-      <div className="text-sm mb-2">👋 Hi, <span className="font-semibold">{secId}</span></div>
-      <h2 className="text-lg font-semibold">SEC Dashboard</h2>
-      <p className="text-xs text-gray-500">Submit your plan sales below or view your reports.</p>
+      <div className="flex justify-between items-start mb-2">
+        <div>
+          <h2 className="text-lg font-semibold">SEC Dashboard</h2>
+          <p className="text-xs text-gray-500">Submit your plan sales below or view your reports.</p>
+          {!secId && (
+            <button
+              onClick={() => setShowProfileModal(true)}
+              className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors w-full text-left"
+            >
+              <p className="text-xs text-yellow-700">
+                ⚠️ Please complete your profile by setting your SEC ID
+                <span className="ml-1 underline">Click here</span>
+              </p>
+            </button>
+          )}
+        </div>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="Logout"
+        >
+          <FaSignOutAlt size={12} />
+          Logout
+        </button>
+      </div>
 
       <form className="mt-4 space-y-4" onSubmit={submit}>
         <div>
           <label className="block text-sm font-medium mb-1">SEC ID</label>
           <div className="relative">
             <FaIdBadge className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input readOnly value={secId} className="w-full pl-10 pr-3 py-3 border rounded-2xl bg-gray-100" />
+            <input 
+              readOnly 
+              value={secId || ''} 
+              placeholder={secId ? '' : 'SEC ID not set - complete profile'}
+              className={`w-full pl-10 pr-3 py-3 border rounded-2xl ${
+                secId ? 'bg-gray-100' : 'bg-yellow-50 border-yellow-300'
+              }`} 
+            />
           </div>
         </div>
 
@@ -245,7 +344,20 @@ export function SecDashboard() {
 
         <p className="text-xs italic text-gray-500">Any incorrect sales reported will impact your future incentives.</p>
 
-        <button type="submit" className="button-gradient w-full py-3">Submit Report</button>
+        <button 
+          type="submit" 
+          className="button-gradient w-full py-3 disabled:opacity-60 flex items-center justify-center gap-2"
+          disabled={loading.submit}
+        >
+          {loading.submit ? (
+            <>
+              <FaSpinner className="animate-spin" size={14} />
+              Submitting...
+            </>
+          ) : (
+            'Submit Report'
+          )}
+        </button>
       </form>
 
       <button onClick={() => navigate('/report')} className="button-gradient w-full py-3 mt-3">Open Reports</button>
@@ -255,6 +367,12 @@ export function SecDashboard() {
           <div className="bg-green-100 text-green-700 px-4 py-2 rounded-full shadow">✅ Report submitted successfully</div>
         </div>
       )}
+      
+      <ProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        onProfileUpdated={handleProfileUpdated}
+      />
     </motion.div>
   )
 }

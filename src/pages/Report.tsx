@@ -1,17 +1,39 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useAuth } from '@/contexts/AuthContext'
+import { FaSpinner } from 'react-icons/fa'
 
-// New day-wise data structure matching the sheet: columns ADLD and Combo
+// Real sales report interface from database
+interface SalesReport {
+  id: string
+  imei: string
+  planPrice: number
+  incentiveEarned: number
+  isPaid: boolean
+  submittedAt: string
+  store: {
+    storeName: string
+    city: string
+  }
+  samsungSKU: {
+    Category: string
+    ModelName: string
+  }
+  plan: {
+    planType: string
+    price: number
+  }
+}
+
+// Processed day-wise data structure
 interface DayRow {
   date: string // ISO
   adld: number
   combo: number
+  screenProtect: number
+  extendedWarranty: number
+  totalReports: number
 }
-
-const rowsSeed: DayRow[] = [
-  { date: '2025-10-15', adld: 2, combo: 3 }, // 5 units, 1150
-  { date: '2025-10-16', adld: 1, combo: 2 }, // 3 units, 700
-]
 
 function formatDayMonYear(iso: string) {
   const d = new Date(iso)
@@ -19,36 +41,154 @@ function formatDayMonYear(iso: string) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-const ADLD_RATE = 200
+// Process raw reports into day-wise summary
+function processReportsToDaily(reports: SalesReport[]): DayRow[] {
+  const dayMap = new Map<string, DayRow>()
+  
+  reports.forEach(report => {
+    const date = new Date(report.submittedAt).toISOString().split('T')[0]
+    
+    if (!dayMap.has(date)) {
+      dayMap.set(date, {
+        date,
+        adld: 0,
+        combo: 0,
+        screenProtect: 0,
+        extendedWarranty: 0,
+        totalReports: 0
+      })
+    }
+    
+    const dayRow = dayMap.get(date)!
+    dayRow.totalReports++
+    
+    switch (report.plan.planType) {
+      case 'ADLD_1_Yr':
+        dayRow.adld++
+        break
+      case 'Combo_2Yrs':
+        dayRow.combo++
+        break
+      case 'Screen_Protect_1_Yr':
+        dayRow.screenProtect++
+        break
+      case 'Extended_Warranty_1_Yr':
+        dayRow.extendedWarranty++
+        break
+    }
+  })
+  
+  return Array.from(dayMap.values()).sort((a, b) => 
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  )
+}
+
+const ADLD_RATE = 150
 const COMBO_RATE = 250
 const calcIncentive = (r: DayRow) => r.adld * ADLD_RATE + r.combo * COMBO_RATE
 
 export function ReportPage() {
-  // Keep filters: search and sort toggle (no plan filter)
+  const { auth } = useAuth()
+  const [reports, setReports] = useState<SalesReport[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [sortDesc, setSortDesc] = useState(true)
+  
+  // Fetch reports on component mount
+  useEffect(() => {
+    const fetchReports = async () => {
+      if (!auth?.token) {
+        setError('Authentication required')
+        setLoading(false)
+        return
+      }
+      
+      try {
+        setLoading(true)
+        const response = await fetch('http://localhost:3001/api/reports/sec', {
+          headers: {
+            'Authorization': `Bearer ${auth.token}`
+          }
+        })
+        
+        const data = await response.json()
+        
+        if (data.success) {
+          setReports(data.data)
+          setError(null)
+        } else {
+          setError(data.message || 'Failed to fetch reports')
+        }
+      } catch (error) {
+        console.error('Error fetching reports:', error)
+        setError('Network error. Please try again.')
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchReports()
+  }, [auth?.token])
 
+  // Process reports into daily summary
+  const dailyData = useMemo(() => processReportsToDaily(reports), [reports])
+  
   const filtered = useMemo(() => {
     const byQuery = (r: DayRow) => {
       const text = `${formatDayMonYear(r.date)} ${r.adld} ${r.combo}`.toLowerCase()
       return !q || text.includes(q.toLowerCase())
     }
-    const sorted = [...rowsSeed].sort((a, b) =>
+    const sorted = [...dailyData].sort((a, b) =>
       sortDesc ? +new Date(b.date) - +new Date(a.date) : +new Date(a.date) - +new Date(b.date)
     )
     return sorted.filter(byQuery)
-  }, [q, sortDesc])
+  }, [dailyData, q, sortDesc])
 
   const totals = useMemo(() => {
-    const totalUnits = filtered.reduce((s, r) => s + r.adld + r.combo, 0)
+    const totalUnits = filtered.reduce((s, r) => s + r.adld + r.combo + r.screenProtect + r.extendedWarranty, 0)
     const totalIncentive = filtered.reduce((s, r) => s + calcIncentive(r), 0)
-    const paid = Math.min(1000, totalIncentive)
-    return { totalUnits, totalIncentive, paid, net: totalIncentive - paid }
-  }, [filtered])
+    const totalEarnedFromReports = reports.reduce((s, r) => s + r.incentiveEarned, 0)
+    const paid = reports.filter(r => r.isPaid).reduce((s, r) => s + r.incentiveEarned, 0)
+    return { 
+      totalUnits, 
+      totalIncentive: totalEarnedFromReports, 
+      paid, 
+      net: totalEarnedFromReports - paid 
+    }
+  }, [filtered, reports])
+
+  if (loading) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
+        <div className="flex items-center justify-center py-12">
+          <FaSpinner className="animate-spin text-2xl text-blue-600" />
+          <span className="ml-3 text-gray-600">Loading reports...</span>
+        </div>
+      </motion.div>
+    )
+  }
+  
+  if (error) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
+        <div className="text-center py-12">
+          <div className="text-red-600 mb-4">❌ {error}</div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="button-gradient px-4 py-2"
+          >
+            Retry
+          </button>
+        </div>
+      </motion.div>
+    )
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card scroll-smooth">
-      <h2 className="text-lg font-semibold">Reporting</h2>
+      <h2 className="text-lg font-semibold">My Sales Reports</h2>
+      <p className="text-sm text-gray-500">Total reports: {reports.length}</p>
 
       <div className="flex flex-col sm:flex-row gap-2 mt-3">
         <input

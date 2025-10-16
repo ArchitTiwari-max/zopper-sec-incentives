@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { utils, writeFileXLSX } from 'xlsx'
+import { FaSignOutAlt } from 'react-icons/fa'
+import { useAuth } from '@/contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
+import { isAdminUser } from '@/lib/auth'
 
 interface ReportRow {
   timestamp: string
@@ -33,12 +37,21 @@ function formatDateOnly(ts: string) {
 }
 
 export function AdminDashboard() {
+  const { auth, logout, user } = useAuth()
+  const navigate = useNavigate()
+  
+  const adminUser = user && isAdminUser(user) ? user : null
   const [data, setData] = useState<ReportRow[]>(initialData)
   const [query, setQuery] = useState('')
   const [storeFilter, setStoreFilter] = useState('')
   const [planFilter, setPlanFilter] = useState('')
   const [page, setPage] = useState(1)
   const pageSize = 5
+  
+  const handleLogout = () => {
+    logout()
+    navigate('/', { replace: true })
+  }
 
   const stores = useMemo(() => Array.from(new Set(data.map(d => d.store))), [data])
   const plans = ['Silver', 'Gold', 'Platinum'] as const
@@ -79,7 +92,20 @@ export function AdminDashboard() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
-      <h2 className="text-lg font-semibold mb-3">Spot Incentive Admin Dashboard</h2>
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <div className="text-sm mb-1">Welcome, <span className="font-semibold">{adminUser?.name || 'Admin'}</span></div>
+          <h2 className="text-lg font-semibold">Spot Incentive Admin Dashboard</h2>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="Logout"
+        >
+          <FaSignOutAlt size={12} />
+          Logout
+        </button>
+      </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <StatCard title="SECs Active" value={totals.totalSECs.toString()} />

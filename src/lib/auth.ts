@@ -2,11 +2,24 @@ export type Role = 'admin' | 'sec'
 
 const STORAGE_KEY = 'spot_incentive_auth'
 
+export interface SECAuthData {
+  secId: string
+  phone: string
+  name?: string
+  storeId?: string
+}
+
+export interface AdminAuthData {
+  adminId: string
+  username: string
+  name: string
+  email?: string
+}
+
 export interface AuthState {
   token: string
   role: Role
-  phone: string
-  secId?: string
+  user: SECAuthData | AdminAuthData
 }
 
 export function setAuth(auth: AuthState) {
@@ -27,4 +40,13 @@ export function getAuth(): AuthState | null {
 export function clearAuth() {
   localStorage.removeItem(STORAGE_KEY)
   localStorage.removeItem('token')
+}
+
+// Type guards
+export function isSECUser(user: SECAuthData | AdminAuthData): user is SECAuthData {
+  return 'phone' in user
+}
+
+export function isAdminUser(user: SECAuthData | AdminAuthData): user is AdminAuthData {
+  return 'username' in user
 }

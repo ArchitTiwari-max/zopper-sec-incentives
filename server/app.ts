@@ -1,14 +1,396 @@
 import express from 'express'
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
 import { PrismaClient } from '@prisma/client'
 
 const app = express()
 const prisma = new PrismaClient()
 const PORT = process.env.PORT || 3001
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production'
 
 // Middleware
-app.use(cors())
+app.use(cors({ credentials: true, origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'] }))
 app.use(express.json())
+app.use(cookieParser())
+
+// Helper functions
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString()
+}
+
+// Comify WhatsApp API integration
+async function sendOTPViaWhatsApp(phone: string, otp: string) {
+  try {
+    const comifyApiKey = process.env.COMIFY_API_KEY || '4hp75ThOEyWdJAWQ4cNmD4GpSBHrBh'
+    const baseUrl = process.env.COMIFY_BASE_URL || 'https://commify.transify.tech/v1'
+    const templateName = process.env.COMIFY_TEMPLATE_NAME || 'zopper_oem_sec_verify'
+    
+    // Format phone number - ensure it starts with 91
+    const formattedPhone = phone.startsWith('91') ? phone : `91${phone}`
+    
+    console.log(`📱 Sending OTP ${otp} to WhatsApp number: ${formattedPhone}`)
+    
+    const response = await fetch(`${baseUrl}/comm`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `ApiKey ${comifyApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: templateName,
+        payload: {
+          phone: formattedPhone,
+          otp: parseInt(otp)
+        },
+        type: 'whatsappTemplate'
+      })
+    })
+
+    const result = await response.json()
+    
+    if (!response.ok) {
+      console.error('❌ Comify API error:', result)
+      throw new Error(`Comify API error: ${result.message || result.error || 'Unknown error'}`)
+    }
+
+    console.log(`✅ WhatsApp OTP sent successfully via Comify to ${formattedPhone}`)
+    return { success: true, message: 'OTP sent successfully', data: result }
+    
+  } catch (error) {
+    console.error('❌ Error sending WhatsApp OTP via Comify:', error)
+    throw error
+  }
+}
+
+// Authentication APIs
+
+/**
+ * POST /api/auth/send-otp
+ * Send OTP to SEC's WhatsApp number
+ */
+app.post('/api/auth/send-otp', async (req, res) => {
+  try {
+    const { phone } = req.body
+
+    if (!phone || !/^\d{10}$/.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid 10-digit phone number is required'
+      })
+    }
+
+    // Generate OTP
+    const otp = generateOTP()
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+
+    // Save OTP to database
+    await prisma.oTPSession.create({
+      data: {
+        phone,
+        otp,
+        expiresAt,
+      },
+    })
+
+    // Send OTP via WhatsApp
+    await sendOTPViaWhatsApp(phone, otp)
+
+    console.log(`✅ OTP sent to ${phone}`)
+    res.json({
+      success: true,
+      message: 'OTP sent to your WhatsApp number',
+    })
+  } catch (error) {
+    console.error('❌ Error sending OTP:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send OTP',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+/**
+ * POST /api/auth/verify-otp
+ * Verify OTP and login SEC user
+ */
+app.post('/api/auth/verify-otp', async (req, res) => {
+  try {
+    const { phone, otp } = req.body
+
+    if (!phone || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number and OTP are required'
+      })
+    }
+
+    // Find valid OTP session
+    const otpSession = await prisma.oTPSession.findFirst({
+      where: {
+        phone,
+        otp,
+        isUsed: false,
+        expiresAt: {
+          gt: new Date()
+        }
+      }
+    })
+
+    if (!otpSession) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP'
+      })
+    }
+
+    // Mark OTP as used
+    await prisma.oTPSession.update({
+      where: { id: otpSession.id },
+      data: { isUsed: true }
+    })
+
+    // Find or create SEC user
+    let secUser = await prisma.sECUser.findUnique({
+      where: { phone },
+      include: { store: true }
+    })
+
+    if (!secUser) {
+      // Auto-create SEC user without secId
+      secUser = await prisma.sECUser.create({
+        data: {
+          phone,
+          // secId will be null - user can set it later in profile
+          name: null, // User can set name later
+        },
+        include: { store: true }
+      })
+      console.log(`✅ Created new SEC user for phone: ${phone}`)
+    } else {
+      // Update last login
+      secUser = await prisma.sECUser.update({
+        where: { id: secUser.id },
+        data: { lastLoginAt: new Date() },
+        include: { store: true }
+      })
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: secUser.id,
+        role: 'sec',
+        phone: secUser.phone
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    )
+
+    console.log(`✅ SEC with phone ${secUser.phone} logged in successfully`)
+    res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: {
+        secId: secUser.secId, // Can be null
+        phone: secUser.phone,
+        name: secUser.name,   // Can be null
+        storeId: secUser.storeId,
+        store: secUser.store
+      }
+    })
+  } catch (error) {
+    console.error('❌ Error verifying OTP:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify OTP',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+/**
+ * POST /api/auth/admin-login
+ * Admin login with username and password
+ */
+app.post('/api/auth/admin-login', async (req, res) => {
+  try {
+    const { username, password } = req.body
+
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username and password are required'
+      })
+    }
+
+    // Find admin user
+    const admin = await prisma.adminUser.findUnique({
+      where: { username }
+    })
+
+    if (!admin || !admin.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      })
+    }
+
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, admin.password)
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      })
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: admin.id,
+        role: 'admin',
+        username: admin.username
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    )
+
+    console.log(`✅ Admin ${admin.username} logged in successfully`)
+    res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: {
+        adminId: admin.id,
+        username: admin.username,
+        name: admin.name,
+        email: admin.email
+      }
+    })
+  } catch (error) {
+    console.error('❌ Error in admin login:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to login',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+/**
+ * POST /api/auth/logout
+ * Logout user (optional endpoint for cleanup)
+ */
+app.post('/api/auth/logout', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Logged out successfully'
+  })
+})
+
+/**
+ * PUT /api/auth/update-profile
+ * Update SEC user profile (secId and name)
+ */
+app.put('/api/auth/update-profile', async (req, res) => {
+  try {
+    const { secId, name } = req.body
+    const authHeader = req.headers.authorization
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only SEC users can update profile'
+      })
+    }
+
+    if (!secId || !secId.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'SEC ID is required'
+      })
+    }
+
+    // Check if SEC ID is already taken by another user
+    const existingUser = await prisma.sECUser.findFirst({
+      where: {
+        secId: secId.trim(),
+        id: { not: decoded.userId } // Exclude current user
+      }
+    })
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'This SEC ID is already taken by another user'
+      })
+    }
+
+    // Update user profile
+    const updatedUser = await prisma.sECUser.update({
+      where: { id: decoded.userId },
+      data: {
+        secId: secId.trim(),
+        name: name?.trim() || null
+      },
+      include: { store: true }
+    })
+
+    console.log(`✅ SEC profile updated: ${updatedUser.secId}`)
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        secId: updatedUser.secId,
+        phone: updatedUser.phone,
+        name: updatedUser.name,
+        storeId: updatedUser.storeId,
+        store: updatedUser.store
+      }
+    })
+  } catch (error) {
+    console.error('❌ Error updating profile:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update profile',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// Helper function to calculate incentive with fixed rates
+function calculateIncentive(planType: string): number {
+  const incentiveRates = {
+    'ADLD_1_Yr': 150,                // Fixed ₹150
+    'Combo_2Yrs': 250,               // Fixed ₹250
+    'Extended_Warranty_1_Yr': 0,     // No incentive
+    'Screen_Protect_1_Yr': 0         // No incentive
+  }
+  
+  return incentiveRates[planType as keyof typeof incentiveRates] || 0
+}
 
 // API Routes
 
@@ -220,6 +602,171 @@ app.get('/api/plan-price', async (req, res) => {
   }
 })
 
+
+// Working submit route
+app.post('/api/reports/submit', async (req, res) => {
+  try {
+    const { storeId, samsungSKUId, planId, imei } = req.body
+    const authHeader = req.headers.authorization
+    
+    // Check auth
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only SEC users can submit reports'
+      })
+    }
+
+    // Validate required fields
+    if (!storeId || !samsungSKUId || !planId || !imei) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store, device, plan, and IMEI are required'
+      })
+    }
+
+    // Get the plan details from database to calculate incentive
+    const plan = await prisma.plan.findUnique({
+      where: { id: planId },
+      include: {
+        samsungSKU: true
+      }
+    })
+
+    if (!plan) {
+      return res.status(404).json({
+        success: false,
+        message: 'Plan not found'
+      })
+    }
+
+    // Calculate incentive based on plan type
+    const incentiveEarned = calculateIncentive(plan.planType)
+
+    // Create sales report in database
+    const salesReport = await prisma.salesReport.create({
+      data: {
+        secUserId: decoded.userId,
+        storeId,
+        samsungSKUId,
+        planId,
+        imei: imei.trim(),
+        planPrice: plan.price,
+        incentiveEarned,
+        submittedAt: new Date()
+      },
+      include: {
+        secUser: true,
+        store: true,
+        samsungSKU: true,
+        plan: true
+      }
+    })
+    
+    console.log(`✅ Sales report saved to database! Report ID: ${salesReport.id}, SEC: ${decoded.userId}, IMEI: ${imei}, Incentive: ₹${incentiveEarned}`)
+    
+    res.json({
+      success: true,
+      message: 'Sales report submitted and saved successfully',
+      data: {
+        reportId: salesReport.id,
+        incentiveEarned,
+        planType: plan.planType,
+        planPrice: plan.price,
+        submittedAt: salesReport.submittedAt
+      }
+    })
+
+  } catch (error) {
+    console.error('❌ Error submitting sales report:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit sales report',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// GET SEC reports endpoint  
+app.get('/api/reports/sec', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only SEC users can view their reports'
+      })
+    }
+
+    // Fetch reports for this SEC user
+    const reports = await prisma.salesReport.findMany({
+      where: {
+        secUserId: decoded.userId
+      },
+      include: {
+        store: true,
+        samsungSKU: true,
+        plan: true
+      },
+      orderBy: {
+        submittedAt: 'desc'
+      }
+    })
+
+    console.log(`✅ Fetched ${reports.length} reports for SEC ${decoded.userId}`)
+    res.json({
+      success: true,
+      data: reports,
+      count: reports.length
+    })
+
+  } catch (error) {
+    console.error('❌ Error fetching SEC reports:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch reports',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
@@ -234,11 +781,22 @@ app.listen(PORT, () => {
   console.log(`🚀 API Server running on http://localhost:${PORT}`)
   console.log(`📍 Available endpoints:`)
   console.log(`   GET /api/health - Health check`)
+  console.log(`🔐 Authentication:`)
+  console.log(`   POST /api/auth/send-otp - Send OTP to SEC phone`)
+  console.log(`   POST /api/auth/verify-otp - Verify OTP and login SEC`)
+  console.log(`   POST /api/auth/admin-login - Admin login`)
+  console.log(`   PUT /api/auth/update-profile - Update SEC profile`)
+  console.log(`   POST /api/auth/logout - Logout user`)
+  console.log(`📊 Data:`)
   console.log(`   GET /api/stores - Fetch all stores`)
   console.log(`   GET /api/samsung-skus - Fetch all Samsung SKUs`)
   console.log(`   GET /api/samsung-skus/:id/plans - Fetch plans for specific SKU`)
   console.log(`   GET /api/plans - Fetch all plans`)
   console.log(`   GET /api/plan-price?skuId=:id&planType=:type - Get specific plan price`)
+  console.log(`📝 Reports:`)
+  console.log(`   POST /api/reports/submit - Submit sales report`)
+  console.log(`   GET /api/reports/sec - Get SEC user reports`)
+  console.log(`   GET /api/reports/admin - Get all reports (admin)`)
 })
 
 // Graceful shutdown
