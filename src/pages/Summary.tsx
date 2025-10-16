@@ -82,7 +82,7 @@ export function SummaryPage() {
       <div className="grid grid-cols-1 gap-3 mt-4">
         <GradientCard title="Total Units Sold" value={`${totals.totalUnits}`} />
         <GradientCard title="Total Incentive Earned" value={`₹${totals.totalIncentive.toLocaleString('en-IN')}`} />
-        <GradientCard title="Incentive Paid (Gift Voucher)" value={`₹${totals.paid.toLocaleString('en-IN')}`} />
+        <GradientCard title="Paid Incentive via Gift Voucher" value={`₹${totals.paid.toLocaleString('en-IN')}`} />
         <GradientCard title="Net Available Incentive" value={`₹${totals.net.toLocaleString('en-IN')}`} />
       </div>
 

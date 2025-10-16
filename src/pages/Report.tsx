@@ -44,6 +44,15 @@ function formatDayMonYear(iso: string) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+function formatDDMMYYYY(iso: string) {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return iso
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  return `${dd}-${mm}-${yyyy}`
+}
+
 // Process raw reports into day-wise summary
 function processReportsToDaily(reports: SalesReport[]): DayRow[] {
   const dayMap = new Map<string, DayRow>()
@@ -151,7 +160,7 @@ const response = await fetch(`${config.apiUrl}/sec/reports`, {
     }
 
     const byQuery = (r: DayRow) => {
-      const text = `${formatDayMonYear(r.date)} ${r.adld} ${r.combo}`.toLowerCase()
+      const text = `${formatDDMMYYYY(r.date)} ${r.adld} ${r.combo}`.toLowerCase()
       return !q || text.includes(q.toLowerCase())
     }
     const sorted = [...dailyData].sort((a, b) =>
@@ -175,7 +184,7 @@ const response = await fetch(`${config.apiUrl}/sec/reports`, {
 
   const downloadExcel = () => {
     const rows = filtered.map((r) => ({
-      Date: formatDayMonYear(r.date).replace(/\s\d{4}$/, ''),
+      Date: formatDDMMYYYY(r.date),
       ADLD: r.adld,
       Combo: r.combo,
       'Total Units Sold': r.adld + r.combo,
@@ -223,37 +232,34 @@ const response = await fetch(`${config.apiUrl}/sec/reports`, {
         <FaArrowLeft className="text-sm" />
         <span className="text-sm font-medium">Back to Plan Sell Info</span>
       </button>
-      <h2 className="text-lg font-semibold">Reporting</h2>
+      <h2 className="text-lg font-semibold">Incentive Passbook</h2>
       <p className="text-sm text-gray-500">Summary for your entries</p>
 
-      <div className="flex flex-col sm:flex-row gap-2 mt-3 items-center">
-        <div className="flex gap-2">
-          <button onClick={() => setDayFilter('today')} className={`px-3 py-2 rounded-2xl border ${dayFilter==='today' ? 'bg-blue-50 border-blue-300 text-blue-700' : ''}`}>Today</button>
-          <button onClick={() => setDayFilter('yesterday')} className={`px-3 py-2 rounded-2xl border ${dayFilter==='yesterday' ? 'bg-blue-50 border-blue-300 text-blue-700' : ''}`}>Yesterday</button>
-          <button onClick={() => setDayFilter('all')} className={`px-3 py-2 rounded-2xl border ${dayFilter==='all' ? 'bg-blue-50 border-blue-300 text-blue-700' : ''}`}>All</button>
+      <div className="flex flex-col sm:flex-row gap-2 mt-3 items-stretch sm:items-center">
+        <div className="grid grid-cols-3 gap-2 w-full sm:w-auto">
+          <button onClick={() => setDayFilter('today')} className={`px-3 py-3 sm:py-2 rounded-2xl border w-full ${dayFilter==='today' ? 'bg-blue-50 border-blue-300 text-blue-700' : ''}`}>Today</button>
+          <button onClick={() => setDayFilter('yesterday')} className={`px-3 py-3 sm:py-2 rounded-2xl border w-full ${dayFilter==='yesterday' ? 'bg-blue-50 border-blue-300 text-blue-700' : ''}`}>Yesterday</button>
+          <button onClick={() => setDayFilter('all')} className={`px-3 py-3 sm:py-2 rounded-2xl border w-full ${dayFilter==='all' ? 'bg-blue-50 border-blue-300 text-blue-700' : ''}`}>All</button>
         </div>
         <input
-          className="flex-1 px-3 py-2 border rounded-2xl"
-          placeholder="Search (e.g., 15 Oct)"
+          className="w-full sm:flex-1 px-3 py-3 sm:py-2 border rounded-2xl"
+          placeholder="Search (e.g., 15-10-2025)"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <button onClick={() => setSortDesc(s => !s)} className="button-gradient px-4 py-2">Sort by Date {sortDesc ? '↓' : '↑'}</button>
-        <button onClick={downloadExcel} className="button-gradient px-4 py-2">Download Report (Excel)</button>
+        <button onClick={() => setSortDesc(s => !s)} className="button-gradient w-full sm:w-auto px-4 py-3 sm:py-2">Sort by Date {sortDesc ? '↓' : '↑'}</button>
+        <button onClick={downloadExcel} className="button-gradient w-full sm:w-auto px-4 py-3 sm:py-2">Download Report</button>
       </div>
 
       <div className="mt-3 overflow-auto rounded-2xl border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 text-left">
-              <th className="p-3 align-bottom" rowSpan={2}>Date</th>
-              <th className="p-3 text-center" colSpan={2}>Plan Type</th>
-              <th className="p-3 align-bottom" rowSpan={2}>Total Units Sold</th>
-              <th className="p-3 align-bottom" rowSpan={2}>Incentive Earned</th>
-            </tr>
-            <tr className="bg-gray-50 text-left">
-              <th className="p-3">ADLD</th>
-              <th className="p-3">Combo</th>
+        <table className="w-full text-xs sm:text-sm">
+          <thead className="bg-gray-50">
+            <tr className="text-left">
+              <th className="p-2 sm:p-3">Date</th>
+              <th className="p-2 sm:p-3">ADLD</th>
+              <th className="p-2 sm:p-3">Combo</th>
+              <th className="p-2 sm:p-3">Total Units Sold</th>
+              <th className="p-2 sm:p-3">Incentive Earned</th>
             </tr>
           </thead>
           <tbody>
@@ -262,11 +268,11 @@ const response = await fetch(`${config.apiUrl}/sec/reports`, {
               const incentive = calcIncentive(r)
               return (
                 <tr key={i} className="border-t hover:bg-gray-50">
-                  <td className="p-3 whitespace-nowrap">{formatDayMonYear(r.date).replace(/\s\d{4}$/, '')}</td>
-                  <td className="p-3">{r.adld}</td>
-                  <td className="p-3">{r.combo}</td>
-                  <td className="p-3">{totalUnits}</td>
-                  <td className="p-3">{incentive}</td>
+                  <td className="p-2 sm:p-3 whitespace-nowrap">{formatDDMMYYYY(r.date)}</td>
+                  <td className="p-2 sm:p-3">{r.adld}</td>
+                  <td className="p-2 sm:p-3">{r.combo}</td>
+                  <td className="p-2 sm:p-3">{totalUnits}</td>
+                  <td className="p-2 sm:p-3">{incentive}</td>
                 </tr>
               )
             })}
@@ -282,7 +288,7 @@ const response = await fetch(`${config.apiUrl}/sec/reports`, {
         <div className="grid grid-cols-1 gap-3">
           <GradientCard title="Total Units Sold" value={`${totals.totalUnits}`} />
           <GradientCard title="Total Earned Incentive" value={`₹${totals.totalIncentive}`} />
-          <GradientCard title="Paid Incentive (Gift Voucher)" value={`₹${totals.paid}`} />
+          <GradientCard title="Paid Incentive via Gift Voucher" value={`₹${totals.paid}`} />
           <GradientCard title="Net Available Balance" value={`₹${totals.net}`} />
         </div>
       </div>

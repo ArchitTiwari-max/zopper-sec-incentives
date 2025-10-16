@@ -46,6 +46,7 @@ export function SecDashboard() {
   const [showToast, setShowToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [scanning, setScanning] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
+  const [congratsAmount, setCongratsAmount] = useState<number | null>(null)
   // Force re-render at midnight so today/yesterday labels update without refresh
   const [dateTick, setDateTick] = useState(0)
   useEffect(() => {
@@ -150,6 +151,12 @@ export function SecDashboard() {
       setTimeout(() => setShowToast(null), 3000)
       return
     }
+    // Basic IMEI validation (10-20 digits)
+    if (!/^\d{10,20}$/.test(imei.trim())) {
+      setShowToast({ type: 'error', message: 'Enter a valid IMEI (10-20 digits)' })
+      setTimeout(() => setShowToast(null), 3000)
+      return
+    }
     
     if (!auth?.token) {
       setShowToast({ type: 'error', message: 'Authentication required' })
@@ -185,11 +192,9 @@ const response = await fetch(`${config.apiUrl}/sec/report`, {
         setImei('')
         setDateOfSale(todayLabel)
         
-        setShowToast({ type: 'success', message: 'Report submitted successfully' })
-        setTimeout(() => setShowToast(null), 2000)
-        
-        // Redirect to reporting page
-        setTimeout(() => navigate('/reporting', { replace: true }), 800)
+        // Show congratulations modal with incentive amount
+        const earned = data?.data?.incentiveEarned ?? data?.incentiveEarned ?? 0
+        setCongratsAmount(earned)
       } else {
         const msg = (data.message || '').toLowerCase()
         if (msg.includes('duplicate') || msg.includes('exists')) {
@@ -366,6 +371,46 @@ const response = await fetch(`${config.apiUrl}/sec/report`, {
         onClose={() => setShowProfileModal(false)}
         onProfileUpdated={handleProfileUpdated}
       />
+
+      {congratsAmount !== null && (
+        <CongratsModal
+          amount={congratsAmount}
+          onClose={() => {
+            setCongratsAmount(null)
+            navigate('/reporting', { replace: true })
+          }}
+        />
+      )}
     </motion.div>
+  )
+}
+
+function CongratsModal({ amount, onClose }: { amount: number; onClose: () => void }) {
+  const pieces = Array.from({ length: 40 })
+  const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6']
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      {/* Confetti */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {pieces.map((_, i) => (
+          <span
+            key={i}
+            className="confetti-piece"
+            style={{
+              left: `${(i * 97) % 100}%`,
+              backgroundColor: colors[i % colors.length],
+              animationDelay: `${(i % 10) * 0.15}s`,
+              animationDuration: `${4 + (i % 5)}s`,
+            }}
+          />
+        ))}
+      </div>
+      <div className="relative bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-center">
+        <div className="text-2xl mb-2">🎉 Congratulations!</div>
+        <div className="text-gray-700">You've earned <span className="font-semibold">₹{amount}</span> incentive!</div>
+        <button onClick={onClose} className="button-gradient w-full py-3 mt-4">View Incentive Passbook</button>
+      </div>
+    </div>
   )
 }
