@@ -767,6 +767,127 @@ app.get('/api/reports/sec', async (req, res) => {
   }
 })
 
+// GET all reports for admin
+app.get('/api/reports/admin', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admin users can view all reports'
+      })
+    }
+
+    // Fetch all sales reports with related data
+    const reports = await prisma.salesReport.findMany({
+      include: {
+        secUser: true,
+        store: true,
+        samsungSKU: true,
+        plan: true
+      },
+      orderBy: {
+        submittedAt: 'desc'
+      }
+    })
+
+    console.log(`✅ Admin fetched ${reports.length} total reports`)
+    res.json({
+      success: true,
+      data: reports,
+      count: reports.length
+    })
+
+  } catch (error) {
+    console.error('❌ Error fetching admin reports:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch reports',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// PUT endpoint to update payment status
+app.put('/api/reports/:id/payment', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { isPaid } = req.body
+    const authHeader = req.headers.authorization
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admin users can update payment status'
+      })
+    }
+
+    // Update the payment status
+    const updatedReport = await prisma.salesReport.update({
+      where: { id },
+      data: { isPaid },
+      include: {
+        secUser: true,
+        store: true,
+        samsungSKU: true,
+        plan: true
+      }
+    })
+
+    console.log(`✅ Admin updated payment status for report ${id}: isPaid = ${isPaid}`)
+    res.json({
+      success: true,
+      message: `Payment status updated to ${isPaid ? 'Paid' : 'Pending'}`,
+      data: updatedReport
+    })
+
+  } catch (error) {
+    console.error('❌ Error updating payment status:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update payment status',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({

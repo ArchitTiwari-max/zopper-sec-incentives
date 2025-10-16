@@ -187,10 +187,12 @@ export function LoginPage() {
           )}
         </div>
       ) : (
-        <div className="mt-6 space-y-3">
+        <form onSubmit={(e) => { e.preventDefault(); adminLogin(); }} className="mt-6 space-y-3">
           <div>
             <label className="block text-sm font-medium">Username</label>
             <input
+              name="username"
+              autoComplete="username"
               className="w-full px-3 py-3 border rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
               placeholder="Enter username"
               value={username}
@@ -201,7 +203,9 @@ export function LoginPage() {
           <div>
             <label className="block text-sm font-medium">Password</label>
             <input
+              name="password"
               type="password"
+              autoComplete="current-password"
               className="w-full px-3 py-3 border rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
               placeholder="Enter password"
               value={password}
@@ -209,8 +213,8 @@ export function LoginPage() {
               disabled={loading}
             />
           </div>
-          <button onClick={adminLogin} disabled={loading} className="button-gradient w-full py-3 disabled:opacity-60">{loading ? 'Signing in…' : 'Sign In'}</button>
-        </div>
+          <button type="submit" disabled={loading} className="button-gradient w-full py-3 disabled:opacity-60">{loading ? 'Signing in…' : 'Sign In'}</button>
+        </form>
       )}
 
       {toast && (

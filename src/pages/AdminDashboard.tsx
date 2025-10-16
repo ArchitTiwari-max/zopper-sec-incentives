@@ -1,29 +1,40 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { utils, writeFileXLSX } from 'xlsx'
-import { FaSignOutAlt } from 'react-icons/fa'
+import { FaSignOutAlt, FaSpinner } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { isAdminUser } from '@/lib/auth'
+import { config } from '@/lib/config'
 
-interface ReportRow {
-  timestamp: string
-  secId: string
-  store: string
-  device: string
-  plan: 'Silver' | 'Gold' | 'Platinum'
-  planPrice: number
+interface SalesReport {
+  id: string
   imei: string
+  planPrice: number
   incentiveEarned: number
-  paid: boolean
+  isPaid: boolean
+  submittedAt: string
+  secUser: {
+    secId: string | null
+    phone: string
+    name: string | null
+  }
+  store: {
+    id: string
+    storeName: string
+    city: string
+  }
+  samsungSKU: {
+    id: string
+    Category: string
+    ModelName: string
+  }
+  plan: {
+    id: string
+    planType: string
+    price: number
+  }
 }
-
-const initialData: ReportRow[] = [
-  { timestamp: '2025-10-01 10:00', secId: 'SEC12345', store: 'Store A', device: 'Device X', plan: 'Silver', planPrice: 99, imei: '356789012345678', incentiveEarned: 99, paid: true },
-  { timestamp: '2025-10-05 14:22', secId: 'SEC56789', store: 'Store B', device: 'Device Y', plan: 'Gold', planPrice: 199, imei: '352345678901234', incentiveEarned: 199, paid: false },
-  { timestamp: '2025-10-08 09:15', secId: 'SEC12345', store: 'Store A', device: 'Device Z', plan: 'Platinum', planPrice: 299, imei: '354567890123456', incentiveEarned: 299, paid: false },
-  { timestamp: '2025-10-10 16:45', secId: 'SEC24680', store: 'Store C', device: 'Device X', plan: 'Gold', planPrice: 199, imei: '358901234567890', incentiveEarned: 199, paid: true },
-]
 
 function formatDateOnly(ts: string) {
   // Accepts 'YYYY-MM-DD HH:mm' or ISO; returns 'dd mm yyyy'
@@ -41,26 +52,69 @@ export function AdminDashboard() {
   const navigate = useNavigate()
   
   const adminUser = user && isAdminUser(user) ? user : null
-  const [data, setData] = useState<ReportRow[]>(initialData)
+  const [data, setData] = useState<SalesReport[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [storeFilter, setStoreFilter] = useState('')
   const [planFilter, setPlanFilter] = useState('')
   const [page, setPage] = useState(1)
-  const pageSize = 5
+  const pageSize = 10
   
   const handleLogout = () => {
     logout()
     navigate('/', { replace: true })
   }
 
-  const stores = useMemo(() => Array.from(new Set(data.map(d => d.store))), [data])
-  const plans = ['Silver', 'Gold', 'Platinum'] as const
+  // Fetch reports from API
+  useEffect(() => {
+    const fetchReports = async () => {
+      if (!auth?.token) {
+        setError('Authentication required')
+        setLoading(false)
+        return
+      }
+      
+      try {
+        setLoading(true)
+        const response = await fetch(`${config.apiUrl}/reports/admin`, {
+          headers: {
+            'Authorization': `Bearer ${auth.token}`
+          }
+        })
+        
+        const result = await response.json()
+        
+        if (result.success) {
+          setData(result.data)
+          setError(null)
+        } else {
+          setError(result.message || 'Failed to fetch reports')
+        }
+      } catch (error) {
+        console.error('Error fetching admin reports:', error)
+        setError('Network error. Please try again.')
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchReports()
+  }, [auth?.token])
+
+  const stores = useMemo(() => Array.from(new Set(data.map(d => d.store.storeName))), [data])
+  const plans = useMemo(() => Array.from(new Set(data.map(d => d.plan.planType))), [data])
 
   const filtered = useMemo(() => {
     return data.filter(r => {
-      const matchesQuery = [r.secId, r.store, r.device].some(v => v.toLowerCase().includes(query.toLowerCase()))
-      const matchesStore = !storeFilter || r.store === storeFilter
-      const matchesPlan = !planFilter || r.plan === planFilter
+      const matchesQuery = [
+        r.secUser.secId || r.secUser.phone, 
+        r.store.storeName, 
+        r.samsungSKU.ModelName,
+        r.imei
+      ].some(v => v.toLowerCase().includes(query.toLowerCase()))
+      const matchesStore = !storeFilter || r.store.storeName === storeFilter
+      const matchesPlan = !planFilter || r.plan.planType === planFilter
       return matchesQuery && matchesStore && matchesPlan
     })
   }, [data, query, storeFilter, planFilter])
@@ -73,8 +127,8 @@ export function AdminDashboard() {
 
   const totals = useMemo(() => {
     const totalIncentive = filtered.reduce((s, r) => s + r.incentiveEarned, 0)
-    const totalPaid = filtered.filter(r => r.paid).reduce((s, r) => s + r.incentiveEarned, 0)
-    const totalSECs = new Set(filtered.map(r => r.secId)).size
+    const totalPaid = filtered.filter(r => r.isPaid).reduce((s, r) => s + r.incentiveEarned, 0)
+    const totalSECs = new Set(filtered.map(r => r.secUser.secId || r.secUser.phone)).size
     return { totalSECs, totalReports: filtered.length, totalIncentive, totalPaid }
   }, [filtered])
 
@@ -85,9 +139,61 @@ export function AdminDashboard() {
     writeFileXLSX(wb, 'all-reports.xlsx')
   }
 
-  const togglePaid = (idx: number) => {
-    const globalIndex = (page - 1) * pageSize + idx
-    setData(prev => prev.map((r, i) => i === globalIndex ? { ...r, paid: !r.paid } : r))
+  const togglePaid = async (idx: number) => {
+    const report = pageData[idx]
+    if (!auth?.token) return
+    
+    try {
+      const response = await fetch(`${config.apiUrl}/reports/${report.id}/payment`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${auth.token}`
+        },
+        body: JSON.stringify({ isPaid: true })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        // Update the local state
+        setData(prev => prev.map(r => 
+          r.id === report.id ? { ...r, isPaid: true } : r
+        ))
+      } else {
+        alert(result.message || 'Failed to update payment status')
+      }
+    } catch (error) {
+      console.error('Error updating payment status:', error)
+      alert('Network error. Please try again.')
+    }
+  }
+
+  if (loading) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
+        <div className="flex items-center justify-center py-12">
+          <FaSpinner className="animate-spin text-2xl text-blue-600" />
+          <span className="ml-3 text-gray-600">Loading reports...</span>
+        </div>
+      </motion.div>
+    )
+  }
+  
+  if (error) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
+        <div className="text-center py-12">
+          <div className="text-red-600 mb-4">❌ {error}</div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="button-gradient px-4 py-2"
+          >
+            Retry
+          </button>
+        </div>
+      </motion.div>
+    )
   }
 
   return (
@@ -150,22 +256,24 @@ export function AdminDashboard() {
           </thead>
           <tbody>
             {pageData.map((r, i) => (
-              <tr key={i} className="border-t hover:bg-gray-50">
-                <td className="p-3 whitespace-nowrap">{formatDateOnly(r.timestamp)}</td>
-                <td className="p-3">{r.secId}</td>
-                <td className="p-3">{r.store}</td>
-                <td className="p-3">{r.device}</td>
-                <td className="p-3">{r.plan}</td>
+              <tr key={r.id} className="border-t hover:bg-gray-50">
+                <td className="p-3 whitespace-nowrap">{formatDateOnly(r.submittedAt)}</td>
+                <td className="p-3">{r.secUser.secId || r.secUser.phone}</td>
+                <td className="p-3">{r.store.storeName}</td>
+                <td className="p-3">{r.samsungSKU.ModelName}</td>
+                <td className="p-3">{r.plan.planType}</td>
                 <td className="p-3">₹{r.planPrice}</td>
                 <td className="p-3">{r.imei}</td>
                 <td className="p-3">₹{r.incentiveEarned}</td>
                 <td className="p-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${r.paid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                    {r.paid ? 'Paid' : 'Pending'}
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${r.isPaid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {r.isPaid ? 'Paid' : 'Pending'}
                   </span>
                 </td>
                 <td className="p-3">
-                  <button onClick={() => togglePaid(i)} className="button-gradient px-3 py-1">Mark as {r.paid ? 'Pending' : 'Paid'}</button>
+                  {!r.isPaid && (
+                    <button onClick={() => togglePaid(i)} className="button-gradient px-3 py-1">Mark as Paid</button>
+                  )}
                 </td>
               </tr>
             ))}

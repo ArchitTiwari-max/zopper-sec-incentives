@@ -47,10 +47,12 @@ export function AdminLoginPage() {
       <h1 className="text-xl font-semibold text-center">Admin Login</h1>
       <p className="text-sm text-gray-500 text-center mt-1">Use your admin credentials</p>
 
-      <div className="mt-6 space-y-3">
+      <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="mt-6 space-y-3">
         <div>
           <label className="block text-sm font-medium">Username</label>
           <input
+            name="username"
+            autoComplete="username"
             className="w-full px-3 py-3 border rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
             placeholder="Enter username"
             value={username}
@@ -61,7 +63,9 @@ export function AdminLoginPage() {
         <div>
           <label className="block text-sm font-medium">Password</label>
           <input
+            name="password"
             type="password"
+            autoComplete="current-password"
             className="w-full px-3 py-3 border rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
             placeholder="Enter password"
             value={password}
@@ -69,11 +73,11 @@ export function AdminLoginPage() {
             disabled={loading}
           />
         </div>
-        <button onClick={handleLogin} disabled={loading} className="button-gradient w-full py-3 disabled:opacity-60">{loading ? 'Signing in…' : 'Sign In'}</button>
+        <button type="submit" disabled={loading} className="button-gradient w-full py-3 disabled:opacity-60">{loading ? 'Signing in…' : 'Sign In'}</button>
         <div className="text-center text-sm text-gray-500">
           Not an admin? <Link to="/" className="underline">Login with phone</Link>
         </div>
-      </div>
+      </form>
 
       {toast && (
         <div className="fixed inset-x-0 bottom-6 flex justify-center">
