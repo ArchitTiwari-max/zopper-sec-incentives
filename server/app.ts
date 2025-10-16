@@ -220,15 +220,32 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 
     if (!secUser) {
       // Auto-create SEC user without secId
-      secUser = await prisma.sECUser.create({
-        data: {
-          phone,
-          // secId will be null - user can set it later in profile
-          name: null, // User can set name later
-        },
-        include: { store: true }
-      })
-      console.log(`✅ Created new SEC user for phone: ${phone}`)
+      try {
+        secUser = await prisma.sECUser.create({
+          data: {
+            phone,
+            // secId will be null - user can set it later in profile
+            name: null, // User can set name later
+          },
+          include: { store: true }
+        })
+        console.log(`✅ Created new SEC user for phone: ${phone}`)
+      } catch (createError) {
+        // If creation fails due to unique constraint, try to find the user again
+        // This can happen in rare race conditions
+        console.log(`⚠️ User creation failed, attempting to find existing user for ${phone}`)
+        secUser = await prisma.sECUser.findUnique({
+          where: { phone },
+          include: { store: true }
+        })
+        
+        if (!secUser) {
+          // If still no user found, throw the original error
+          console.error(`❌ Failed to create or find SEC user for ${phone}:`, createError)
+          throw createError
+        }
+        console.log(`✅ Found existing SEC user for phone: ${phone}`)
+      }
     } else {
       // Update last login
       secUser = await prisma.sECUser.update({
@@ -236,6 +253,7 @@ app.post('/api/auth/verify-otp', async (req, res) => {
         data: { lastLoginAt: new Date() },
         include: { store: true }
       })
+      console.log(`✅ Updated last login for existing SEC user: ${phone}`)
     }
 
     // Generate JWT token
