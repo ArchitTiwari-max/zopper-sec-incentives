@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import CameraScanner from '@/components/CameraScanner'
 import { ProfileModal } from '@/components/ProfileModal'
 import { motion } from 'framer-motion'
-import { FaBarcode, FaStore, FaMobileAlt, FaListAlt, FaRupeeSign, FaIdBadge, FaSpinner, FaSignOutAlt } from 'react-icons/fa'
+import { FaBarcode, FaStore, FaMobileAlt, FaListAlt, FaIdBadge, FaSpinner, FaSignOutAlt } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { isSECUser, SECAuthData } from '@/lib/auth'
@@ -10,9 +10,7 @@ import {
   fetchStores, 
   fetchSamsungSKUs, 
   fetchPlansForSKU, 
-  fetchPlanPrice,
   formatPlanType,
-  formatPrice,
   type Store, 
   type SamsungSKU, 
   type Plan 
@@ -26,15 +24,50 @@ export function SecDashboard() {
   
   const secUser = user && isSECUser(user) ? user : null
   const secId = secUser?.secId || null
-  const displayName = secUser?.name || `User (${secUser?.phone})`
   const [store, setStore] = useState('')
   const [device, setDevice] = useState('')
   const [planType, setPlanType] = useState('')
-  const [planPrice, setPlanPrice] = useState(0)
   const [imei, setImei] = useState('')
-  const [showToast, setShowToast] = useState(false)
+  // IST date helpers
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000
+  const DAY_MS = 24 * 60 * 60 * 1000
+  const nowUtcMs = Date.now()
+  const nowIstMs = nowUtcMs + IST_OFFSET_MS
+  const formatDMYFromISTMs = (istMs: number) => {
+    const d = new Date(istMs)
+    const dd = String(d.getUTCDate()).padStart(2, '0')
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0')
+    const yyyy = d.getUTCFullYear()
+    return `${dd}-${mm}-${yyyy}`
+  }
+  const todayLabel = formatDMYFromISTMs(nowIstMs)
+  const yesterdayLabel = formatDMYFromISTMs(nowIstMs - DAY_MS)
+  const [dateOfSale, setDateOfSale] = useState<string>(todayLabel)
+  const [showToast, setShowToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [scanning, setScanning] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
+  // Force re-render at midnight so today/yesterday labels update without refresh
+  const [dateTick, setDateTick] = useState(0)
+  useEffect(() => {
+    // Compute ms until next midnight in IST
+    const utcNow = Date.now()
+    const istNow = new Date(utcNow + IST_OFFSET_MS)
+    const nextMidnightIstUtcMs = Date.UTC(
+      istNow.getUTCFullYear(),
+      istNow.getUTCMonth(),
+      istNow.getUTCDate() + 1,
+      0, 0, 0, 0
+    ) - IST_OFFSET_MS
+    const ms = Math.max(1000, nextMidnightIstUtcMs - utcNow)
+    const t = setTimeout(() => setDateTick((v) => v + 1), ms)
+    return () => clearTimeout(t)
+  }, [dateTick])
+  // If current selection is no longer one of the two options, reset to today
+  useEffect(() => {
+    if (dateOfSale !== todayLabel && dateOfSale !== yesterdayLabel) {
+      setDateOfSale(todayLabel)
+    }
+  }, [dateTick, todayLabel, yesterdayLabel])
   
   const handleLogout = () => {
     logout()
@@ -42,7 +75,6 @@ export function SecDashboard() {
   }
   
   const handleProfileUpdated = (updatedUser: SECAuthData) => {
-    // Update the auth context with new user data
     updateUser(updatedUser)
   }
   
@@ -54,7 +86,6 @@ export function SecDashboard() {
     stores: false,
     skus: false,
     plans: false,
-    price: false,
     submit: false
   })
 
@@ -108,47 +139,28 @@ export function SecDashboard() {
     }
     // Reset plan selection when device changes
     setPlanType('')
-    setPlanPrice(0)
   }, [device])
-  
-  // Load plan price when both device and plan type are selected
-  useEffect(() => {
-    if (device && planType) {
-      const loadPlanPrice = async () => {
-        setLoading(prev => ({ ...prev, price: true }))
-        const response = await fetchPlanPrice(device, planType)
-        if (response.success) {
-          setPlanPrice(response.data.price)
-        } else {
-          console.error('Failed to load plan price:', response.error)
-          setPlanPrice(0)
-        }
-        setLoading(prev => ({ ...prev, price: false }))
-      }
-      loadPlanPrice()
-    } else {
-      setPlanPrice(0)
-    }
-  }, [device, planType])
   
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     // Validate required fields
     if (!store || !device || !planType || !imei) {
-      alert('Please fill in all fields')
+      setShowToast({ type: 'error', message: 'Please fill in all fields' })
+      setTimeout(() => setShowToast(null), 3000)
       return
     }
     
     if (!auth?.token) {
-      alert('Authentication required')
+      setShowToast({ type: 'error', message: 'Authentication required' })
+      setTimeout(() => setShowToast(null), 3000)
       return
     }
     
     setLoading(prev => ({ ...prev, submit: true }))
     
     try {
-      const response = await fetch(`${config.apiUrl}/reports/submit`, {
+const response = await fetch(`${config.apiUrl}/sec/report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -158,7 +170,8 @@ export function SecDashboard() {
           storeId: store,
           samsungSKUId: device,
           planId: availablePlans.find(p => p.planType === planType)?.id,
-          imei: imei.trim()
+          imei: imei.trim(),
+          dateOfSale
         })
       })
       
@@ -169,22 +182,31 @@ export function SecDashboard() {
         setStore('')
         setDevice('')
         setPlanType('')
-        setPlanPrice(0)
         setImei('')
+        setDateOfSale(todayLabel)
         
-        setShowToast(true)
-        setTimeout(() => setShowToast(false), 3000)
+        setShowToast({ type: 'success', message: 'Report submitted successfully' })
+        setTimeout(() => setShowToast(null), 2000)
         
-        // Show incentive earned
-        if (data.data.incentiveEarned > 0) {
-          alert(`Report submitted successfully! You earned ₹${data.data.incentiveEarned} incentive.`)
-        }
+        // Redirect to reporting page
+        setTimeout(() => navigate('/reporting', { replace: true }), 800)
       } else {
-        alert(`Error: ${data.message}`)
+        const msg = (data.message || '').toLowerCase()
+        if (msg.includes('duplicate') || msg.includes('exists')) {
+          setShowToast({ type: 'error', message: 'IMEI already exists — duplicate entry not allowed.' })
+        } else {
+          setShowToast({ type: 'error', message: data.message || 'Failed to submit' })
+        }
+        setTimeout(() => setShowToast(null), 3000)
       }
-    } catch (error) {
-      console.error('Error submitting report:', error)
-      alert('Network error. Please try again.')
+    } catch (error: any) {
+      const msg = (error?.message || '').toLowerCase()
+      if (msg.includes('unique') || msg.includes('duplicate')) {
+        setShowToast({ type: 'error', message: 'IMEI already exists — duplicate entry not allowed.' })
+      } else {
+        setShowToast({ type: 'error', message: 'Network error. Please try again.' })
+      }
+      setTimeout(() => setShowToast(null), 3000)
     } finally {
       setLoading(prev => ({ ...prev, submit: false }))
     }
@@ -194,7 +216,7 @@ export function SecDashboard() {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
       <div className="flex justify-between items-start mb-2">
         <div>
-          <h2 className="text-lg font-semibold">SEC Dashboard</h2>
+          <h2 className="text-lg font-semibold">Plan Sell Info</h2>
           <p className="text-xs text-gray-500">Submit your plan sales below or view your reports.</p>
           {!secId && (
             <button
@@ -235,6 +257,18 @@ export function SecDashboard() {
         </div>
 
         <div>
+          <label className="block text-sm font-medium mb-1">Date of Sale</label>
+          <select
+            value={dateOfSale}
+            onChange={(e) => setDateOfSale(e.target.value)}
+            className="w-full px-3 py-3 border rounded-2xl"
+          >
+            <option value={todayLabel}>{todayLabel}</option>
+            <option value={yesterdayLabel}>{yesterdayLabel}</option>
+          </select>
+        </div>
+
+        <div>
           <label className="block text-sm font-medium mb-1">Store Name</label>
           <SearchableSelect
             value={store}
@@ -263,25 +297,13 @@ export function SecDashboard() {
           <SearchableSelect
             value={planType}
             onChange={setPlanType}
-            options={availablePlans.map(p => ({ value: p.planType, label: `${formatPlanType(p.planType)} - ${formatPrice(p.price)}` }))}
+            options={availablePlans
+              .filter(p => p.planType !== 'Extended_Warranty_1_Yr')
+              .map(p => ({ value: p.planType, label: `${formatPlanType(p.planType)}` }))}
             placeholder={!device ? 'Select device first' : loading.plans ? 'Loading plans...' : 'Search or select plan'}
             disabled={loading.plans || !device}
             leftIcon={<FaListAlt />}
           />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Plan Price</label>
-          <div className="relative">
-            <FaRupeeSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            {loading.price && <FaSpinner className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />}
-            <input 
-              readOnly 
-              value={loading.price ? 'Loading price...' : planPrice ? formatPrice(planPrice) : ''} 
-              className="w-full pl-10 pr-10 py-3 border rounded-2xl bg-gray-100" 
-              placeholder="Select device and plan to see price"
-            />
-          </div>
         </div>
 
         <div>
@@ -324,16 +346,18 @@ export function SecDashboard() {
               Submitting...
             </>
           ) : (
-            'Submit Report'
+            'Submit'
           )}
         </button>
       </form>
 
-      <button onClick={() => navigate('/report')} className="button-gradient w-full py-3 mt-3">Open Reports</button>
+      <button onClick={() => navigate('/reporting')} className="button-gradient w-full py-3 mt-3">View Incentive Passbook</button>
 
       {showToast && (
         <div className="fixed inset-x-0 bottom-6 flex justify-center">
-          <div className="bg-green-100 text-green-700 px-4 py-2 rounded-full shadow">✅ Report submitted successfully</div>
+          <div className={`${showToast.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} px-4 py-2 rounded-full shadow`}>
+            {showToast.message}
+          </div>
         </div>
       )}
       

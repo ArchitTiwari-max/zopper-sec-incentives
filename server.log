@@ -1,0 +1,70 @@
+
+> sec-incentive@0.1.0 dev:api
+> tsx server/app.ts
+
+🚀 API Server running on http://localhost:3001
+📍 Available endpoints:
+   GET /api/health - Health check
+🔐 Authentication:
+   POST /api/auth/send-otp - Send OTP to SEC phone
+   POST /api/auth/verify-otp - Verify OTP and login SEC
+   POST /api/auth/admin-login - Admin login
+   PUT /api/auth/update-profile - Update SEC profile
+   POST /api/auth/logout - Logout user
+📊 Data:
+   GET /api/stores - Fetch all stores
+   GET /api/samsung-skus - Fetch all Samsung SKUs
+   GET /api/samsung-skus/:id/plans - Fetch plans for specific SKU
+   GET /api/plans - Fetch all plans
+   GET /api/plan-price?skuId=:id&planType=:type - Get specific plan price
+📝 Reports:
+   POST /api/reports/submit - Submit sales report
+   GET /api/reports/sec - Get SEC user reports
+   GET /api/reports/admin - Get all reports (admin)
+📍 Fetching all stores...
+📱 Fetching Samsung SKUs...
+📍 Fetching all stores...
+📱 Fetching Samsung SKUs...
+✅ Found 23 Samsung SKUs
+✅ Found 713 stores
+✅ Found 23 Samsung SKUs
+✅ Found 713 stores
+📋 Fetching plans for Samsung SKU: 68efc897efe0dedeb8077922
+🆕 Created global Test_Plan with price ₹0
+✅ Found 4 plans (including Test_Plan) for SKU 68efc897efe0dedeb8077922
+📍 Fetching all stores...
+📱 Fetching Samsung SKUs...
+📍 Fetching all stores...
+📱 Fetching Samsung SKUs...
+✅ Found 23 Samsung SKUs
+✅ Found 23 Samsung SKUs
+✅ Found 713 stores
+✅ Found 713 stores
+📍 Fetching all stores...
+📱 Fetching Samsung SKUs...
+📍 Fetching all stores...
+📱 Fetching Samsung SKUs...
+✅ Found 23 Samsung SKUs
+✅ Found 23 Samsung SKUs
+✅ Found 713 stores
+✅ Found 713 stores
+📱 Fetching Samsung SKUs...
+📱 Fetching Samsung SKUs...
+📍 Fetching all stores...
+📍 Fetching all stores...
+✅ Found 23 Samsung SKUs
+✅ Found 23 Samsung SKUs
+✅ Found 713 stores
+✅ Found 713 stores
+📱 Fetching Samsung SKUs...
+📍 Fetching all stores...
+📱 Fetching Samsung SKUs...
+📍 Fetching all stores...
+✅ Found 23 Samsung SKUs
+✅ Found 23 Samsung SKUs
+✅ Found 713 stores
+✅ Found 713 stores
+🗑️ Deleted all previous OTP records for 9569310917
+📱 Sending OTP 644960 to WhatsApp number: 919569310917
+✅ WhatsApp OTP sent successfully via Comify to 919569310917
+✅ New OTP sent to 9569310917, Session ID: 68f12e6488c17233653f4b37

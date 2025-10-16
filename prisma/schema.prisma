@@ -18,6 +18,7 @@ enum PlanType {
   ADLD_1_Yr
   Combo_2Yrs
   Extended_Warranty_1_Yr
+  Test_Plan
 }
 
 model Store {
@@ -102,4 +103,5 @@ model SalesReport {
   @@index([secUserId])
   @@index([storeId])
   @@index([submittedAt])
+  @@unique([imei])
 }

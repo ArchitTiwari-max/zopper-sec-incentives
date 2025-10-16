@@ -5,6 +5,7 @@ import { LoginPage } from './pages/Login'
 import { ReportPage } from './pages/Report'
 import { AdminDashboard } from './pages/AdminDashboard'
 import { SecDashboard } from './pages/SecDashboard'
+import { AdminLoginPage } from './pages/AdminLogin'
 
 export default function App() {
   return (
@@ -18,23 +19,28 @@ export default function App() {
                 <LoginPage />
               </PublicOnlyRoute>
             } />
-            <Route path="/admin" element={
+            <Route path="/admin-login" element={
               <PublicOnlyRoute>
-                <LoginPage />
+                <AdminLoginPage />
               </PublicOnlyRoute>
             } />
+            {/* Backward compat redirects */}
+            <Route path="/admin" element={<Navigate to="/admin-login" replace />} />
             
             {/* SEC protected routes */}
-            <Route path="/dashboard" element={
+            <Route path="/plan-sell-info" element={
               <SECRoute>
                 <SecDashboard />
               </SECRoute>
             } />
-            <Route path="/report" element={
+            <Route path="/reporting" element={
               <SECRoute>
                 <ReportPage />
               </SECRoute>
             } />
+            {/* Backward compat redirects */}
+            <Route path="/dashboard" element={<Navigate to="/plan-sell-info" replace />} />
+            <Route path="/report" element={<Navigate to="/reporting" replace />} />
             
             {/* Admin protected routes */}
             <Route path="/admin/dashboard" element={

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { FaSpinner, FaArrowLeft } from 'react-icons/fa'
 import { config } from '@/lib/config'
+import { utils, writeFileXLSX } from 'xlsx'
 
 // Real sales report interface from database
 interface SalesReport {
@@ -97,6 +98,7 @@ export function ReportPage() {
   const [error, setError] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [sortDesc, setSortDesc] = useState(true)
+  const [dayFilter, setDayFilter] = useState<'today' | 'yesterday' | 'all'>('today')
   
   // Fetch reports on component mount
   useEffect(() => {
@@ -109,7 +111,7 @@ export function ReportPage() {
       
       try {
         setLoading(true)
-        const response = await fetch(`${config.apiUrl}/reports/sec`, {
+const response = await fetch(`${config.apiUrl}/sec/reports`, {
           headers: {
             'Authorization': `Bearer ${auth.token}`
           }
@@ -138,6 +140,16 @@ export function ReportPage() {
   const dailyData = useMemo(() => processReportsToDaily(reports), [reports])
   
   const filtered = useMemo(() => {
+    const todayISO = new Date().toISOString().split('T')[0]
+    const yesterdayISO = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+    const byDay = (r: DayRow) => {
+      if (dayFilter === 'all') return true
+      if (dayFilter === 'today') return r.date === todayISO
+      if (dayFilter === 'yesterday') return r.date === yesterdayISO
+      return true
+    }
+
     const byQuery = (r: DayRow) => {
       const text = `${formatDayMonYear(r.date)} ${r.adld} ${r.combo}`.toLowerCase()
       return !q || text.includes(q.toLowerCase())
@@ -145,8 +157,8 @@ export function ReportPage() {
     const sorted = [...dailyData].sort((a, b) =>
       sortDesc ? +new Date(b.date) - +new Date(a.date) : +new Date(a.date) - +new Date(b.date)
     )
-    return sorted.filter(byQuery)
-  }, [dailyData, q, sortDesc])
+    return sorted.filter(byDay).filter(byQuery)
+  }, [dailyData, q, sortDesc, dayFilter])
 
   const totals = useMemo(() => {
     const totalUnits = filtered.reduce((s, r) => s + r.adld + r.combo + r.screenProtect + r.extendedWarranty, 0)
@@ -160,6 +172,20 @@ export function ReportPage() {
       net: totalEarnedFromReports - paid 
     }
   }, [filtered, reports])
+
+  const downloadExcel = () => {
+    const rows = filtered.map((r) => ({
+      Date: formatDayMonYear(r.date).replace(/\s\d{4}$/, ''),
+      ADLD: r.adld,
+      Combo: r.combo,
+      'Total Units Sold': r.adld + r.combo,
+      'Incentive Earned': calcIncentive(r),
+    }))
+    const ws = utils.json_to_sheet(rows)
+    const wb = utils.book_new()
+    utils.book_append_sheet(wb, ws, 'SEC Report')
+    writeFileXLSX(wb, 'sec-report.xlsx')
+  }
 
   if (loading) {
     return (
@@ -191,16 +217,21 @@ export function ReportPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card scroll-smooth">
       <button 
-        onClick={() => navigate('/')}
+        onClick={() => navigate('/plan-sell-info')}
         className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors"
       >
         <FaArrowLeft className="text-sm" />
-        <span className="text-sm font-medium">Back to Dashboard</span>
+        <span className="text-sm font-medium">Back to Plan Sell Info</span>
       </button>
-      <h2 className="text-lg font-semibold">My Sales Reports</h2>
-      <p className="text-sm text-gray-500">Total reports: {reports.length}</p>
+      <h2 className="text-lg font-semibold">Reporting</h2>
+      <p className="text-sm text-gray-500">Summary for your entries</p>
 
-      <div className="flex flex-col sm:flex-row gap-2 mt-3">
+      <div className="flex flex-col sm:flex-row gap-2 mt-3 items-center">
+        <div className="flex gap-2">
+          <button onClick={() => setDayFilter('today')} className={`px-3 py-2 rounded-2xl border ${dayFilter==='today' ? 'bg-blue-50 border-blue-300 text-blue-700' : ''}`}>Today</button>
+          <button onClick={() => setDayFilter('yesterday')} className={`px-3 py-2 rounded-2xl border ${dayFilter==='yesterday' ? 'bg-blue-50 border-blue-300 text-blue-700' : ''}`}>Yesterday</button>
+          <button onClick={() => setDayFilter('all')} className={`px-3 py-2 rounded-2xl border ${dayFilter==='all' ? 'bg-blue-50 border-blue-300 text-blue-700' : ''}`}>All</button>
+        </div>
         <input
           className="flex-1 px-3 py-2 border rounded-2xl"
           placeholder="Search (e.g., 15 Oct)"
@@ -208,6 +239,7 @@ export function ReportPage() {
           onChange={(e) => setQ(e.target.value)}
         />
         <button onClick={() => setSortDesc(s => !s)} className="button-gradient px-4 py-2">Sort by Date {sortDesc ? '↓' : '↑'}</button>
+        <button onClick={downloadExcel} className="button-gradient px-4 py-2">Download Report (Excel)</button>
       </div>
 
       <div className="mt-3 overflow-auto rounded-2xl border">
@@ -246,12 +278,12 @@ export function ReportPage() {
       </div>
 
       <div className="mt-6">
-        <div className="text-sm font-medium mb-2">Payout</div>
+        <div className="text-sm font-medium mb-2">Summary</div>
         <div className="grid grid-cols-1 gap-3">
           <GradientCard title="Total Units Sold" value={`${totals.totalUnits}`} />
-          <GradientCard title="Total Incentive Earned" value={`₹${totals.totalIncentive}`} />
-          <GradientCard title="Incentive Paid (Gift Voucher)" value={`₹${totals.paid}`} />
-          <GradientCard title="Net Available Incentive" value={`₹${totals.net}`} />
+          <GradientCard title="Total Earned Incentive" value={`₹${totals.totalIncentive}`} />
+          <GradientCard title="Paid Incentive (Gift Voucher)" value={`₹${totals.paid}`} />
+          <GradientCard title="Net Available Balance" value={`₹${totals.net}`} />
         </div>
       </div>
     </motion.div>

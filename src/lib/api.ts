@@ -14,7 +14,7 @@ export interface SamsungSKU {
 
 export interface Plan {
   id: string
-  planType: 'Screen_Protect_1_Yr' | 'ADLD_1_Yr' | 'Combo_2Yrs' | 'Extended_Warranty_1_Yr'
+  planType: 'Screen_Protect_1_Yr' | 'ADLD_1_Yr' | 'Combo_2Yrs' | 'Extended_Warranty_1_Yr' | 'Test_Plan'
   price: number
   samsungSKU?: {
     id: string
@@ -98,7 +98,8 @@ export function formatPlanType(planType: string): string {
     'Screen_Protect_1_Yr': 'Screen Protection (1 Year)',
     'ADLD_1_Yr': 'ADLD (1 Year)',
     'Combo_2Yrs': 'Combo Plan (2 Years)',
-    'Extended_Warranty_1_Yr': 'Extended Warranty (1 Year)'
+    'Extended_Warranty_1_Yr': 'Extended Warranty (1 Year)',
+    'Test_Plan': 'Test Plan'
   }
   
   return planTypeMap[planType] || planType

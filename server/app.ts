@@ -467,7 +467,8 @@ function calculateIncentive(planType: string): number {
     'ADLD_1_Yr': 150,                // Fixed ₹150
     'Combo_2Yrs': 250,               // Fixed ₹250
     'Extended_Warranty_1_Yr': 0,     // No incentive
-    'Screen_Protect_1_Yr': 0         // No incentive
+    'Screen_Protect_1_Yr': 0,        // No incentive
+    'Test_Plan': 1                   // Test plan ₹1 incentive
   }
   
   return incentiveRates[planType as keyof typeof incentiveRates] || 0
@@ -566,12 +567,27 @@ app.get('/api/samsung-skus/:id/plans', async (req, res) => {
         planType: 'asc'
       }
     })
+
+    // Ensure a global Test_Plan exists (no SKU) and include it in returned list
+    let testPlan = await prisma.plan.findFirst({
+      where: { planType: 'Test_Plan', samsungSKUId: null },
+      select: { id: true, planType: true, price: true }
+    })
+    if (!testPlan) {
+      testPlan = await prisma.plan.create({
+        data: { planType: 'Test_Plan' as any, price: 0 },
+        select: { id: true, planType: true, price: true }
+      })
+      console.log('🆕 Created global Test_Plan with price ₹0')
+    }
+
+    const result = [...plans, testPlan]
     
-    console.log(`✅ Found ${plans.length} plans for SKU ${id}`)
+    console.log(`✅ Found ${result.length} plans (including Test_Plan) for SKU ${id}`)
     res.json({
       success: true,
-      data: plans,
-      count: plans.length
+      data: result,
+      count: result.length
     })
   } catch (error) {
     console.error('❌ Error fetching plans:', error)
@@ -724,6 +740,16 @@ app.post('/api/reports/submit', async (req, res) => {
       })
     }
 
+    // Duplicate IMEI check
+    const trimmedImei = String(imei).trim()
+    const existing = await prisma.salesReport.findFirst({ where: { imei: trimmedImei } })
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: 'IMEI already exists — duplicate entry not allowed.'
+      })
+    }
+
     // Get the plan details from database to calculate incentive
     const plan = await prisma.plan.findUnique({
       where: { id: planId },
@@ -749,7 +775,7 @@ app.post('/api/reports/submit', async (req, res) => {
         storeId,
         samsungSKUId,
         planId,
-        imei: imei.trim(),
+        imei: trimmedImei,
         planPrice: plan.price,
         incentiveEarned,
         submittedAt: new Date()
@@ -762,7 +788,7 @@ app.post('/api/reports/submit', async (req, res) => {
       }
     })
     
-    console.log(`✅ Sales report saved to database! Report ID: ${salesReport.id}, SEC: ${decoded.userId}, IMEI: ${imei}, Incentive: ₹${incentiveEarned}`)
+    console.log(`✅ Sales report saved to database! Report ID: ${salesReport.id}, SEC: ${decoded.userId}, IMEI: ${trimmedImei}, Incentive: ₹${incentiveEarned}`)
     
     res.json({
       success: true,
@@ -776,13 +802,86 @@ app.post('/api/reports/submit', async (req, res) => {
       }
     })
 
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      return res.status(409).json({ success: false, message: 'IMEI already exists — duplicate entry not allowed.' })
+    }
     console.error('❌ Error submitting sales report:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to submit sales report',
       error: error instanceof Error ? error.message : 'Unknown error'
     })
+  }
+})
+
+// Alias as per SEC endpoint naming
+app.post('/api/sec/report', async (req, res) => {
+  try {
+    const { storeId, samsungSKUId, planId, imei } = req.body
+    const authHeader = req.headers.authorization
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({ success: false, message: 'Only SEC users can submit reports' })
+    }
+
+    if (!storeId || !samsungSKUId || !planId || !imei) {
+      return res.status(400).json({ success: false, message: 'Store, device, plan, and IMEI are required' })
+    }
+
+    const trimmedImei = String(imei).trim()
+    const existing = await prisma.salesReport.findFirst({ where: { imei: trimmedImei } })
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'IMEI already exists — duplicate entry not allowed.' })
+    }
+
+    const plan = await prisma.plan.findUnique({ where: { id: planId } })
+    if (!plan) return res.status(404).json({ success: false, message: 'Plan not found' })
+
+    const incentiveEarned = calculateIncentive(plan.planType)
+
+    const salesReport = await prisma.salesReport.create({
+      data: {
+        secUserId: decoded.userId,
+        storeId,
+        samsungSKUId,
+        planId,
+        imei: trimmedImei,
+        planPrice: plan.price,
+        incentiveEarned,
+        submittedAt: new Date()
+      }
+    })
+
+    return res.json({
+      success: true,
+      message: 'Sales report submitted and saved successfully',
+      data: {
+        reportId: salesReport.id,
+        incentiveEarned,
+        planType: plan.planType,
+        planPrice: plan.price,
+        submittedAt: salesReport.submittedAt
+      }
+    })
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      return res.status(409).json({ success: false, message: 'IMEI already exists — duplicate entry not allowed.' })
+    }
+    console.error('❌ Error submitting SEC report (alias):', error)
+    return res.status(500).json({ success: false, message: 'Failed to submit sales report' })
   }
 })
 
@@ -845,6 +944,39 @@ app.get('/api/reports/sec', async (req, res) => {
       message: 'Failed to fetch reports',
       error: error instanceof Error ? error.message : 'Unknown error'
     })
+  }
+})
+
+// Alias as per SEC endpoint naming
+app.get('/api/sec/reports', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({ success: false, message: 'Only SEC users can view their reports' })
+    }
+
+    const reports = await prisma.salesReport.findMany({
+      where: { secUserId: decoded.userId },
+      include: { store: true, samsungSKU: true, plan: true },
+      orderBy: { submittedAt: 'desc' }
+    })
+
+    return res.json({ success: true, data: reports, count: reports.length })
+  } catch (error) {
+    console.error('❌ Error fetching SEC reports (alias):', error)
+    return res.status(500).json({ success: false, message: 'Failed to fetch reports' })
   }
 })
 
