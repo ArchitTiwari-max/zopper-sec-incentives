@@ -48,7 +48,7 @@ model Plan {
 model SECUser {
   id           String        @id @default(auto()) @map("_id") @db.ObjectId
   phone        String        @unique
-  secId        String?       @unique // Optional - SEC provides their own ID
+  secId        String?       // Optional - SEC provides their own ID (removed @unique)
   name         String?
   storeId      String?
   store        Store?        @relation(fields: [storeId], references: [id])
