@@ -1,0 +1,20 @@
+{
+  "functions": {
+    "server/app.ts": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/server/app.ts"
+    }
+  ],
+  "env": {
+    "DATABASE_URL": "@database_url",
+    "JWT_SECRET": "@jwt_secret",
+    "COMIFY_API_KEY": "@comify_api_key",
+    "COMIFY_BASE_URL": "@comify_base_url",
+    "COMIFY_TEMPLATE_NAME": "@comify_template_name"
+  }
+}
