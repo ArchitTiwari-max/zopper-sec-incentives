@@ -81,12 +81,41 @@ app.post('/api/auth/send-otp', async (req, res) => {
       })
     }
 
-    // Generate OTP
+    // Check for rate limiting - prevent multiple OTP requests within 1 minute
+    const recentOTP = await prisma.oTPSession.findFirst({
+      where: {
+        phone,
+        createdAt: {
+          gt: new Date(Date.now() - 60 * 1000) // 1 minute ago
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+
+    if (recentOTP) {
+      return res.status(429).json({
+        success: false,
+        message: 'Please wait 1 minute before requesting another OTP'
+      })
+    }
+
+    // Delete all previous OTP records for this phone number
+    await prisma.oTPSession.deleteMany({
+      where: {
+        phone
+      }
+    })
+
+    console.log(`🗑️ Deleted all previous OTP records for ${phone}`)
+
+    // Generate new OTP
     const otp = generateOTP()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
-    // Save OTP to database
-    await prisma.oTPSession.create({
+    // Create new OTP session
+    const otpSession = await prisma.oTPSession.create({
       data: {
         phone,
         otp,
@@ -97,7 +126,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
     // Send OTP via WhatsApp
     await sendOTPViaWhatsApp(phone, otp)
 
-    console.log(`✅ OTP sent to ${phone}`)
+    console.log(`✅ New OTP sent to ${phone}, Session ID: ${otpSession.id}`)
     res.json({
       success: true,
       message: 'OTP sent to your WhatsApp number',
@@ -140,11 +169,36 @@ app.post('/api/auth/verify-otp', async (req, res) => {
     })
 
     if (!otpSession) {
+      // Check if OTP exists but is expired or used for better error message
+      const anyOTP = await prisma.oTPSession.findFirst({
+        where: { phone, otp },
+        orderBy: { createdAt: 'desc' }
+      })
+      
+      if (anyOTP) {
+        if (anyOTP.isUsed) {
+          console.log(`❌ OTP already used for ${phone}: ${otp}`)
+          return res.status(400).json({
+            success: false,
+            message: 'This OTP has already been used'
+          })
+        } else if (anyOTP.expiresAt < new Date()) {
+          console.log(`❌ OTP expired for ${phone}: ${otp}, expired at ${anyOTP.expiresAt}`)
+          return res.status(400).json({
+            success: false,
+            message: 'OTP has expired. Please request a new one.'
+          })
+        }
+      }
+      
+      console.log(`❌ Invalid OTP for ${phone}: ${otp}`)
       return res.status(400).json({
         success: false,
-        message: 'Invalid or expired OTP'
+        message: 'Invalid OTP. Please check and try again.'
       })
     }
+
+    console.log(`✅ Valid OTP found for ${phone}, Session ID: ${otpSession.id}`)
 
     // Mark OTP as used
     await prisma.oTPSession.update({
