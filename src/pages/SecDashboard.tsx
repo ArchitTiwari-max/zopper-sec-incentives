@@ -17,6 +17,7 @@ import {
   type SamsungSKU, 
   type Plan 
 } from '@/lib/api'
+import SearchableSelect from '@/components/SearchableSelect'
 import { config } from '@/lib/config'
 
 export function SecDashboard() {
@@ -235,71 +236,38 @@ export function SecDashboard() {
 
         <div>
           <label className="block text-sm font-medium mb-1">Store Name</label>
-          <div className="relative">
-            <FaStore className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            {loading.stores && <FaSpinner className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />}
-            <select 
-              value={store} 
-              onChange={(e) => setStore(e.target.value)} 
-              className="w-full pl-10 pr-10 py-3 border rounded-2xl"
-              disabled={loading.stores}
-            >
-              <option value="" disabled>
-                {loading.stores ? 'Loading stores...' : 'Select store'}
-              </option>
-              {stores.map((storeItem) => (
-                <option key={storeItem.id} value={storeItem.id}>
-                  {storeItem.storeName} - {storeItem.city}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SearchableSelect
+            value={store}
+            onChange={setStore}
+            options={stores.map(s => ({ value: s.id, label: `${s.storeName} - ${s.city}` }))}
+            placeholder={loading.stores ? 'Loading stores...' : 'Search or select store'}
+            disabled={loading.stores}
+            leftIcon={<FaStore />}
+          />
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">Device Name</label>
-          <div className="relative">
-            <FaMobileAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            {loading.skus && <FaSpinner className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />}
-            <select 
-              value={device} 
-              onChange={(e) => setDevice(e.target.value)} 
-              className="w-full pl-10 pr-10 py-3 border rounded-2xl"
-              disabled={loading.skus}
-            >
-              <option value="" disabled>
-                {loading.skus ? 'Loading devices...' : 'Select device'}
-              </option>
-              {samsungSKUs.map((sku) => (
-                <option key={sku.id} value={sku.id}>
-                  {sku.Category} - {sku.ModelName}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SearchableSelect
+            value={device}
+            onChange={setDevice}
+            options={samsungSKUs.map(sku => ({ value: sku.id, label: `${sku.Category} - ${sku.ModelName}` }))}
+            placeholder={loading.skus ? 'Loading devices...' : 'Search or select device'}
+            disabled={loading.skus}
+            leftIcon={<FaMobileAlt />}
+          />
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">Plan Type</label>
-          <div className="relative">
-            <FaListAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            {loading.plans && <FaSpinner className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />}
-            <select 
-              value={planType} 
-              onChange={(e) => setPlanType(e.target.value)} 
-              className="w-full pl-10 pr-10 py-3 border rounded-2xl"
-              disabled={loading.plans || !device}
-            >
-              <option value="" disabled>
-                {!device ? 'Select device first' : loading.plans ? 'Loading plans...' : 'Select plan'}
-              </option>
-              {availablePlans.map((plan) => (
-                <option key={plan.id} value={plan.planType}>
-                  {formatPlanType(plan.planType)} - {formatPrice(plan.price)}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SearchableSelect
+            value={planType}
+            onChange={setPlanType}
+            options={availablePlans.map(p => ({ value: p.planType, label: `${formatPlanType(p.planType)} - ${formatPrice(p.price)}` }))}
+            placeholder={!device ? 'Select device first' : loading.plans ? 'Loading plans...' : 'Search or select plan'}
+            disabled={loading.plans || !device}
+            leftIcon={<FaListAlt />}
+          />
         </div>
 
         <div>
