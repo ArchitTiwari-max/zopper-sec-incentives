@@ -28,7 +28,15 @@ export function AdminLoginPage() {
         return
       }
       const token = `admin-mock-jwt-${Date.now()}`
-      setAuth({ token, role: 'admin', phone: 'NA' })
+      setAuth({ 
+        token, 
+        role: 'admin', 
+        user: { 
+          adminId: 'admin-1', 
+          username: 'admin', 
+          name: 'Administrator' 
+        } 
+      })
       setLoading(false)
       navigate('/admin/dashboard', { replace: true })
     }, 500)
