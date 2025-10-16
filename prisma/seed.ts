@@ -7,16 +7,16 @@ async function main() {
   console.log('🌱 Starting database seed...')
 
   // Create initial admin user
-  const hashedPassword = await bcrypt.hash('admin123', 10)
+  const hashedPassword = await bcrypt.hash('sysad@12', 10)
   
   const admin = await prisma.adminUser.upsert({
     where: { username: 'admin' },
     update: {},
     create: {
-      username: 'admin',
+      username: 'system_admin',
       password: hashedPassword,
       name: 'System Administrator',
-      email: 'admin@zopperincentives.com',
+      email: 'vishal.shukla@zopper.com',
       isActive: true,
     },
   })
@@ -27,38 +27,6 @@ async function main() {
     name: admin.name 
   })
 
-  // Create some sample stores
-  const stores = await Promise.all([
-    prisma.store.upsert({
-      where: { id: 'STORE001' },
-      update: {},
-      create: {
-        id: 'STORE001',
-        storeName: 'Samsung Store Mumbai',
-        city: 'Mumbai',
-      },
-    }),
-    prisma.store.upsert({
-      where: { id: 'STORE002' },
-      update: {},
-      create: {
-        id: 'STORE002',
-        storeName: 'Samsung Store Delhi',
-        city: 'Delhi',
-      },
-    }),
-    prisma.store.upsert({
-      where: { id: 'STORE003' },
-      update: {},
-      create: {
-        id: 'STORE003',
-        storeName: 'Samsung Store Bangalore',
-        city: 'Bangalore',
-      },
-    }),
-  ])
-
-  console.log('✅ Created stores:', stores.map(s => s.storeName))
 
   console.log('🎉 Database seeding completed!')
 }
