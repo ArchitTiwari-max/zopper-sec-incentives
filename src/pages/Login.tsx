@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { FaWhatsapp, FaPhone } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
+import { config } from '@/lib/config'
 
 export function LoginPage() {
   const location = useLocation()
@@ -38,7 +39,7 @@ export function LoginPage() {
 
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:3001/api/auth/send-otp', {
+      const response = await fetch(`${config.apiUrl}/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone })
@@ -68,7 +69,7 @@ export function LoginPage() {
 
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:3001/api/auth/verify-otp', {
+      const response = await fetch(`${config.apiUrl}/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, otp })
@@ -105,7 +106,7 @@ export function LoginPage() {
 
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:3001/api/auth/admin-login', {
+      const response = await fetch(`${config.apiUrl}/auth/admin-login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { FaSpinner, FaArrowLeft } from 'react-icons/fa'
+import { config } from '@/lib/config'
 
 // Real sales report interface from database
 interface SalesReport {
@@ -108,7 +109,7 @@ export function ReportPage() {
       
       try {
         setLoading(true)
-        const response = await fetch('http://localhost:3001/api/reports/sec', {
+        const response = await fetch(`${config.apiUrl}/reports/sec`, {
           headers: {
             'Authorization': `Bearer ${auth.token}`
           }

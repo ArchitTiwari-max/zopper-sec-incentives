@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { FaTimes, FaUser, FaIdBadge, FaSpinner } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { SECAuthData } from '@/lib/auth'
+import { config } from '@/lib/config'
 
 interface ProfileModalProps {
   isOpen: boolean
@@ -30,7 +31,7 @@ export function ProfileModal({ isOpen, onClose, onProfileUpdated }: ProfileModal
 
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:3001/api/auth/update-profile', {
+      const response = await fetch(`${config.apiUrl}/auth/update-profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

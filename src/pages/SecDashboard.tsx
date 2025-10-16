@@ -17,6 +17,7 @@ import {
   type SamsungSKU, 
   type Plan 
 } from '@/lib/api'
+import { config } from '@/lib/config'
 
 export function SecDashboard() {
   const { auth, logout, user, updateUser } = useAuth()
@@ -146,7 +147,7 @@ export function SecDashboard() {
     setLoading(prev => ({ ...prev, submit: true }))
     
     try {
-      const response = await fetch('http://localhost:3001/api/reports/submit', {
+      const response = await fetch(`${config.apiUrl}/reports/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
