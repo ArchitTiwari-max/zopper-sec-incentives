@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
-import { FaSpinner } from 'react-icons/fa'
+import { useNavigate } from 'react-router-dom'
+import { FaSpinner, FaArrowLeft } from 'react-icons/fa'
 
 // Real sales report interface from database
 interface SalesReport {
@@ -89,6 +90,7 @@ const calcIncentive = (r: DayRow) => r.adld * ADLD_RATE + r.combo * COMBO_RATE
 
 export function ReportPage() {
   const { auth } = useAuth()
+  const navigate = useNavigate()
   const [reports, setReports] = useState<SalesReport[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -187,6 +189,13 @@ export function ReportPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card scroll-smooth">
+      <button 
+        onClick={() => navigate('/')}
+        className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors"
+      >
+        <FaArrowLeft className="text-sm" />
+        <span className="text-sm font-medium">Back to Dashboard</span>
+      </button>
       <h2 className="text-lg font-semibold">My Sales Reports</h2>
       <p className="text-sm text-gray-500">Total reports: {reports.length}</p>
 
