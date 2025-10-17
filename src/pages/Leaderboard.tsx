@@ -235,10 +235,10 @@ export function Leaderboard() {
             className="mb-4 sm:mb-6 bg-white/10 backdrop-blur-lg rounded-2xl p-3 sm:p-4 text-white border border-white/20"
           >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="text-center sm:text-left">
+              <div className="text-center sm:text-left flex-1">
                 <div className="text-xs sm:text-sm opacity-80">Your Best Store</div>
-                <div className="font-bold text-base sm:text-lg truncate">{userPosition.storeName}</div>
-                <div className="text-xs sm:text-sm opacity-80 truncate">{userPosition.city}</div>
+                <div className="font-bold text-base sm:text-lg break-words leading-tight" style={{wordBreak: 'break-word'}}>{userPosition.storeName}</div>
+                <div className="text-xs sm:text-sm opacity-80 break-words" style={{wordBreak: 'break-word'}}>{userPosition.city}</div>
               </div>
               <div className="text-center sm:text-right">
                 <div className="flex items-center justify-center sm:justify-end gap-2 mb-2">
@@ -330,10 +330,10 @@ export function Leaderboard() {
                         )}
                       </div>
                     </td>
-                    <td className="p-1 sm:p-3">
+                    <td className="p-1 sm:p-3 min-w-[120px] sm:min-w-[180px]">
                       <div>
-                        <div className="font-semibold text-gray-800 text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none" title={entry.storeName}>{entry.storeName}</div>
-                        <div className="text-xs text-gray-500 truncate max-w-[100px] sm:max-w-none" title={entry.city}>{entry.city}</div>
+                        <div className="font-semibold text-gray-800 text-xs sm:text-sm break-words leading-tight" style={{wordBreak: 'break-word'}}>{entry.storeName}</div>
+                        <div className="text-xs text-gray-500 break-words" style={{wordBreak: 'break-word'}}>{entry.city}</div>
                       </div>
                     </td>
                     <td className="p-1 sm:p-3 text-right font-mono text-xs sm:text-sm">₹{entry.adldIncentive}</td>

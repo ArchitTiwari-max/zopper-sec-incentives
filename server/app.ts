@@ -1373,9 +1373,25 @@ app.get('/api/leaderboard', async (req, res) => {
       }
     })
 
-    // Sort by total incentive descending and add ranks
+    // Sort with multi-level criteria: Total (desc) -> Combo (desc) -> Store Name (asc)
     const sortedStats = detailedStats
-      .sort((a, b) => b.totalIncentive - a.totalIncentive)
+      .sort((a, b) => {
+        // Primary sort: Total incentive (descending - higher is better)
+        if (b.totalIncentive !== a.totalIncentive) {
+          return b.totalIncentive - a.totalIncentive
+        }
+        
+        // Secondary sort: Combo incentive (descending - higher is better)
+        if (b.comboIncentive !== a.comboIncentive) {
+          return b.comboIncentive - a.comboIncentive
+        }
+        
+        // Tertiary sort: Store name (ascending - alphabetical)
+        return a.storeName.localeCompare(b.storeName, 'en', { 
+          numeric: true, 
+          sensitivity: 'base' 
+        })
+      })
       .map((stat, index) => ({
         ...stat,
         rank: index + 1

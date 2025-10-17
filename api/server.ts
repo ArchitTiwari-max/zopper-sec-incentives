@@ -4,6 +4,8 @@ import cookieParser from 'cookie-parser'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { PrismaClient } from '@prisma/client'
+import multer from 'multer'
+import { utils, read } from 'xlsx'
 
 const app = express()
 const prisma = new PrismaClient()
@@ -15,6 +17,22 @@ if (!JWT_SECRET) {
   console.error('❌ CRITICAL: JWT_SECRET environment variable is not set!')
   process.exit(1)
 }
+
+// Multer configuration for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    // Accept only Excel files
+    if (file.mimetype.includes('spreadsheet') || file.originalname.endsWith('.xlsx') || file.originalname.endsWith('.xls')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Only Excel files are allowed!'))
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+})
 
 // Middleware
 app.use(cors({ credentials: true, origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'] }))
@@ -1160,6 +1178,273 @@ app.delete('/api/reports/:id', async (req, res) => {
   }
 })
 
+// GET SEC voucher reports endpoint (only reports with voucher codes)
+app.get('/api/vouchers/sec', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only SEC users can view their voucher reports'
+      })
+    }
+
+    // Fetch only reports with voucher codes for this SEC user
+    const voucherReports = await prisma.salesReport.findMany({
+      where: {
+        secUserId: decoded.userId,
+        voucherCode: {
+          not: null
+        }
+      },
+      include: {
+        store: true,
+        samsungSKU: true,
+        plan: true
+      },
+      orderBy: {
+        submittedAt: 'desc'
+      }
+    })
+
+    console.log(`✅ Fetched ${voucherReports.length} voucher reports for SEC ${decoded.userId}`)
+    res.json({
+      success: true,
+      data: voucherReports,
+      count: voucherReports.length
+    })
+
+  } catch (error) {
+    console.error('❌ Error fetching SEC voucher reports:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch voucher reports',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// Process voucher Excel file endpoint
+app.post('/api/admin/process-voucher-excel', upload.single('excel'), async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admin users can process voucher files'
+      })
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Excel file is required'
+      })
+    }
+
+    console.log(`📊 Processing voucher Excel file: ${req.file.originalname}`)
+
+    // Read Excel file
+    const workbook = read(req.file.buffer, { type: 'buffer' })
+    const sheetName = workbook.SheetNames[0]
+    const worksheet = workbook.Sheets[sheetName]
+    const data = utils.sheet_to_json(worksheet)
+
+    console.log(`📋 Found ${data.length} rows in Excel file`)
+
+    const processResults = {
+      total: data.length,
+      processed: 0,
+      updated: 0,
+      errors: 0,
+      skipped: 0,
+      logs: [] as any[],
+      summary: {
+        updatedReports: [] as any[],
+        errorReports: [] as any[],
+        skippedReports: [] as any[]
+      }
+    }
+
+    // Process each row
+    for (let i = 0; i < data.length; i++) {
+      const row: any = data[i]
+      processResults.processed++
+      
+      try {
+        // Get required fields from Excel row
+        const reportId = row['Report ID']?.toString()?.trim()
+        const paymentStatus = row['Payment Status']?.toString()?.trim()
+        const voucherCode = row['Voucher Code']?.toString()?.trim()
+
+        // Log current row processing
+        const logEntry = {
+          row: i + 1,
+          reportId,
+          paymentStatus,
+          voucherCode,
+          action: '',
+          success: false,
+          message: ''
+        }
+
+        // Validation checks
+        if (!reportId) {
+          logEntry.action = 'SKIP'
+          logEntry.message = 'Missing Report ID'
+          processResults.logs.push(logEntry)
+          processResults.skipped++
+          processResults.summary.skippedReports.push(logEntry)
+          continue
+        }
+
+        if (paymentStatus !== 'Pending') {
+          logEntry.action = 'SKIP'
+          logEntry.message = 'Payment status is not Pending'
+          processResults.logs.push(logEntry)
+          processResults.skipped++
+          processResults.summary.skippedReports.push(logEntry)
+          continue
+        }
+
+        if (!voucherCode || voucherCode === '') {
+          logEntry.action = 'SKIP'
+          logEntry.message = 'No voucher code provided'
+          processResults.logs.push(logEntry)
+          processResults.skipped++
+          processResults.summary.skippedReports.push(logEntry)
+          continue
+        }
+
+        // Find the sales report in database
+        const existingReport = await prisma.salesReport.findUnique({
+          where: { id: reportId },
+          include: {
+            secUser: { select: { secId: true, phone: true } },
+            store: { select: { storeName: true } },
+            samsungSKU: { select: { ModelName: true } }
+          }
+        })
+
+        if (!existingReport) {
+          logEntry.action = 'ERROR'
+          logEntry.message = 'Sales report not found in database'
+          processResults.logs.push(logEntry)
+          processResults.errors++
+          processResults.summary.errorReports.push(logEntry)
+          continue
+        }
+
+        if (existingReport.isPaid) {
+          logEntry.action = 'SKIP'
+          logEntry.message = 'Report is already marked as paid'
+          processResults.logs.push(logEntry)
+          processResults.skipped++
+          processResults.summary.skippedReports.push(logEntry)
+          continue
+        }
+
+        // Update the sales report
+        const updatedReport = await prisma.salesReport.update({
+          where: { id: reportId },
+          data: {
+            voucherCode: voucherCode,
+            isPaid: true,
+            paidAt: new Date()
+          }
+        })
+
+        logEntry.action = 'UPDATE'
+        logEntry.success = true
+        logEntry.message = `Updated with voucher code ${voucherCode}`
+        processResults.logs.push(logEntry)
+        processResults.updated++
+        processResults.summary.updatedReports.push({
+          ...logEntry,
+          secUser: existingReport.secUser,
+          store: existingReport.store,
+          device: existingReport.samsungSKU,
+          incentiveEarned: existingReport.incentiveEarned
+        })
+
+        console.log(`✅ Updated report ${reportId} with voucher ${voucherCode}`)
+
+      } catch (error) {
+        console.error(`❌ Error processing row ${i + 1}:`, error)
+        const logEntry = {
+          row: i + 1,
+          reportId: row['Report ID'] || 'Unknown',
+          action: 'ERROR',
+          success: false,
+          message: error instanceof Error ? error.message : 'Unknown error'
+        }
+        processResults.logs.push(logEntry)
+        processResults.errors++
+        processResults.summary.errorReports.push(logEntry)
+      }
+    }
+
+    console.log(`📊 Voucher processing completed:`, {
+      total: processResults.total,
+      updated: processResults.updated,
+      errors: processResults.errors,
+      skipped: processResults.skipped
+    })
+
+    res.json({
+      success: true,
+      message: 'Voucher Excel file processed successfully',
+      data: processResults
+    })
+
+  } catch (error) {
+    console.error('❌ Error processing voucher Excel:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process voucher Excel file',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
 // GET leaderboard data
 app.get('/api/leaderboard', async (req, res) => {
   try {
@@ -1207,8 +1492,8 @@ app.get('/api/leaderboard', async (req, res) => {
       distinct: ['storeId']
     })
 
-    // Aggregate sales data by store (for all stores) - excluding Test_Plan
-    const storeStats = await prisma.salesReport.groupBy({
+    // Optimized single query to get all leaderboard data - excluding Test_Plan
+    const leaderboardRawData = await prisma.salesReport.groupBy({
       by: ['storeId'],
       where: {
         plan: {
@@ -1225,57 +1510,90 @@ app.get('/api/leaderboard', async (req, res) => {
       }
     })
 
-    // Get detailed breakdown by plan type for each store
-    const detailedStats = await Promise.all(
-      storeStats.map(async (storeStat) => {
-        const adldIncentive = await prisma.salesReport.aggregate({
-          where: {
-            storeId: storeStat.storeId,
-            plan: {
-              planType: 'ADLD_1_Yr'
-            }
-          },
-          _sum: {
-            incentiveEarned: true
-          }
-        })
-
-        const comboIncentive = await prisma.salesReport.aggregate({
-          where: {
-            storeId: storeStat.storeId,
-            plan: {
-              planType: 'Combo_2Yrs'
-            }
-          },
-          _sum: {
-            incentiveEarned: true
-          }
-        })
-
-
-        const store = await prisma.store.findUnique({
-          where: { id: storeStat.storeId },
-          select: {
-            storeName: true,
-            city: true
-          }
-        })
-
-        return {
-          storeId: storeStat.storeId,
-          storeName: store?.storeName || 'Unknown Store',
-          city: store?.city || 'Unknown City',
-          totalIncentive: storeStat._sum.incentiveEarned || 0,
-          adldIncentive: adldIncentive._sum.incentiveEarned || 0,
-          comboIncentive: comboIncentive._sum.incentiveEarned || 0,
-          totalSales: storeStat._count.id
+    // Get store details in a single query
+    const storeIds = leaderboardRawData.map(stat => stat.storeId)
+    const stores = await prisma.store.findMany({
+      where: {
+        id: {
+          in: storeIds
         }
-      })
-    )
+      },
+      select: {
+        id: true,
+        storeName: true,
+        city: true
+      }
+    })
 
-    // Sort by total incentive descending and add ranks
+    // Get plan-specific incentives in two efficient queries
+    const adldIncentives = await prisma.salesReport.groupBy({
+      by: ['storeId'],
+      where: {
+        storeId: {
+          in: storeIds
+        },
+        plan: {
+          planType: 'ADLD_1_Yr'
+        }
+      },
+      _sum: {
+        incentiveEarned: true
+      }
+    })
+
+    const comboIncentives = await prisma.salesReport.groupBy({
+      by: ['storeId'],
+      where: {
+        storeId: {
+          in: storeIds
+        },
+        plan: {
+          planType: 'Combo_2Yrs'
+        }
+      },
+      _sum: {
+        incentiveEarned: true
+      }
+    })
+
+    // Create lookup maps for efficient data combination
+    const storeMap = new Map(stores.map(store => [store.id, store]))
+    const adldMap = new Map(adldIncentives.map(item => [item.storeId, item._sum.incentiveEarned || 0]))
+    const comboMap = new Map(comboIncentives.map(item => [item.storeId, item._sum.incentiveEarned || 0]))
+
+    // Combine all data efficiently
+    const detailedStats = leaderboardRawData.map(storeStat => {
+      const store = storeMap.get(storeStat.storeId)
+      return {
+        storeId: storeStat.storeId,
+        storeName: store?.storeName || 'Unknown Store',
+        city: store?.city || 'Unknown City',
+        totalIncentive: storeStat._sum.incentiveEarned || 0,
+        adldIncentive: adldMap.get(storeStat.storeId) || 0,
+        comboIncentive: comboMap.get(storeStat.storeId) || 0,
+        totalSales: storeStat._count.id
+      }
+    })
+
+    // Sort with multi-level criteria: Total (desc) -> Combo (desc) -> Store Name (asc)
     const sortedStats = detailedStats
-      .sort((a, b) => b.totalIncentive - a.totalIncentive)
+      .sort((a, b) => {
+        // Primary sort: Total incentive (descending - higher is better)
+        if (b.totalIncentive !== a.totalIncentive) {
+          return b.totalIncentive - a.totalIncentive
+        }
+        
+        // Secondary sort: Combo incentive (descending - higher is better)
+        if (b.comboIncentive !== a.comboIncentive) {
+          return b.comboIncentive - a.comboIncentive
+        }
+        
+        // Tertiary sort: Store name (ascending - alphabetical)
+        return a.storeName.localeCompare(b.storeName, 'en', { 
+          numeric: true, 
+          sensitivity: 'base' 
+        })
+      })
       .map((stat, index) => ({
         ...stat,
         rank: index + 1
