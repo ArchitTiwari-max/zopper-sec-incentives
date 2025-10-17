@@ -409,6 +409,14 @@ const response = await fetch(`${config.apiUrl}/sec/report`, {
       </form>
 
       <button onClick={() => navigate('/reporting')} className="button-gradient w-full py-3 mt-3">View Incentive Passbook</button>
+      
+      <button 
+        onClick={() => navigate('/leaderboard')} 
+        className="w-full py-3 mt-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-2xl font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
+      >
+        <span className="text-xl">🏆</span>
+        View Leaderboard
+      </button>
 
       {showToast && (
         <div className="fixed inset-x-0 bottom-6 flex justify-center">

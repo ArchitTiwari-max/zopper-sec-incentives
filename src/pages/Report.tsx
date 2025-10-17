@@ -14,6 +14,7 @@ interface SalesReport {
   incentiveEarned: number
   isPaid: boolean
   submittedAt: string
+  voucherCode?: string
   store: {
     storeName: string
     city: string
@@ -25,6 +26,20 @@ interface SalesReport {
   plan: {
     planType: string
     price: number
+  }
+}
+
+// Voucher report interface (reports with voucher codes)
+interface VoucherReport {
+  id: string
+  incentiveEarned: number
+  submittedAt: string
+  voucherCode: string
+  samsungSKU: {
+    ModelName: string
+  }
+  plan: {
+    planType: string
   }
 }
 
@@ -107,13 +122,16 @@ export function ReportPage() {
   const { auth } = useAuth()
   const navigate = useNavigate()
   const [reports, setReports] = useState<SalesReport[]>([])
+  const [voucherReports, setVoucherReports] = useState<VoucherReport[]>([])
   const [loading, setLoading] = useState(true)
+  const [voucherLoading, setVoucherLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [voucherError, setVoucherError] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [sortDesc, setSortDesc] = useState(true)
   const [dayFilter, setDayFilter] = useState<'today' | 'yesterday' | 'all'>('today')
   
-  // Fetch reports on component mount
+  // Fetch reports and vouchers on component mount
   useEffect(() => {
     const fetchReports = async () => {
       if (!auth?.token) {
@@ -124,7 +142,7 @@ export function ReportPage() {
       
       try {
         setLoading(true)
-const response = await fetch(`${config.apiUrl}/sec/reports`, {
+        const response = await fetch(`${config.apiUrl}/sec/reports`, {
           headers: {
             'Authorization': `Bearer ${auth.token}`
           }
@@ -145,8 +163,40 @@ const response = await fetch(`${config.apiUrl}/sec/reports`, {
         setLoading(false)
       }
     }
+
+    const fetchVoucherReports = async () => {
+      if (!auth?.token) {
+        setVoucherError('Authentication required')
+        setVoucherLoading(false)
+        return
+      }
+      
+      try {
+        setVoucherLoading(true)
+        const response = await fetch(`${config.apiUrl}/vouchers/sec`, {
+          headers: {
+            'Authorization': `Bearer ${auth.token}`
+          }
+        })
+        
+        const data = await response.json()
+        
+        if (data.success) {
+          setVoucherReports(data.data)
+          setVoucherError(null)
+        } else {
+          setVoucherError(data.message || 'Failed to fetch voucher reports')
+        }
+      } catch (error) {
+        console.error('Error fetching voucher reports:', error)
+        setVoucherError('Network error. Please try again.')
+      } finally {
+        setVoucherLoading(false)
+      }
+    }
     
     fetchReports()
+    fetchVoucherReports()
   }, [auth?.token])
 
   // Process reports into daily summary
@@ -286,6 +336,58 @@ const response = await fetch(`${config.apiUrl}/sec/reports`, {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Incentive Voucher Section */}
+      <div className="mt-8">
+        <div className="text-lg font-semibold mb-2">💳 Incentive Voucher Codes</div>
+        <p className="text-sm text-gray-500 mb-4">Your redeemed incentive vouchers</p>
+        
+        {voucherLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <FaSpinner className="animate-spin text-lg text-blue-600" />
+            <span className="ml-2 text-gray-600">Loading vouchers...</span>
+          </div>
+        ) : voucherError ? (
+          <div className="text-center py-8 bg-red-50 rounded-2xl">
+            <div className="text-red-600 text-sm">❌ {voucherError}</div>
+          </div>
+        ) : voucherReports.length === 0 ? (
+          <div className="text-center py-8 bg-gray-50 rounded-2xl">
+            <div className="text-4xl mb-2">🎫</div>
+            <div className="text-gray-600 text-sm">No voucher codes available yet</div>
+            <div className="text-gray-500 text-xs mt-1">Voucher codes will appear here once your incentives are processed</div>
+          </div>
+        ) : (
+          <div className="overflow-auto rounded-2xl border">
+            <table className="w-full text-xs sm:text-sm">
+              <thead className="bg-gray-50">
+                <tr className="text-left">
+                  <th className="p-2 sm:p-3">Date</th>
+                  <th className="p-2 sm:p-3">Device Name</th>
+                  <th className="p-2 sm:p-3">Plan Name</th>
+                  <th className="p-2 sm:p-3">Incentive Earned</th>
+                  <th className="p-2 sm:p-3">Voucher Code</th>
+                </tr>
+              </thead>
+              <tbody>
+                {voucherReports.map((voucher, i) => (
+                  <tr key={voucher.id} className="border-t hover:bg-gray-50">
+                    <td className="p-2 sm:p-3 whitespace-nowrap">{formatDDMMYYYY(voucher.submittedAt)}</td>
+                    <td className="p-2 sm:p-3">{voucher.samsungSKU.ModelName}</td>
+                    <td className="p-2 sm:p-3">{voucher.plan.planType.replace('_', ' ')}</td>
+                    <td className="p-2 sm:p-3 font-semibold text-green-600">₹{voucher.incentiveEarned}</td>
+                    <td className="p-2 sm:p-3">
+                      <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-mono text-xs">
+                        {voucher.voucherCode}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="mt-6">

@@ -14,6 +14,7 @@ interface SalesReport {
   incentiveEarned: number
   isPaid: boolean
   submittedAt: string
+  voucherCode?: string
   secUser: {
     secId: string | null
     phone: string
@@ -166,6 +167,7 @@ export function AdminDashboard() {
   const exportExcel = () => {
     // Transform data to show readable names instead of IDs
     const exportData = filtered.map(report => ({
+      'Report ID': report.id,
       'SEC ID': report.secUser.secId || 'Not Set',
       'SEC Phone': report.secUser.phone,
       'SEC Name': report.secUser.name || 'Not Set',
@@ -179,7 +181,8 @@ export function AdminDashboard() {
       'Incentive Earned': `₹${report.incentiveEarned}`,
       'Payment Status': report.isPaid ? 'Paid' : 'Pending',
       'Submitted Date': formatDateWithTime(report.submittedAt).date,
-      'Submitted Time': formatDateWithTime(report.submittedAt).time
+      'Submitted Time': formatDateWithTime(report.submittedAt).time,
+      'Voucher Code': report.voucherCode || ''
     }))
     
     const ws = utils.json_to_sheet(exportData)
@@ -403,6 +406,12 @@ export function AdminDashboard() {
           <option value="unpaid">Unpaid</option>
         </select>
         <button onClick={exportExcel} className="button-gradient px-4 py-2">Export to Excel</button>
+        <button 
+          onClick={() => navigate('/admin/voucher-processor')} 
+          className="bg-green-600 text-white px-4 py-2 rounded-2xl hover:bg-green-700 transition-colors"
+        >
+          Process Voucher Excel
+        </button>
         
         {!showMultiSelect ? (
           <button 
@@ -436,12 +445,18 @@ export function AdminDashboard() {
             <tr className="text-left">
               {showMultiSelect && (
                 <th className="p-1 lg:p-2 w-[5%] text-xs lg:text-sm">
-                  <input 
-                    type="checkbox" 
-                    onChange={handleSelectAll}
-                    checked={selectedReports.size > 0 && selectedReports.size === pageData.filter(r => !r.isPaid).length}
-                    className="rounded"
-                  />
+                  <div className="flex items-center gap-1">
+                    <input 
+                      type="checkbox" 
+                      id="select-all-checkbox"
+                      onChange={handleSelectAll}
+                      checked={selectedReports.size > 0 && selectedReports.size === pageData.filter(r => !r.isPaid).length}
+                      className="rounded"
+                    />
+                    <label htmlFor="select-all-checkbox" className="text-xs cursor-pointer select-none">
+                      Select All
+                    </label>
+                  </div>
                 </th>
               )}
               <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[10%]' : 'w-[11%]'}`}>Timestamp</th>

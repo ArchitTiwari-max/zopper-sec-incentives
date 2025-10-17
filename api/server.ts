@@ -1160,6 +1160,163 @@ app.delete('/api/reports/:id', async (req, res) => {
   }
 })
 
+// GET leaderboard data
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only SEC users can view leaderboard'
+      })
+    }
+
+    // Find which stores the current SEC user has made sales for
+    const userSalesReports = await prisma.salesReport.findMany({
+      where: {
+        secUserId: decoded.userId
+      },
+      select: {
+        storeId: true,
+        store: {
+          select: {
+            storeName: true,
+            city: true
+          }
+        }
+      },
+      distinct: ['storeId']
+    })
+
+    // Aggregate sales data by store (for all stores) - excluding Test_Plan
+    const storeStats = await prisma.salesReport.groupBy({
+      by: ['storeId'],
+      where: {
+        plan: {
+          planType: {
+            not: 'Test_Plan'
+          }
+        }
+      },
+      _sum: {
+        incentiveEarned: true
+      },
+      _count: {
+        id: true
+      }
+    })
+
+    // Get detailed breakdown by plan type for each store
+    const detailedStats = await Promise.all(
+      storeStats.map(async (storeStat) => {
+        const adldIncentive = await prisma.salesReport.aggregate({
+          where: {
+            storeId: storeStat.storeId,
+            plan: {
+              planType: 'ADLD_1_Yr'
+            }
+          },
+          _sum: {
+            incentiveEarned: true
+          }
+        })
+
+        const comboIncentive = await prisma.salesReport.aggregate({
+          where: {
+            storeId: storeStat.storeId,
+            plan: {
+              planType: 'Combo_2Yrs'
+            }
+          },
+          _sum: {
+            incentiveEarned: true
+          }
+        })
+
+
+        const store = await prisma.store.findUnique({
+          where: { id: storeStat.storeId },
+          select: {
+            storeName: true,
+            city: true
+          }
+        })
+
+        return {
+          storeId: storeStat.storeId,
+          storeName: store?.storeName || 'Unknown Store',
+          city: store?.city || 'Unknown City',
+          totalIncentive: storeStat._sum.incentiveEarned || 0,
+          adldIncentive: adldIncentive._sum.incentiveEarned || 0,
+          comboIncentive: comboIncentive._sum.incentiveEarned || 0,
+          totalSales: storeStat._count.id
+        }
+      })
+    )
+
+    // Sort by total incentive descending and add ranks
+    const sortedStats = detailedStats
+      .sort((a, b) => b.totalIncentive - a.totalIncentive)
+      .map((stat, index) => ({
+        ...stat,
+        rank: index + 1
+      }))
+
+    // Find current user's store position based on their sales reports
+    // If user has sales for multiple stores, we'll show the best performing one
+    let userPosition = null
+    if (userSalesReports.length > 0) {
+      // Find the best performing store where this user has made sales
+      const userStorePositions = userSalesReports.map(userStore => 
+        sortedStats.find(stat => stat.storeId === userStore.storeId)
+      ).filter(Boolean)
+      
+      if (userStorePositions.length > 0) {
+        // Get the store with the best rank (lowest rank number)
+        userPosition = userStorePositions.reduce((best, current) => 
+          (current && (!best || current.rank < best.rank)) ? current : best
+        )
+      }
+    }
+
+    console.log(`✅ Leaderboard fetched with ${sortedStats.length} stores`)
+    res.json({
+      success: true,
+      data: {
+        leaderboard: sortedStats,
+        userPosition: userPosition || null
+      }
+    })
+
+  } catch (error) {
+    console.error('❌ Error fetching leaderboard:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch leaderboard',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({

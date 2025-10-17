@@ -94,6 +94,7 @@ model SalesReport {
   imei          String
   planPrice     Int
   incentiveEarned Int      // Calculated incentive amount
+  voucherCode   String?    // Optional voucher code for incentive redemption
   isPaid        Boolean    @default(false)
   paidAt        DateTime?
   submittedAt   DateTime   @default(now())
