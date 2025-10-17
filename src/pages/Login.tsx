@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { FaWhatsapp, FaPhone } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { config } from '@/lib/config'
+import { ZopperLogo } from '@/components/ZopperLogo'
 
 export function LoginPage() {
   const { login, isAuthenticated, isAdmin, isSEC } = useAuth()
@@ -95,11 +96,6 @@ export function LoginPage() {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-center flex-1">Spot Incentive Portal</h1>
-        {otpSent && (
-          <button onClick={sendOtp} disabled={loading} className="ml-2 text-sm text-blue-600 underline disabled:opacity-60">
-            Resend WhatsApp OTP
-          </button>
-        )}
       </div>
 
       <div className="mt-6 space-y-3">
@@ -133,11 +129,20 @@ export function LoginPage() {
               disabled={loading}
             />
             <button onClick={verifyOtp} disabled={loading} className="button-gradient w-full py-3 disabled:opacity-60">{loading ? 'Verifying…' : 'Verify & Continue'}</button>
+            <div className="text-center">
+              <button onClick={sendOtp} disabled={loading} className="text-sm text-blue-600 underline disabled:opacity-60">
+                Resend WhatsApp OTP
+              </button>
+            </div>
           </div>
         )}
 
         <div className="text-center text-sm text-gray-500">
           Admin? <a className="underline" href="/admin-login">Go to Admin Login</a>
+        </div>
+        <div className="mt-3 flex items-center justify-center gap-1 text-xs text-gray-500 whitespace-nowrap">
+          <span>Powered by</span>
+          <ZopperLogo className="align-middle" />
         </div>
       </div>
 

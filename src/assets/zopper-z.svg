@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .top{fill:#00B9E4}
+      .bottom{fill:#0B4F9F}
+      .orange{fill:#F37021}
+      .stroke-orange{stroke:#F37021;stroke-width:12;stroke-linecap:round}
+    </style>
+  </defs>
+  <!-- Top cyan bar -->
+  <rect x="8" y="12" width="38" height="10" rx="5" class="top"/>
+  <!-- Top orange cap -->
+  <circle cx="52" cy="17" r="6" class="orange"/>
+  <!-- Bottom dark blue bar -->
+  <rect x="18" y="42" width="38" height="10" rx="5" class="bottom"/>
+  <!-- Bottom orange cap -->
+  <circle cx="18" cy="47" r="6" class="orange"/>
+  <!-- Orange diagonal of the Z -->
+  <line x1="48" y1="22" x2="22" y2="48" class="stroke-orange"/>
+</svg>
