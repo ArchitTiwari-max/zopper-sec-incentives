@@ -464,8 +464,8 @@ app.put('/api/auth/update-profile', async (req, res) => {
 // Helper function to calculate incentive with fixed rates
 function calculateIncentive(planType: string): number {
   const incentiveRates = {
-    'ADLD_1_Yr': 150,                // Fixed ₹150
-    'Combo_2Yrs': 250,               // Fixed ₹250
+    'ADLD_1_Yr': 100,                // Fixed ₹100
+    'Combo_2Yrs': 300,               // Fixed ₹300
     'Extended_Warranty_1_Yr': 0,     // No incentive
     'Screen_Protect_1_Yr': 0,        // No incentive
     'Test_Plan': 1                   // Test plan ₹1 incentive
