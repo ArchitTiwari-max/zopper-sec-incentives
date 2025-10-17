@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import CameraScanner from '@/components/CameraScanner'
 import { ProfileModal } from '@/components/ProfileModal'
 import { motion } from 'framer-motion'
@@ -41,7 +41,6 @@ export function SecDashboard() {
     return `${dd}-${mm}-${yyyy}`
   }
   const todayLabel = formatDMYFromISTMs(nowIstMs)
-  const yesterdayLabel = formatDMYFromISTMs(nowIstMs - DAY_MS)
   const [dateOfSale, setDateOfSale] = useState<string>(todayLabel)
   const [showToast, setShowToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [scanning, setScanning] = useState(false)
@@ -63,12 +62,12 @@ export function SecDashboard() {
     const t = setTimeout(() => setDateTick((v) => v + 1), ms)
     return () => clearTimeout(t)
   }, [dateTick])
-  // If current selection is no longer one of the two options, reset to today
+  // Always lock date to today and refresh at midnight
   useEffect(() => {
-    if (dateOfSale !== todayLabel && dateOfSale !== yesterdayLabel) {
+    if (dateOfSale !== todayLabel) {
       setDateOfSale(todayLabel)
     }
-  }, [dateTick, todayLabel, yesterdayLabel])
+  }, [dateTick, todayLabel, dateOfSale])
   
   const handleLogout = () => {
     logout()
@@ -119,6 +118,60 @@ export function SecDashboard() {
     }
     loadSKUs()
   }, [])
+
+  // Custom ordering for Device Name dropdown
+  const DEVICE_PRIORITY_LIST: Array<[string, string]> = [
+    ['Luxury Fold', 'Z Fold 6'],
+    ['Luxury Fold', 'Z Fold 7'],
+    ['Luxury Flip', 'Z Flip 6'],
+    ['Luxury Flip', 'Z Flip 7'],
+    ['Super Premium', 'S25'],
+    ['Super Premium', 'S25 +'],
+    ['Super Premium', 'S25 Ultra'],
+    ['Super Premium', 'S25 Edge'],
+    ['Super Premium', 'S24'],
+    ['Super Premium', 'S24 +'],
+    ['Super Premium', 'S24 Ultra'],
+    ['Premium', 'A55'],
+    ['Premium', 'A56'],
+    ['Premium', 'S25 FE'],
+    ['High', 'A26'],
+    ['High', 'A36'],
+    ['High', 'M56'],
+    ['Mid', 'A16'],
+    ['Mid', 'F16'],
+    ['Mid', 'F17'],
+    ['Mid', 'A17'],
+    ['Mass', 'F15'],
+    ['Mass', 'A06'],
+  ]
+  const CATEGORY_ORDER = ['Luxury Fold', 'Luxury Flip', 'Super Premium', 'Premium', 'High', 'Mid', 'Mass']
+  const priorityKey = (sku: SamsungSKU) => `${sku.Category}|||${sku.ModelName}`
+  const priorityIndex = useMemo(() => {
+    const m = new Map<string, number>()
+    DEVICE_PRIORITY_LIST.forEach(([cat, model], i) => m.set(`${cat}|||${model}`, i))
+    return m
+  }, [])
+  const categoryIndex = (cat: string) => {
+    const i = CATEGORY_ORDER.indexOf(cat)
+    return i === -1 ? CATEGORY_ORDER.length : i
+  }
+  const sortedSKUs = useMemo(() => {
+    const byLabel = (s: SamsungSKU) => `${s.Category} - ${s.ModelName}`
+    return [...samsungSKUs].sort((a, b) => {
+      const ra = priorityIndex.get(priorityKey(a))
+      const rb = priorityIndex.get(priorityKey(b))
+      const aHas = ra !== undefined
+      const bHas = rb !== undefined
+      if (aHas && bHas) return (ra as number) - (rb as number)
+      if (aHas) return -1
+      if (bHas) return 1
+      const ca = categoryIndex(a.Category)
+      const cb = categoryIndex(b.Category)
+      if (ca !== cb) return ca - cb
+      return byLabel(a).localeCompare(byLabel(b), 'en', { numeric: true, sensitivity: 'base' })
+    })
+  }, [samsungSKUs, priorityIndex])
   
   // Load plans when device changes
   useEffect(() => {
@@ -265,11 +318,10 @@ const response = await fetch(`${config.apiUrl}/sec/report`, {
           <label className="block text-sm font-medium mb-1">Date of Sale</label>
           <select
             value={dateOfSale}
-            onChange={(e) => setDateOfSale(e.target.value)}
-            className="w-full px-3 py-3 border rounded-2xl"
+            disabled
+            className="w-full px-3 py-3 border rounded-2xl bg-gray-100 text-gray-700"
           >
             <option value={todayLabel}>{todayLabel}</option>
-            <option value={yesterdayLabel}>{yesterdayLabel}</option>
           </select>
         </div>
 
@@ -290,7 +342,7 @@ const response = await fetch(`${config.apiUrl}/sec/report`, {
           <SearchableSelect
             value={device}
             onChange={setDevice}
-            options={samsungSKUs.map(sku => ({ value: sku.id, label: `${sku.Category} - ${sku.ModelName}` }))}
+            options={sortedSKUs.map(sku => ({ value: sku.id, label: `${sku.Category} - ${sku.ModelName}` }))}
             placeholder={loading.skus ? 'Loading devices...' : 'Search or select device'}
             disabled={loading.skus}
             leftIcon={<FaMobileAlt />}

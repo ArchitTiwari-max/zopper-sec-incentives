@@ -38,6 +38,9 @@ interface DayRow {
   totalReports: number
 }
 
+// IST offset helper (UTC+5:30)
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000
+
 function formatDayMonYear(iso: string) {
   const d = new Date(iso)
   if (isNaN(d.getTime())) return iso
@@ -58,7 +61,8 @@ function processReportsToDaily(reports: SalesReport[]): DayRow[] {
   const dayMap = new Map<string, DayRow>()
   
   reports.forEach(report => {
-    const date = new Date(report.submittedAt).toISOString().split('T')[0]
+    const utcMs = new Date(report.submittedAt).getTime()
+    const date = new Date(utcMs + IST_OFFSET_MS).toISOString().split('T')[0]
     
     if (!dayMap.has(date)) {
       dayMap.set(date, {
@@ -95,8 +99,8 @@ function processReportsToDaily(reports: SalesReport[]): DayRow[] {
   )
 }
 
-const ADLD_RATE = 150
-const COMBO_RATE = 250
+const ADLD_RATE = 100
+const COMBO_RATE = 300
 const calcIncentive = (r: DayRow) => r.adld * ADLD_RATE + r.combo * COMBO_RATE
 
 export function ReportPage() {
@@ -149,8 +153,9 @@ const response = await fetch(`${config.apiUrl}/sec/reports`, {
   const dailyData = useMemo(() => processReportsToDaily(reports), [reports])
   
   const filtered = useMemo(() => {
-    const todayISO = new Date().toISOString().split('T')[0]
-    const yesterdayISO = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const istNow = new Date(Date.now() + IST_OFFSET_MS)
+    const todayISO = istNow.toISOString().split('T')[0]
+    const yesterdayISO = new Date(istNow.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
     const byDay = (r: DayRow) => {
       if (dayFilter === 'all') return true
@@ -289,7 +294,7 @@ const response = await fetch(`${config.apiUrl}/sec/reports`, {
           <GradientCard title="Total Units Sold" value={`${totals.totalUnits}`} />
           <GradientCard title="Total Earned Incentive" value={`₹${totals.totalIncentive}`} />
           <GradientCard title="Paid Incentive via Gift Voucher" value={`₹${totals.paid}`} />
-          <GradientCard title="Net Available Balance" value={`₹${totals.net}`} />
+          <GradientCard title="Incentive to be Paid" value={`₹${totals.net}`} />
         </div>
       </div>
     </motion.div>

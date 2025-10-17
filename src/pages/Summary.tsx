@@ -3,8 +3,8 @@ import { motion } from 'framer-motion'
 import { utils, writeFileXLSX } from 'xlsx'
 
 // Incentive rates inferred from examples: 2*200 + 3*250 = 1150; 1*200 + 2*250 = 700
-const ADLD_RATE = 200
-const COMBO_RATE = 250
+const ADLD_RATE = 100
+const COMBO_RATE = 300
 
 type DayRow = {
   date: string // ISO (YYYY-MM-DD)
@@ -83,7 +83,7 @@ export function SummaryPage() {
         <GradientCard title="Total Units Sold" value={`${totals.totalUnits}`} />
         <GradientCard title="Total Incentive Earned" value={`₹${totals.totalIncentive.toLocaleString('en-IN')}`} />
         <GradientCard title="Paid Incentive via Gift Voucher" value={`₹${totals.paid.toLocaleString('en-IN')}`} />
-        <GradientCard title="Net Available Incentive" value={`₹${totals.net.toLocaleString('en-IN')}`} />
+        <GradientCard title="Incentive to be Paid" value={`₹${totals.net.toLocaleString('en-IN')}`} />
       </div>
 
       <div className="mt-4 flex gap-2">
