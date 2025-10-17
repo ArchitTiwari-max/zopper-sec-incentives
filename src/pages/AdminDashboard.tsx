@@ -36,15 +36,20 @@ interface SalesReport {
   }
 }
 
-function formatDateOnly(ts: string) {
-  // Accepts 'YYYY-MM-DD HH:mm' or ISO; returns 'dd mm yyyy'
+function formatDateWithTime(ts: string) {
+  // Accepts 'YYYY-MM-DD HH:mm' or ISO; returns object with date and time
   const iso = ts.includes(' ') ? ts.replace(' ', 'T') : ts
   const d = new Date(iso)
-  if (isNaN(d.getTime())) return ts
+  if (isNaN(d.getTime())) return { date: ts, time: '' }
   const dd = String(d.getDate()).padStart(2, '0')
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const yyyy = d.getFullYear()
-  return `${dd} ${mm} ${yyyy}`
+  const hh = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return {
+    date: `${dd}-${mm}-${yyyy}`,
+    time: `${hh}:${min}`
+  }
 }
 
 export function AdminDashboard() {
@@ -197,11 +202,14 @@ export function AdminDashboard() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
+    <div className="fixed inset-0 bg-gray-50 overflow-y-auto overflow-x-hidden">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white shadow-md p-2 lg:p-4 mx-2 lg:mx-4 my-2 lg:my-4">
       <div className="flex justify-between items-start mb-4">
         <div>
           <div className="text-sm mb-1">Welcome, <span className="font-semibold">{adminUser?.name || 'Admin'}</span></div>
-          <h2 className="text-lg font-semibold">Spot Incentive Admin Dashboard</h2>
+          <div className="text-base">
+            No of Incentive Paid: {filtered.filter(r => r.isPaid).length} | Unpaid: {filtered.filter(r => !r.isPaid).length}
+          </div>
         </div>
         <button
           onClick={handleLogout}
@@ -213,14 +221,14 @@ export function AdminDashboard() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <StatCard title="SECs Active" value={totals.totalSECs.toString()} />
         <StatCard title="Reports Submitted" value={totals.totalReports.toString()} />
         <StatCard title="Incentive Earned" value={`₹${totals.totalIncentive}`} />
         <StatCard title="Incentive Paid" value={`₹${totals.totalPaid}`} />
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-2 mb-3">
+      <div className="flex flex-col lg:flex-row gap-2 mb-3">
         <input
           className="flex-1 px-3 py-2 border rounded-2xl"
           placeholder="Search SEC / Store / Device"
@@ -238,47 +246,50 @@ export function AdminDashboard() {
         <button onClick={exportExcel} className="button-gradient px-4 py-2">Export to Excel</button>
       </div>
 
-      <div className="overflow-auto rounded-2xl border">
+      <div className="border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr className="text-left">
-              <th className="p-3">Timestamp</th>
-              <th className="p-3">SEC ID</th>
-              <th className="p-3">Store Name</th>
-              <th className="p-3">Device Name</th>
-              <th className="p-3">Plan Type</th>
-              <th className="p-3">Plan Price</th>
-              <th className="p-3">IMEI</th>
-              <th className="p-3">Incentive Earned</th>
-              <th className="p-3">Incentive Paid</th>
-              <th className="p-3">Actions</th>
+              <th className="p-1 lg:p-2 w-[11%] text-xs lg:text-sm">Timestamp</th>
+              <th className="p-1 lg:p-2 w-[9%] text-xs lg:text-sm">SEC ID</th>
+              <th className="p-1 lg:p-2 w-[18%] text-xs lg:text-sm">Store Name</th>
+              <th className="p-1 lg:p-2 w-[12%] text-xs lg:text-sm">Device Name</th>
+              <th className="p-1 lg:p-2 w-[8%] text-xs lg:text-sm">Plan Type</th>
+              <th className="p-1 lg:p-2 w-[15%] text-xs lg:text-sm">IMEI</th>
+              <th className="p-1 lg:p-2 w-[10%] text-xs lg:text-sm">Incentive Earned</th>
+              <th className="p-1 lg:p-2 w-[9%] text-xs lg:text-sm">Status</th>
+              <th className="p-1 lg:p-2 w-[8%] text-xs lg:text-sm">Actions</th>
             </tr>
           </thead>
           <tbody>
             {pageData.map((r, i) => (
               <tr key={r.id} className="border-t hover:bg-gray-50">
-                <td className="p-3 whitespace-nowrap">{formatDateOnly(r.submittedAt)}</td>
-                <td className="p-3">{r.secUser.secId || r.secUser.phone}</td>
-                <td className="p-3">{r.store.storeName}</td>
-                <td className="p-3">{r.samsungSKU.ModelName}</td>
-                <td className="p-3">{r.plan.planType}</td>
-                <td className="p-3">₹{r.planPrice}</td>
-                <td className="p-3">{r.imei}</td>
-                <td className="p-3">₹{r.incentiveEarned}</td>
-                <td className="p-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${r.isPaid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                    {r.isPaid ? 'Paid' : 'Pending'}
+                <td className="p-1 lg:p-2 text-xs text-left">
+                  <div className="flex flex-col">
+                    <div className="font-medium">{formatDateWithTime(r.submittedAt).date}</div>
+                    <div className="text-gray-600">{formatDateWithTime(r.submittedAt).time}</div>
+                  </div>
+                </td>
+                <td className="p-1 lg:p-2 text-xs">{r.secUser.secId || r.secUser.phone}</td>
+                <td className="p-1 lg:p-2 text-xs truncate" title={r.store.storeName}>{r.store.storeName}</td>
+                <td className="p-1 lg:p-2 text-xs truncate" title={r.samsungSKU.ModelName}>{r.samsungSKU.ModelName}</td>
+                <td className="p-1 lg:p-2 text-xs">{r.plan.planType}</td>
+                <td className="p-1 lg:p-2 text-xs font-mono truncate" title={r.imei}>{r.imei}</td>
+                <td className="p-1 lg:p-2 text-xs font-semibold">₹{r.incentiveEarned}</td>
+                <td className="p-1 lg:p-2">
+                  <span className={`px-1 py-0.5 rounded text-xs font-medium ${r.isPaid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {r.isPaid ? 'Paid' : 'Unpaid'}
                   </span>
                 </td>
-                <td className="p-3">
+                <td className="p-1 lg:p-2">
                   {!r.isPaid && (
-                    <button onClick={() => togglePaid(i)} className="button-gradient px-3 py-1">Mark as Paid</button>
+                    <button onClick={() => togglePaid(i)} className="button-gradient px-1 lg:px-2 py-0.5 text-xs whitespace-nowrap">Mark Paid</button>
                   )}
                 </td>
               </tr>
             ))}
             {pageData.length === 0 && (
-              <tr><td className="p-6 text-center text-gray-500" colSpan={10}>No reports found</td></tr>
+              <tr><td className="p-6 text-center text-gray-500" colSpan={9}>No reports found</td></tr>
             )}
           </tbody>
         </table>
@@ -291,7 +302,8 @@ export function AdminDashboard() {
           <button disabled={page===totalPages} onClick={() => setPage(p => Math.min(totalPages, p+1))} className="px-3 py-1 border rounded-2xl disabled:opacity-50">Next</button>
         </div>
       </div>
-    </motion.div>
+      </motion.div>
+    </div>
   )
 }
 
