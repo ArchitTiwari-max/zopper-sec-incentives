@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { setAuth, getAuth } from '@/lib/auth'
+import { useAuth } from '@/contexts/AuthContext'
+import { config } from '@/lib/config'
 
 export function AdminLoginPage() {
   const [username, setUsername] = useState('')
@@ -9,37 +10,54 @@ export function AdminLoginPage() {
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const navigate = useNavigate()
+  const { login, isAdmin } = useAuth()
 
   useEffect(() => {
-    const auth = getAuth()
-    if (auth?.role === 'admin') navigate('/admin/dashboard', { replace: true })
-  }, [navigate])
+    if (isAdmin) navigate('/admin/dashboard', { replace: true })
+  }, [navigate, isAdmin])
 
-  const handleLogin = () => {
-    if (!username || !password) return alert('Enter username and password')
+  const handleLogin = async () => {
+    if (!username || !password) {
+      setToast('Enter username and password')
+      setTimeout(() => setToast(null), 3000)
+      return
+    }
+
     setLoading(true)
-    setTimeout(() => {
-      // Mock auth: replace with real API call
-      const ok = username.toLowerCase() === 'admin' && password === 'admin123'
-      if (!ok) {
-        setLoading(false)
-        setToast('Invalid credentials')
-        setTimeout(() => setToast(null), 1500)
-        return
-      }
-      const token = `admin-mock-jwt-${Date.now()}`
-      setAuth({ 
-        token, 
-        role: 'admin', 
-        user: { 
-          adminId: 'admin-1', 
-          username: 'admin', 
-          name: 'Administrator' 
-        } 
+    setToast(null)
+
+    try {
+      const response = await fetch(`${config.apiUrl}/auth/admin-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password })
       })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed')
+      }
+
+      if (data.success && data.token) {
+        login({
+          token: data.token,
+          role: 'admin',
+          user: data.user
+        })
+        navigate('/admin/dashboard', { replace: true })
+      } else {
+        throw new Error('Invalid response format')
+      }
+    } catch (error) {
+      console.error('Admin login error:', error)
+      setToast(error instanceof Error ? error.message : 'Login failed')
+      setTimeout(() => setToast(null), 3000)
+    } finally {
       setLoading(false)
-      navigate('/admin/dashboard', { replace: true })
-    }, 500)
+    }
   }
 
   return (
