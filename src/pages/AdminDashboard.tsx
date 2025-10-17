@@ -63,6 +63,7 @@ export function AdminDashboard() {
   const [query, setQuery] = useState('')
   const [storeFilter, setStoreFilter] = useState('')
   const [planFilter, setPlanFilter] = useState('')
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'unpaid'>('all')
   const [page, setPage] = useState(1)
   const pageSize = 50
   const [showMultiSelect, setShowMultiSelect] = useState(false)
@@ -144,15 +145,16 @@ export function AdminDashboard() {
       ].some(v => v.toLowerCase().includes(query.toLowerCase()))
       const matchesStore = !storeFilter || r.store.storeName === storeFilter
       const matchesPlan = !planFilter || r.plan.planType === planFilter
-      return matchesQuery && matchesStore && matchesPlan
+      const matchesPayment = paymentFilter === 'all' || (paymentFilter === 'paid' ? r.isPaid : !r.isPaid)
+      return matchesQuery && matchesStore && matchesPlan && matchesPayment
     })
-  }, [data, query, storeFilter, planFilter])
+  }, [data, query, storeFilter, planFilter, paymentFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const pageData = filtered.slice((page - 1) * pageSize, page * pageSize)
   useEffect(() => {
     setPage(1)
-  }, [query, storeFilter, planFilter])
+  }, [query, storeFilter, planFilter, paymentFilter])
 
   const totals = useMemo(() => {
     const totalIncentive = filtered.reduce((s, r) => s + r.incentiveEarned, 0)
@@ -394,6 +396,11 @@ export function AdminDashboard() {
         <select className="px-3 py-2 border rounded-2xl" value={planFilter} onChange={e => setPlanFilter(e.target.value)}>
           <option value="">All Plans</option>
           {plans.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select className="px-3 py-2 border rounded-2xl" value={paymentFilter} onChange={e => setPaymentFilter(e.target.value as 'all' | 'paid' | 'unpaid')}>
+          <option value="all">All</option>
+          <option value="paid">Paid</option>
+          <option value="unpaid">Unpaid</option>
         </select>
         <button onClick={exportExcel} className="button-gradient px-4 py-2">Export to Excel</button>
         
