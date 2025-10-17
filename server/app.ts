@@ -1101,6 +1101,65 @@ app.put('/api/reports/:id/payment', async (req, res) => {
   }
 })
 
+// DELETE endpoint to discard/delete a report
+app.delete('/api/reports/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const authHeader = req.headers.authorization
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admin users can delete reports'
+      })
+    }
+
+    // Delete the sales report
+    const deletedReport = await prisma.salesReport.delete({
+      where: { id }
+    })
+
+    console.log(`✅ Admin deleted report ${id} with IMEI: ${deletedReport.imei}`)
+    res.json({
+      success: true,
+      message: 'Report deleted successfully'
+    })
+
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'P2025') {
+      return res.status(404).json({
+        success: false,
+        message: 'Report not found'
+      })
+    }
+    
+    console.error('❌ Error deleting report:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete report',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
