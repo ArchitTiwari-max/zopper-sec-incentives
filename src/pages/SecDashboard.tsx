@@ -3,7 +3,6 @@ import CameraScanner from '@/components/CameraScanner'
 import { ProfileModal } from '@/components/ProfileModal'
 import { motion } from 'framer-motion'
 import { FaBarcode, FaStore, FaMobileAlt, FaListAlt, FaIdBadge, FaSpinner, FaSignOutAlt } from 'react-icons/fa'
-import NotificationsBell from '@/components/NotificationsBell'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { isSECUser, SECAuthData } from '@/lib/auth'
@@ -18,6 +17,7 @@ import {
 } from '@/lib/api'
 import SearchableSelect from '@/components/SearchableSelect'
 import { config } from '@/lib/config'
+import SecDeductionsBell from '@/components/SecDeductionsBell'
 
 export function SecDashboard() {
   const { auth, logout, user, updateUser } = useAuth()
@@ -126,8 +126,9 @@ export function SecDashboard() {
   const DEVICE_PRIORITY_LIST: Array<[string, string]> = [
     ['Luxury Fold', 'Z Fold 6'],
     ['Luxury Fold', 'Z Fold 7'],
-    ['Luxury Flip', 'Z Flip 6'],
     ['Luxury Flip', 'Z Flip 7'],
+    ['Luxury Flip', 'Z Flip 6'],
+    ['Luxury Flip', 'Z Flip FE'],
     ['Super Premium', 'S25'],
     ['Super Premium', 'S25 +'],
     ['Super Premium', 'S25 Ultra'],
@@ -292,7 +293,10 @@ const response = await fetch(`${config.apiUrl}/sec/report`, {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <NotificationsBell />
+          <div className="hidden sm:block"><span className="sr-only">Notifications</span></div>
+          {/* Notification bell for invalid IMEI deductions */}
+          {/* Placed next to Logout at top-right of the dashboard */}
+          <SecDeductionsBell />
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"

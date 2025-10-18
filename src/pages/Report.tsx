@@ -43,14 +43,43 @@ interface VoucherReport {
   }
 }
 
-interface InvalidVoucherLog {
-  id?: string
+// Deduction interface
+interface DeductionReport {
+  id: string
   imei: string
-  uploadedAt?: string
-  uploadedByAdminId?: string
-  status?: string
-  secId?: string | null
-  phone?: string | null
+  deductionAmount: number
+  reason: string
+  processedAt: string
+  salesReport: {
+    store: {
+      storeName: string
+      city: string
+    }
+    samsungSKU: {
+      ModelName: string
+      Category: string
+    }
+    plan: {
+      planType: string
+      price: number
+    }
+  }
+}
+
+
+// Transaction interface for combined view
+interface Transaction {
+  id: string
+  date: string // ISO format
+  type: 'earning' | 'deduction'
+  amount: number // positive for earnings, negative for deductions
+  description: string
+  imei?: string
+  planType: string
+  deviceName: string
+  storeName?: string
+  voucherCode?: string
+  reason?: string
 }
 
 // Processed day-wise data structure
@@ -133,13 +162,13 @@ export function ReportPage() {
   const navigate = useNavigate()
   const [reports, setReports] = useState<SalesReport[]>([])
   const [voucherReports, setVoucherReports] = useState<VoucherReport[]>([])
-  const [invalidLogs, setInvalidLogs] = useState<InvalidVoucherLog[]>([])
+  const [deductions, setDeductions] = useState<DeductionReport[]>([])
   const [loading, setLoading] = useState(true)
   const [voucherLoading, setVoucherLoading] = useState(true)
-  const [invalidLoading, setInvalidLoading] = useState(true)
+  const [deductionLoading, setDeductionLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [voucherError, setVoucherError] = useState<string | null>(null)
-  const [invalidError, setInvalidError] = useState<string | null>(null)
+  const [deductionError, setDeductionError] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [sortDesc, setSortDesc] = useState(true)
   const [dayFilter, setDayFilter] = useState<'today' | 'yesterday' | 'all'>('today')
@@ -208,37 +237,83 @@ export function ReportPage() {
       }
     }
 
-    const fetchInvalidLogs = async () => {
+    
+    const fetchDeductions = async () => {
       if (!auth?.token) {
-        setInvalidError('Authentication required')
-        setInvalidLoading(false)
+        setDeductionError('Authentication required')
+        setDeductionLoading(false)
         return
       }
+      
       try {
-        setInvalidLoading(true)
-        const res = await fetch(`${config.apiUrl}/vouchers/sec-invalid`, {
-          headers: { 'Authorization': `Bearer ${auth.token}` }
+        setDeductionLoading(true)
+        const response = await fetch(`${config.apiUrl}/sec/deductions`, {
+          headers: {
+            'Authorization': `Bearer ${auth.token}`
+          }
         })
-        const json = await res.json()
-        if (json.success) {
-          setInvalidLogs(json.data)
-          setInvalidError(null)
+        
+        const data = await response.json()
+        
+        if (data.success) {
+          setDeductions(data.data)
+          setDeductionError(null)
         } else {
-          setInvalidError(json.message || 'Failed to fetch cancelled vouchers')
+          setDeductionError(data.message || 'Failed to fetch deductions')
         }
-      } catch (err) {
-        console.error('Error fetching invalid vouchers:', err)
-        setInvalidError('Network error. Please try again.')
+      } catch (error) {
+        console.error('Error fetching deductions:', error)
+        setDeductionError('Network error. Please try again.')
       } finally {
-        setInvalidLoading(false)
+        setDeductionLoading(false)
       }
     }
     
     fetchReports()
     fetchVoucherReports()
-    fetchInvalidLogs()
+    fetchDeductions()
   }, [auth?.token])
 
+  // Process reports and deductions into combined transactions
+  const transactions = useMemo((): Transaction[] => {
+    const combined: Transaction[] = []
+    
+    // Add earning transactions from reports
+    reports.forEach(report => {
+      combined.push({
+        id: report.id,
+        date: report.submittedAt,
+        type: 'earning',
+        amount: report.incentiveEarned,
+        description: `Plan Sale - ${report.plan.planType.replace(/_/g, ' ')}`,
+        imei: report.imei,
+        planType: report.plan.planType,
+        deviceName: report.samsungSKU.ModelName,
+        storeName: report.store.storeName,
+        voucherCode: report.voucherCode
+      })
+    })
+    
+    // Add deduction transactions
+    deductions.forEach(deduction => {
+      combined.push({
+        id: deduction.id,
+        date: deduction.processedAt,
+        type: 'deduction',
+        amount: -deduction.deductionAmount,
+        description: `Deduction - ${deduction.reason}`,
+        imei: deduction.imei,
+        planType: deduction.salesReport.plan.planType,
+        deviceName: deduction.salesReport.samsungSKU.ModelName,
+        storeName: deduction.salesReport.store.storeName,
+        reason: deduction.reason
+      })
+    })
+    
+    // Sort by date descending (newest first)
+    return combined.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }, [reports, deductions])
+  
   // Process reports into daily summary
   const dailyData = useMemo(() => processReportsToDaily(reports), [reports])
   
@@ -266,32 +341,40 @@ export function ReportPage() {
 
   const totals = useMemo(() => {
     const totalUnits = filtered.reduce((s, r) => s + r.adld + r.combo + r.screenProtect + r.extendedWarranty, 0)
-    const totalIncentive = filtered.reduce((s, r) => s + calcIncentive(r), 0)
     const totalEarnedFromReports = reports.reduce((s, r) => s + r.incentiveEarned, 0)
+    const totalDeducted = deductions.reduce((s, d) => s + d.deductionAmount, 0)
     const paid = reports.filter(r => r.isPaid).reduce((s, r) => s + r.incentiveEarned, 0)
+    const netIncentive = totalEarnedFromReports - totalDeducted
+    
     return { 
       totalUnits, 
-      totalIncentive: totalEarnedFromReports, 
+      totalIncentive: totalEarnedFromReports,
+      totalDeducted,
       paid, 
-      net: totalEarnedFromReports - paid 
+      net: netIncentive - paid 
     }
-  }, [filtered, reports])
+  }, [filtered, reports, deductions])
 
   const downloadExcel = () => {
-    const rows = filtered.map((r) => ({
-      Date: formatDDMMYYYY(r.date),
-      ADLD: r.adld,
-      Combo: r.combo,
-      'Total Units Sold': r.adld + r.combo,
-      'Incentive Earned': calcIncentive(r),
+    const rows = transactions.map((transaction) => ({
+      Date: formatDDMMYYYY(transaction.date),
+      IMEI: transaction.imei || '',
+      'Device Name': transaction.deviceName,
+      'Plan Type': transaction.planType.replace(/_/g, ' '),
+      'Transaction Type': transaction.type === 'earning' ? 'Earning' : 'Deduction',
+      'Amount': transaction.amount,
+      'Description': transaction.description,
+      'Reason': transaction.reason || '',
+      'Voucher Code': transaction.voucherCode || '',
+      'Store Name': transaction.storeName || ''
     }))
     const ws = utils.json_to_sheet(rows)
     const wb = utils.book_new()
-    utils.book_append_sheet(wb, ws, 'SEC Report')
-    writeFileXLSX(wb, 'sec-report.xlsx')
+    utils.book_append_sheet(wb, ws, 'Incentive Passbook')
+    writeFileXLSX(wb, 'incentive-passbook.xlsx')
   }
 
-  if (loading) {
+  if (loading || deductionLoading) {
     return (
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
         <div className="flex items-center justify-center py-12">
@@ -302,11 +385,11 @@ export function ReportPage() {
     )
   }
   
-  if (error) {
+  if (error || deductionError) {
     return (
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
         <div className="text-center py-12">
-          <div className="text-red-600 mb-4">❌ {error}</div>
+          <div className="text-red-600 mb-4">❌ {error || deductionError}</div>
           <button 
             onClick={() => window.location.reload()} 
             className="button-gradient px-4 py-2"
@@ -346,6 +429,7 @@ export function ReportPage() {
         <button onClick={downloadExcel} className="button-gradient w-full sm:w-auto px-4 py-3 sm:py-2">Download Report</button>
       </div>
 
+      {/* Daily summary table (Date, ADLD, Combo, Total Units Sold, Incentive Earned) */}
       <div className="mt-3 overflow-auto rounded-2xl border">
         <table className="w-full text-xs sm:text-sm">
           <thead className="bg-gray-50">
@@ -358,21 +442,24 @@ export function ReportPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((r, i) => {
-              const totalUnits = r.adld + r.combo
-              const incentive = calcIncentive(r)
-              return (
-                <tr key={i} className="border-t hover:bg-gray-50">
-                  <td className="p-2 sm:p-3 whitespace-nowrap">{formatDDMMYYYY(r.date)}</td>
-                  <td className="p-2 sm:p-3">{r.adld}</td>
-                  <td className="p-2 sm:p-3">{r.combo}</td>
-                  <td className="p-2 sm:p-3">{totalUnits}</td>
-                  <td className="p-2 sm:p-3">{incentive}</td>
-                </tr>
-              )
-            })}
-            {filtered.length === 0 && (
-              <tr><td className="p-6 text-center text-gray-500" colSpan={5}>No records</td></tr>
+            {filtered.length === 0 ? (
+              <tr>
+                <td className="p-6 text-center text-gray-500" colSpan={5}>No data found</td>
+              </tr>
+            ) : (
+              filtered.map((row) => {
+                const totalUnits = row.adld + row.combo
+                const incentive = calcIncentive(row)
+                return (
+                  <tr key={row.date} className="border-t hover:bg-gray-50">
+                    <td className="p-2 sm:p-3 whitespace-nowrap">{formatDDMMYYYY(row.date)}</td>
+                    <td className="p-2 sm:p-3">{row.adld}</td>
+                    <td className="p-2 sm:p-3">{row.combo}</td>
+                    <td className="p-2 sm:p-3">{totalUnits}</td>
+                    <td className="p-2 sm:p-3 font-semibold">₹{incentive}</td>
+                  </tr>
+                )
+              })
             )}
           </tbody>
         </table>
@@ -408,7 +495,6 @@ export function ReportPage() {
                   <th className="p-2 sm:p-3">Plan Name</th>
                   <th className="p-2 sm:p-3">Incentive Earned</th>
                   <th className="p-2 sm:p-3">Voucher Code</th>
-                  <th className="p-2 sm:p-3">Voucher Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -423,9 +509,6 @@ export function ReportPage() {
                         {voucher.voucherCode}
                       </div>
                     </td>
-                    <td className="p-2 sm:p-3">
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">Valid</span>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -434,55 +517,37 @@ export function ReportPage() {
         )}
       </div>
 
-      {/* Cancelled/Invalid vouchers */}
-      <div className="mt-8">
-        <div className="text-lg font-semibold mb-2">⚠️ Cancelled Vouchers (Invalid IMEI)</div>
-        {invalidLoading ? (
-          <div className="flex items-center gap-2 text-sm text-gray-600"><FaSpinner className="animate-spin" /> Loading...</div>
-        ) : invalidError ? (
-          <div className="text-sm text-red-600">❌ {invalidError}</div>
-        ) : invalidLogs.length === 0 ? (
-          <div className="text-sm text-gray-500 bg-gray-50 rounded-2xl p-4">No cancelled vouchers.</div>
-        ) : (
-          <div className="overflow-auto rounded-2xl border">
-            <table className="w-full text-xs sm:text-sm">
-              <thead className="bg-gray-50">
-                <tr className="text-left">
-                  <th className="p-2 sm:p-3">IMEI</th>
-                  <th className="p-2 sm:p-3">Uploaded At</th>
-                  <th className="p-2 sm:p-3">Voucher Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invalidLogs.map((log, i) => (
-                  <tr key={`${log.imei}-${i}`} className="border-t hover:bg-gray-50">
-                    <td className="p-2 sm:p-3 font-mono text-xs">{log.imei}</td>
-                    <td className="p-2 sm:p-3">{log.uploadedAt ? formatDayMonYear(log.uploadedAt) : '-'}</td>
-                    <td className="p-2 sm:p-3"><span className="px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">Cancelled (Invalid IMEI)</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
       <div className="mt-6">
         <div className="text-sm font-medium mb-2">Summary</div>
         <div className="grid grid-cols-1 gap-3">
-          <GradientCard title="Total Units Sold" value={`${totals.totalUnits}`} />
-          <GradientCard title="Total Earned Incentive" value={`₹${totals.totalIncentive}`} />
-          <GradientCard title="Paid Incentive via Gift Voucher" value={`₹${totals.paid}`} />
-          <GradientCard title="Incentive to be Paid" value={`₹${totals.net}`} />
+          <GradientCard title="Total Units Sold" value={`${totals.totalUnits}`} color="blue" />
+          <GradientCard title="Total Earned Incentive" value={`₹${totals.totalIncentive}`} color="green" />
+          {totals.totalDeducted > 0 && (
+            <GradientCard title="Total Deducted" value={`₹${totals.totalDeducted}`} color="red" />
+          )}
+          <GradientCard title="Paid Incentive via Gift Voucher" value={`₹${totals.paid}`} color="purple" />
+          <GradientCard 
+            title="Net Balance" 
+            value={`${totals.net >= 0 ? '' : '-'}₹${Math.abs(totals.net)}`} 
+            color={totals.net >= 0 ? "blue" : "red"} 
+          />
         </div>
       </div>
     </motion.div>
   )
 }
 
-function GradientCard({ title, value }: { title: string; value: string }) {
+function GradientCard({ title, value, color = 'blue' }: { title: string; value: string; color?: string }) {
+  const colorClasses = {
+    blue: 'bg-gradient-to-r from-blue-500 to-blue-700',
+    green: 'bg-gradient-to-r from-green-500 to-green-700',
+    red: 'bg-gradient-to-r from-red-500 to-red-700',
+    purple: 'bg-gradient-to-r from-purple-500 to-purple-700'
+  }
+  
   return (
-    <div className="rounded-2xl p-4 text-white shadow-md bg-gradient-to-r from-blue-500 to-blue-700">
+    <div className={`rounded-2xl p-4 text-white shadow-md ${colorClasses[color as keyof typeof colorClasses] || colorClasses.blue}`}>
       <div className="text-xs opacity-90">{title}</div>
       <div className="text-xl font-semibold mt-1">{value}</div>
     </div>

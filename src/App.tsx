@@ -8,7 +8,7 @@ import { SecDashboard } from './pages/SecDashboard'
 import { AdminLoginPage } from './pages/AdminLogin'
 import { Leaderboard } from './pages/Leaderboard'
 import { VoucherProcessor } from './pages/VoucherProcessor'
-import { AdminGiftVoucherUpload } from './pages/AdminGiftVoucherUpload'
+import { AdminInvalidImeiProcessor } from './pages/AdminInvalidImeiProcessor'
 import { Footer } from './components/Footer'
 
 export default function App() {
@@ -70,9 +70,9 @@ export default function App() {
                   <VoucherProcessor />
                 </AdminRoute>
               } />
-              <Route path="/admin/gift-voucher-upload" element={
+              <Route path="/admin/invalid-imei-processor" element={
                 <AdminRoute>
-                  <AdminGiftVoucherUpload />
+                  <AdminInvalidImeiProcessor />
                 </AdminRoute>
               } />
               

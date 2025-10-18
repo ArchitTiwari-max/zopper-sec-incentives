@@ -44,6 +44,30 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
+// Ensure required Samsung SKUs exist (runs at startup)
+async function ensureEssentialSKUs() {
+  const requiredSKUs = [
+    { Category: 'Luxury Flip', ModelName: 'Z Flip FE' }
+  ]
+
+  for (const sku of requiredSKUs) {
+    try {
+      const existing = await prisma.samsungSKU.findFirst({
+        where: { Category: sku.Category, ModelName: sku.ModelName }
+      })
+
+      if (!existing) {
+        const created = await prisma.samsungSKU.create({ data: sku })
+        // Removed startup console log
+      } else {
+        // Removed startup console log
+      }
+    } catch (e) {
+      console.error('❌ Failed ensuring Samsung SKU', sku, e)
+    }
+  }
+}
+
 // Comify WhatsApp API integration
 async function sendOTPViaWhatsApp(phone: string, otp: string) {
   try {
@@ -571,19 +595,41 @@ app.get('/api/samsung-skus/:id/plans', async (req, res) => {
   try {
     const { id } = req.params
     console.log(`📋 Fetching plans for Samsung SKU: ${id}`)
-    
+
+    // Fetch existing plans for this SKU
+    const existingPlans = await prisma.plan.findMany({
+      where: { samsungSKUId: id },
+      select: { id: true, planType: true, price: true },
+      orderBy: { planType: 'asc' }
+    })
+
+    // Ensure all standard plan types exist for this SKU (create missing with price ₹0)
+    const requiredPlanTypes = [
+      'Screen_Protect_1_Yr',
+      'ADLD_1_Yr',
+      'Combo_2Yrs',
+      'Extended_Warranty_1_Yr'
+    ] as const
+
+    const existingTypes = new Set(existingPlans.map(p => p.planType))
+    const missingTypes = requiredPlanTypes.filter(t => !existingTypes.has(t as any))
+
+    if (missingTypes.length > 0) {
+      await prisma.plan.createMany({
+        data: missingTypes.map(t => ({
+          planType: t as any,
+          price: 0,
+          samsungSKUId: id
+        }))
+      })
+      console.log(`🆕 Added ${missingTypes.length} missing plan(s) for SKU ${id}: ${missingTypes.join(', ')}`)
+    }
+
+    // Fetch updated list after ensuring completeness
     const plans = await prisma.plan.findMany({
-      where: {
-        samsungSKUId: id
-      },
-      select: {
-        id: true,
-        planType: true,
-        price: true
-      },
-      orderBy: {
-        planType: 'asc'
-      }
+      where: { samsungSKUId: id },
+      select: { id: true, planType: true, price: true },
+      orderBy: { planType: 'asc' }
     })
 
     // Ensure a global Test_Plan exists (no SKU) and include it in returned list
@@ -600,7 +646,7 @@ app.get('/api/samsung-skus/:id/plans', async (req, res) => {
     }
 
     const result = [...plans, testPlan]
-    
+
     console.log(`✅ Found ${result.length} plans (including Test_Plan) for SKU ${id}`)
     res.json({
       success: true,
@@ -1243,6 +1289,227 @@ app.get('/api/vouchers/sec', async (req, res) => {
   }
 })
 
+// Process invalid IMEI Excel file endpoint
+app.post('/api/admin/process-invalid-imeis', upload.single('excel'), async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admin users can process invalid IMEI files'
+      })
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Excel file is required'
+      })
+    }
+
+    console.log(`📊 Processing invalid IMEI Excel file: ${req.file.originalname}`)
+
+    // Read Excel file
+    const workbook = read(req.file.buffer, { type: 'buffer' })
+    const sheetName = workbook.SheetNames[0]
+    const worksheet = workbook.Sheets[sheetName]
+    const data = utils.sheet_to_json(worksheet)
+
+    console.log(`📋 Found ${data.length} rows in Excel file`)
+
+    const processResults = {
+      total: data.length,
+      processed: 0,
+      deducted: 0,
+      errors: 0,
+      skipped: 0,
+      notificationsSent: 0,
+      logs: [] as any[],
+      summary: {
+        deductedReports: [] as any[],
+        errorReports: [] as any[],
+        skippedReports: [] as any[]
+      }
+    }
+
+    // Process each row
+    for (let i = 0; i < data.length; i++) {
+      const row: any = data[i]
+      processResults.processed++
+      
+      try {
+        // Get IMEI from Excel row (try different possible column names)
+        const imei = (row['IMEI'] || row['imei'] || row['Imei'] || row['IMEI Number'])?.toString()?.trim()
+
+        // Log current row processing
+        const logEntry = {
+          row: i + 1,
+          imei,
+          action: '',
+          success: false,
+          message: '',
+          secUser: null as any,
+          deductionAmount: 0
+        }
+
+        // Validation checks
+        if (!imei) {
+          logEntry.action = 'SKIP'
+          logEntry.message = 'Missing IMEI'
+          processResults.logs.push(logEntry)
+          processResults.skipped++
+          processResults.summary.skippedReports.push(logEntry)
+          continue
+        }
+
+        // Find the sales report with this IMEI
+        const salesReport = await prisma.salesReport.findUnique({
+          where: { imei },
+          include: {
+            secUser: { select: { id: true, secId: true, phone: true, name: true } },
+            store: { select: { storeName: true, city: true } },
+            samsungSKU: { select: { ModelName: true, Category: true } },
+            plan: { select: { planType: true, price: true } }
+          }
+        })
+
+        if (!salesReport) {
+          logEntry.action = 'ERROR'
+          logEntry.message = 'IMEI not found in any sales report'
+          processResults.logs.push(logEntry)
+          processResults.errors++
+          processResults.summary.errorReports.push(logEntry)
+          continue
+        }
+
+        // Check if deduction already exists for this IMEI
+        const existingDeduction = await prisma.incentiveDeduction.findFirst({
+          where: {
+            imei,
+            salesReportId: salesReport.id
+          }
+        })
+
+        if (existingDeduction) {
+          logEntry.action = 'SKIP'
+          logEntry.message = 'Deduction already processed for this IMEI'
+          logEntry.secUser = salesReport.secUser
+          logEntry.deductionAmount = existingDeduction.deductionAmount
+          processResults.logs.push(logEntry)
+          processResults.skipped++
+          processResults.summary.skippedReports.push(logEntry)
+          continue
+        }
+
+        // Create deduction record
+        const deductionAmount = salesReport.planPrice
+        const deduction = await prisma.incentiveDeduction.create({
+          data: {
+            secUserId: salesReport.secUserId,
+            salesReportId: salesReport.id,
+            imei,
+            deductionAmount,
+            reason: 'Invalid IMEI for gift voucher',
+            processedBy: decoded.username || decoded.userId,
+            notificationSent: false
+          }
+        })
+
+        // Send WhatsApp notification
+        try {
+          await sendOTPViaWhatsApp(
+            salesReport.secUser.phone, 
+            `⚠️ The IMEI ${imei} you submitted for the ${salesReport.plan.planType.replace(/_/g, ' ')} plan is invalid for a gift voucher. The plan amount of ₹${deductionAmount} has been deducted from your total incentive.`
+          )
+          
+          // Update notification sent status
+          await prisma.incentiveDeduction.update({
+            where: { id: deduction.id },
+            data: { notificationSent: true }
+          })
+          
+          processResults.notificationsSent++
+        } catch (notificationError) {
+          console.error(`❌ Failed to send notification to ${salesReport.secUser.phone}:`, notificationError)
+          // Continue processing even if notification fails
+        }
+
+        logEntry.action = 'DEDUCT'
+        logEntry.success = true
+        logEntry.message = `Deducted ₹${deductionAmount} from SEC incentive`
+        logEntry.secUser = salesReport.secUser
+        logEntry.deductionAmount = deductionAmount
+        processResults.logs.push(logEntry)
+        processResults.deducted++
+        processResults.summary.deductedReports.push({
+          ...logEntry,
+          store: salesReport.store,
+          device: salesReport.samsungSKU,
+          plan: salesReport.plan
+        })
+
+        console.log(`✅ Processed invalid IMEI ${imei} for SEC ${salesReport.secUser.secId || salesReport.secUser.phone}`)
+
+      } catch (error) {
+        console.error(`❌ Error processing row ${i + 1}:`, error)
+        const logEntry = {
+          row: i + 1,
+          imei: row['IMEI'] || row['imei'] || 'Unknown',
+          action: 'ERROR',
+          success: false,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          secUser: null,
+          deductionAmount: 0
+        }
+        processResults.logs.push(logEntry)
+        processResults.errors++
+        processResults.summary.errorReports.push(logEntry)
+      }
+    }
+
+    console.log(`📊 Invalid IMEI processing completed:`, {
+      total: processResults.total,
+      deducted: processResults.deducted,
+      errors: processResults.errors,
+      skipped: processResults.skipped,
+      notificationsSent: processResults.notificationsSent
+    })
+
+    res.json({
+      success: true,
+      message: 'Invalid IMEI Excel file processed successfully',
+      data: processResults
+    })
+
+  } catch (error) {
+    console.error('❌ Error processing invalid IMEI Excel:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process invalid IMEI Excel file',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
 // Process voucher Excel file endpoint
 app.post('/api/admin/process-voucher-excel', upload.single('excel'), async (req, res) => {
   try {
@@ -1440,6 +1707,133 @@ app.post('/api/admin/process-voucher-excel', upload.single('excel'), async (req,
     res.status(500).json({
       success: false,
       message: 'Failed to process voucher Excel file',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// GET SEC incentive summary (earned vs deducted)
+app.get('/api/sec/incentive-summary', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only SEC users can view their incentive summary'
+      })
+    }
+
+    // Get total incentive earned
+    const earnedResult = await prisma.salesReport.aggregate({
+      where: { secUserId: decoded.userId },
+      _sum: { incentiveEarned: true }
+    })
+
+    // Get total deductions
+    const deductionResult = await prisma.incentiveDeduction.aggregate({
+      where: { secUserId: decoded.userId },
+      _sum: { deductionAmount: true }
+    })
+
+    const totalEarned = earnedResult._sum.incentiveEarned || 0
+    const totalDeducted = deductionResult._sum.deductionAmount || 0
+    const netIncentive = totalEarned - totalDeducted
+
+    res.json({
+      success: true,
+      data: {
+        totalEarned,
+        totalDeducted,
+        netIncentive
+      }
+    })
+
+  } catch (error) {
+    console.error('❌ Error fetching SEC incentive summary:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch incentive summary',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// GET SEC deductions
+app.get('/api/sec/deductions', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only SEC users can view their deductions'
+      })
+    }
+
+    // Fetch deductions for this SEC user
+    const deductions = await prisma.incentiveDeduction.findMany({
+      where: { secUserId: decoded.userId },
+      include: {
+        salesReport: {
+          include: {
+            store: { select: { storeName: true, city: true } },
+            samsungSKU: { select: { ModelName: true, Category: true } },
+            plan: { select: { planType: true, price: true } }
+          }
+        }
+      },
+      orderBy: { processedAt: 'desc' }
+    })
+
+    console.log(`✅ Fetched ${deductions.length} deductions for SEC ${decoded.userId}`)
+    res.json({
+      success: true,
+      data: deductions,
+      count: deductions.length
+    })
+
+  } catch (error) {
+    console.error('❌ Error fetching SEC deductions:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch deductions',
       error: error instanceof Error ? error.message : 'Unknown error'
     })
   }
@@ -1644,12 +2038,12 @@ app.get('/api/health', (req, res) => {
   })
 })
 
-// For Vercel deployment - export the app as default
-export default app
-
 // For local development - start server if not in Vercel environment
 if (!process.env.VERCEL) {
-  app.listen(PORT, () => {
+  app.listen(PORT, async () => {
+    // Run essential data checks on startup (silently)
+    await ensureEssentialSKUs()
+    
     console.log(`🚀 API Server running on http://localhost:${PORT}`)
     console.log(`📍 Available endpoints:`)
     console.log(`   GET /api/health - Health check`)
@@ -1678,3 +2072,18 @@ process.on('SIGINT', async () => {
   await prisma.$disconnect()
   process.exit(0)
 })
+
+// Run essential data checks for serverless environment
+if (process.env.VERCEL) {
+  // For serverless, we need to run this on first import
+  (async () => {
+    try {
+      await ensureEssentialSKUs()
+    } catch (error) {
+      console.error('❌ Failed to run essential data checks on serverless startup:', error)
+    }
+  })()
+}
+
+// Export for Vercel serverless functions
+export default app
