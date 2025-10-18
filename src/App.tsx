@@ -8,6 +8,7 @@ import { SecDashboard } from './pages/SecDashboard'
 import { AdminLoginPage } from './pages/AdminLogin'
 import { Leaderboard } from './pages/Leaderboard'
 import { VoucherProcessor } from './pages/VoucherProcessor'
+import { AdminGiftVoucherUpload } from './pages/AdminGiftVoucherUpload'
 import { Footer } from './components/Footer'
 
 export default function App() {
@@ -67,6 +68,11 @@ export default function App() {
               <Route path="/admin/voucher-processor" element={
                 <AdminRoute>
                   <VoucherProcessor />
+                </AdminRoute>
+              } />
+              <Route path="/admin/gift-voucher-upload" element={
+                <AdminRoute>
+                  <AdminGiftVoucherUpload />
                 </AdminRoute>
               } />
               

@@ -56,6 +56,8 @@ model SECUser {
   isActive     Boolean       @default(true)
   lastLoginAt  DateTime?
   salesReports SalesReport[] // SEC sales reports
+  giftVouchers GiftVoucher[]
+  notifications Notification[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 }
@@ -67,6 +69,8 @@ model AdminUser {
   email     String?  @unique
   name      String
   isActive  Boolean  @default(true)
+  uploadedGiftVouchers GiftVoucher[]
+  invalidVoucherLogs  InvalidVoucherLog[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -101,8 +105,58 @@ model SalesReport {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
+  // Relations
+  giftVoucher   GiftVoucher?
+
   @@index([secUserId])
   @@index([storeId])
   @@index([submittedAt])
   @@unique([imei])
+}
+
+model GiftVoucher {
+  id                 String      @id @default(auto()) @map("_id") @db.ObjectId
+  salesReportId      String      @unique @db.ObjectId
+  salesReport        SalesReport @relation(fields: [salesReportId], references: [id])
+  imei               String
+  voucherCode        String?
+  secUserId          String?     @db.ObjectId
+  secUser            SECUser?    @relation(fields: [secUserId], references: [id])
+  uploadedByAdminId  String      @db.ObjectId
+  uploadedBy         AdminUser   @relation(fields: [uploadedByAdminId], references: [id])
+  uploadedAt         DateTime    @default(now())
+  status             String      @default("VALID") // VALID or CANCELLED
+  message            String?
+  createdAt          DateTime    @default(now())
+
+  @@unique([imei])
+  @@index([secUserId])
+}
+
+model InvalidVoucherLog {
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  imei               String
+  uploadedByAdminId  String    @db.ObjectId
+  uploadedBy         AdminUser @relation(fields: [uploadedByAdminId], references: [id])
+  uploadedAt         DateTime  @default(now())
+  secId              String?
+  phone              String?
+  status             String    @default("INVALID")
+  message            String?
+  createdAt          DateTime  @default(now())
+
+  @@index([imei])
+}
+
+model Notification {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  secUserId  String   @db.ObjectId
+  secUser    SECUser  @relation(fields: [secUserId], references: [id])
+  type       String
+  title      String
+  message    String
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([secUserId, createdAt])
 }

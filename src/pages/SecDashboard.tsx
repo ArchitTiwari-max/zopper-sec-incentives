@@ -3,6 +3,7 @@ import CameraScanner from '@/components/CameraScanner'
 import { ProfileModal } from '@/components/ProfileModal'
 import { motion } from 'framer-motion'
 import { FaBarcode, FaStore, FaMobileAlt, FaListAlt, FaIdBadge, FaSpinner, FaSignOutAlt } from 'react-icons/fa'
+import NotificationsBell from '@/components/NotificationsBell'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { isSECUser, SECAuthData } from '@/lib/auth'
@@ -290,14 +291,17 @@ const response = await fetch(`${config.apiUrl}/sec/report`, {
             </button>
           )}
         </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          title="Logout"
-        >
-          <FaSignOutAlt size={12} />
-          Logout
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationsBell />
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Logout"
+          >
+            <FaSignOutAlt size={12} />
+            Logout
+          </button>
+        </div>
       </div>
 
       <form className="mt-4 space-y-4" onSubmit={submit}>

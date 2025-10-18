@@ -412,6 +412,12 @@ export function AdminDashboard() {
         >
           Process Voucher Excel
         </button>
+        <button 
+          onClick={() => navigate('/admin/gift-voucher-upload')} 
+          className="bg-purple-600 text-white px-4 py-2 rounded-2xl hover:bg-purple-700 transition-colors"
+        >
+          Upload Gift Vouchers (IMEI)
+        </button>
         
         {!showMultiSelect ? (
           <button 

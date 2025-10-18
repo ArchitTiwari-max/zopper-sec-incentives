@@ -43,6 +43,16 @@ interface VoucherReport {
   }
 }
 
+interface InvalidVoucherLog {
+  id?: string
+  imei: string
+  uploadedAt?: string
+  uploadedByAdminId?: string
+  status?: string
+  secId?: string | null
+  phone?: string | null
+}
+
 // Processed day-wise data structure
 interface DayRow {
   date: string // ISO
@@ -123,10 +133,13 @@ export function ReportPage() {
   const navigate = useNavigate()
   const [reports, setReports] = useState<SalesReport[]>([])
   const [voucherReports, setVoucherReports] = useState<VoucherReport[]>([])
+  const [invalidLogs, setInvalidLogs] = useState<InvalidVoucherLog[]>([])
   const [loading, setLoading] = useState(true)
   const [voucherLoading, setVoucherLoading] = useState(true)
+  const [invalidLoading, setInvalidLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [voucherError, setVoucherError] = useState<string | null>(null)
+  const [invalidError, setInvalidError] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [sortDesc, setSortDesc] = useState(true)
   const [dayFilter, setDayFilter] = useState<'today' | 'yesterday' | 'all'>('today')
@@ -194,9 +207,36 @@ export function ReportPage() {
         setVoucherLoading(false)
       }
     }
+
+    const fetchInvalidLogs = async () => {
+      if (!auth?.token) {
+        setInvalidError('Authentication required')
+        setInvalidLoading(false)
+        return
+      }
+      try {
+        setInvalidLoading(true)
+        const res = await fetch(`${config.apiUrl}/vouchers/sec-invalid`, {
+          headers: { 'Authorization': `Bearer ${auth.token}` }
+        })
+        const json = await res.json()
+        if (json.success) {
+          setInvalidLogs(json.data)
+          setInvalidError(null)
+        } else {
+          setInvalidError(json.message || 'Failed to fetch cancelled vouchers')
+        }
+      } catch (err) {
+        console.error('Error fetching invalid vouchers:', err)
+        setInvalidError('Network error. Please try again.')
+      } finally {
+        setInvalidLoading(false)
+      }
+    }
     
     fetchReports()
     fetchVoucherReports()
+    fetchInvalidLogs()
   }, [auth?.token])
 
   // Process reports into daily summary
@@ -368,10 +408,11 @@ export function ReportPage() {
                   <th className="p-2 sm:p-3">Plan Name</th>
                   <th className="p-2 sm:p-3">Incentive Earned</th>
                   <th className="p-2 sm:p-3">Voucher Code</th>
+                  <th className="p-2 sm:p-3">Voucher Status</th>
                 </tr>
               </thead>
               <tbody>
-                {voucherReports.map((voucher, i) => (
+                {voucherReports.map((voucher) => (
                   <tr key={voucher.id} className="border-t hover:bg-gray-50">
                     <td className="p-2 sm:p-3 whitespace-nowrap">{formatDDMMYYYY(voucher.submittedAt)}</td>
                     <td className="p-2 sm:p-3">{voucher.samsungSKU.ModelName}</td>
@@ -382,6 +423,42 @@ export function ReportPage() {
                         {voucher.voucherCode}
                       </div>
                     </td>
+                    <td className="p-2 sm:p-3">
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">Valid</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Cancelled/Invalid vouchers */}
+      <div className="mt-8">
+        <div className="text-lg font-semibold mb-2">⚠️ Cancelled Vouchers (Invalid IMEI)</div>
+        {invalidLoading ? (
+          <div className="flex items-center gap-2 text-sm text-gray-600"><FaSpinner className="animate-spin" /> Loading...</div>
+        ) : invalidError ? (
+          <div className="text-sm text-red-600">❌ {invalidError}</div>
+        ) : invalidLogs.length === 0 ? (
+          <div className="text-sm text-gray-500 bg-gray-50 rounded-2xl p-4">No cancelled vouchers.</div>
+        ) : (
+          <div className="overflow-auto rounded-2xl border">
+            <table className="w-full text-xs sm:text-sm">
+              <thead className="bg-gray-50">
+                <tr className="text-left">
+                  <th className="p-2 sm:p-3">IMEI</th>
+                  <th className="p-2 sm:p-3">Uploaded At</th>
+                  <th className="p-2 sm:p-3">Voucher Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invalidLogs.map((log, i) => (
+                  <tr key={`${log.imei}-${i}`} className="border-t hover:bg-gray-50">
+                    <td className="p-2 sm:p-3 font-mono text-xs">{log.imei}</td>
+                    <td className="p-2 sm:p-3">{log.uploadedAt ? formatDayMonYear(log.uploadedAt) : '-'}</td>
+                    <td className="p-2 sm:p-3"><span className="px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">Cancelled (Invalid IMEI)</span></td>
                   </tr>
                 ))}
               </tbody>

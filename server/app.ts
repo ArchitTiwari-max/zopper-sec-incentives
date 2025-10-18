@@ -1635,6 +1635,352 @@ app.post('/api/admin/process-voucher-excel', upload.single('excel'), async (req,
   }
 })
 
+// Helper to send WhatsApp notification for voucher cancellation (best-effort)
+async function sendVoucherCancelledWhatsApp(phone: string, imei: string) {
+  try {
+    const comifyApiKey = process.env.COMIFY_API_KEY
+    const baseUrl = process.env.COMIFY_BASE_URL || 'https://commify.transify.tech/v1'
+    const templateName = process.env.COMIFY_VOUCHER_CANCEL_TEMPLATE // optional
+
+    // Require both API key and template to actually send; otherwise skip
+    if (!comifyApiKey || !templateName) {
+      console.log('ℹ️ Skipping WhatsApp send: COMIFY config missing')
+      return { success: false, skipped: true }
+    }
+
+    const formattedPhone = phone.startsWith('91') ? phone : `91${phone}`
+    const response = await fetch(`${baseUrl}/comm`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `ApiKey ${comifyApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: templateName,
+        payload: {
+          phone: formattedPhone,
+          imei
+        },
+        type: 'whatsappTemplate'
+      })
+    })
+
+    const result = await response.json()
+    if (!response.ok) {
+      console.error('❌ Comify voucher cancel API error:', result)
+      return { success: false, error: result }
+    }
+    console.log(`✅ WhatsApp voucher cancel sent to ${formattedPhone} for IMEI ${imei}`)
+    return { success: true, data: result }
+  } catch (err) {
+    console.error('❌ Error sending voucher cancel WhatsApp:', err)
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
+  }
+}
+
+// Admin Gift Voucher Upload (IMEI-wise validation)
+app.post('/api/admin/gift-vouchers/upload', upload.single('excel'), async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+    const token = authHeader.split(' ')[1]
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only admin users can upload gift vouchers' })
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Excel file is required' })
+    }
+
+    const workbook = read(req.file.buffer, { type: 'buffer' })
+    const sheetName = workbook.SheetNames[0]
+    const worksheet = workbook.Sheets[sheetName]
+    const rows: any[] = utils.sheet_to_json(worksheet)
+
+    const now = new Date()
+    const uploadedBy = decoded.username || 'Admin'
+
+    let validCount = 0
+    let invalidCount = 0
+    const invalidRecords: Array<{ imei: string; uploadedBy: string; uploadTime: string; status: string } & Record<string, any>> = []
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+      // Flexible column names
+      const rawImei = (row['IMEI'] ?? row['imei'] ?? row['Imei'] ?? '').toString().trim()
+      if (!rawImei) {
+        // skip blank rows
+        continue
+      }
+      const voucherCode = (row['Voucher Code'] ?? row['Voucher'] ?? row['voucherCode'] ?? '').toString().trim() || null
+      const secId = (row['SEC ID'] ?? row['secId'] ?? '').toString().trim() || null
+      const phone = (row['Phone'] ?? row['Phone Number'] ?? row['SEC Phone'] ?? '').toString().trim() || null
+
+      try {
+        // Check existence in sales reports
+        const report = await prisma.salesReport.findUnique({
+          where: { imei: rawImei },
+          include: { secUser: true }
+        })
+
+        if (!report) {
+          invalidCount++
+          // Persist invalid log
+          await prisma.invalidVoucherLog.create({
+            data: {
+              imei: rawImei,
+              uploadedByAdminId: decoded.userId,
+              secId: secId || undefined,
+              phone: phone || undefined,
+              message: 'Unmatched IMEI in sales data',
+            }
+          })
+
+          // In-app notification if SEC user can be identified via provided row metadata
+          let secUserForNotif = null
+          if (phone) {
+            secUserForNotif = await prisma.sECUser.findUnique({ where: { phone } })
+          } else if (secId) {
+            secUserForNotif = await prisma.sECUser.findFirst({ where: { secId } })
+          }
+          if (secUserForNotif) {
+            await prisma.notification.create({
+              data: {
+                secUserId: secUserForNotif.id,
+                type: 'GIFT_VOUCHER_CANCELLED',
+                title: 'Gift Voucher Cancelled',
+                message: `Your gift voucher for IMEI ${rawImei} has been cancelled due to incorrect IMEI details. Please verify and correct your submission.`,
+              }
+            })
+            if (secUserForNotif.phone) {
+              // Best-effort WhatsApp send
+              await sendVoucherCancelledWhatsApp(secUserForNotif.phone, rawImei)
+            }
+          }
+
+          invalidRecords.push({
+            imei: rawImei,
+            uploadedBy,
+            uploadTime: now.toISOString(),
+            status: 'Invalid'
+          })
+          continue
+        }
+
+        // Create GiftVoucher if not exists for this IMEI
+        try {
+          await prisma.giftVoucher.create({
+            data: {
+              salesReportId: report.id,
+              imei: rawImei,
+              voucherCode: voucherCode || undefined,
+              secUserId: report.secUserId,
+              uploadedByAdminId: decoded.userId,
+              status: 'VALID',
+            }
+          })
+        } catch (e: any) {
+          // Handle unique constraint (already exists)
+          if (e?.code !== 'P2002') throw e
+        }
+
+        validCount++
+      } catch (err) {
+        console.error(`❌ Error processing row ${i + 1} (IMEI: ${rawImei}):`, err)
+        invalidCount++
+        invalidRecords.push({
+          imei: rawImei,
+          uploadedBy,
+          uploadTime: now.toISOString(),
+          status: 'Invalid'
+        })
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: 'Gift voucher file processed',
+      data: {
+        totalUploaded: rows.length,
+        validEntries: validCount,
+        invalidImeis: invalidCount,
+        invalidRecords
+      }
+    })
+  } catch (error) {
+    console.error('❌ Error in gift voucher upload:', error)
+    res.status(500).json({ success: false, message: 'Failed to process gift voucher file' })
+  }
+})
+
+// Admin: fetch invalid gift voucher IMEIs
+app.get('/api/admin/gift-vouchers/invalid', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+    const token = authHeader.split(' ')[1]
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only admin users can view invalid IMEIs' })
+    }
+
+    const logs = await prisma.invalidVoucherLog.findMany({
+      orderBy: { uploadedAt: 'desc' },
+      take: 200
+    })
+
+    res.json({ success: true, data: logs, count: logs.length })
+  } catch (err) {
+    console.error('❌ Error fetching invalid voucher logs:', err)
+    res.status(500).json({ success: false, message: 'Failed to fetch invalid IMEIs' })
+  }
+})
+
+// SEC: fetch invalid voucher logs associated to this SEC (by phone or secId)
+app.get('/api/vouchers/sec-invalid', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+    const token = authHeader.split(' ')[1]
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({ success: false, message: 'Only SEC users can view their invalid vouchers' })
+    }
+
+    const secUser = await prisma.sECUser.findUnique({ where: { id: decoded.userId } })
+    if (!secUser) return res.status(404).json({ success: false, message: 'SEC user not found' })
+
+    const logs = await prisma.invalidVoucherLog.findMany({
+      where: {
+        OR: [
+          secUser.secId ? { secId: secUser.secId } : undefined,
+          { phone: secUser.phone }
+        ].filter(Boolean) as any
+      },
+      orderBy: { uploadedAt: 'desc' },
+      take: 100
+    })
+
+    res.json({ success: true, data: logs, count: logs.length })
+  } catch (err) {
+    console.error('❌ Error fetching SEC invalid vouchers:', err)
+    res.status(500).json({ success: false, message: 'Failed to fetch invalid vouchers' })
+  }
+})
+
+// SEC notifications - list latest notifications
+app.get('/api/notifications', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+    const token = authHeader.split(' ')[1]
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({ success: false, message: 'Only SEC users can view notifications' })
+    }
+
+    const notifications = await prisma.notification.findMany({
+      where: { secUserId: decoded.userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    })
+
+    res.json({ success: true, data: notifications, count: notifications.length })
+  } catch (err) {
+    console.error('❌ Error fetching notifications:', err)
+    res.status(500).json({ success: false, message: 'Failed to fetch notifications' })
+  }
+})
+
+// SEC notifications - mark one as read
+app.put('/api/notifications/:id/read', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+    const token = authHeader.split(' ')[1]
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({ success: false, message: 'Only SEC users can update notifications' })
+    }
+
+    const { id } = req.params
+    const updated = await prisma.notification.update({
+      where: { id },
+      data: { readAt: new Date() }
+    })
+
+    res.json({ success: true, data: updated })
+  } catch (err) {
+    console.error('❌ Error marking notification as read:', err)
+    res.status(500).json({ success: false, message: 'Failed to update notification' })
+  }
+})
+
+// SEC notifications - mark all as read
+app.put('/api/notifications/read-all', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+    const token = authHeader.split(' ')[1]
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({ success: false, message: 'Only SEC users can update notifications' })
+    }
+
+    await prisma.notification.updateMany({
+      where: { secUserId: decoded.userId, readAt: null },
+      data: { readAt: new Date() }
+    })
+
+    res.json({ success: true })
+  } catch (err) {
+    console.error('❌ Error marking all notifications as read:', err)
+    res.status(500).json({ success: false, message: 'Failed to update notifications' })
+  }
+})
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
