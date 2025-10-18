@@ -13,8 +13,8 @@ import { Footer } from './components/Footer'
 
 export default function App() {
   const location = useLocation()
-  const showFooter = location.pathname !== '/' && location.pathname !== '/leaderboard'
-  const isFullScreenPage = location.pathname === '/leaderboard'
+  const showFooter = location.pathname !== '/' && !location.pathname.endsWith('/leaderboard')
+  const isFullScreenPage = location.pathname.endsWith('/leaderboard')
   
   return (
     <AuthProvider>
@@ -24,6 +24,11 @@ export default function App() {
             <SECRoute>
               <Leaderboard />
             </SECRoute>
+          } />
+          <Route path="/admin/leaderboard" element={
+            <AdminRoute>
+              <Leaderboard />
+            </AdminRoute>
           } />
         </Routes>
       ) : (

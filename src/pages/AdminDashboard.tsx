@@ -385,7 +385,7 @@ export function AdminDashboard() {
         <StatCard title="Incentive Paid" value={`₹${totals.totalPaid}`} />
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-2 mb-3">
+      <div className="flex flex-col lg:flex-row lg:flex-wrap gap-2 mb-3">
         <input
           className="flex-1 px-3 py-2 border rounded-2xl"
           placeholder="Search SEC / Store / Device"
@@ -406,6 +406,12 @@ export function AdminDashboard() {
           <option value="unpaid">Unpaid</option>
         </select>
         <button onClick={exportExcel} className="button-gradient px-4 py-2">Export to Excel</button>
+        <button 
+          onClick={() => navigate('/admin/leaderboard')} 
+          className="bg-purple-600 text-white px-4 py-2 rounded-2xl hover:bg-purple-700 transition-colors"
+        >
+          View Leaderboard
+        </button>
         <button 
           onClick={() => navigate('/admin/voucher-processor')} 
           className="bg-green-600 text-white px-4 py-2 rounded-2xl hover:bg-green-700 transition-colors"

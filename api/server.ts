@@ -1862,29 +1862,32 @@ app.get('/api/leaderboard', async (req, res) => {
       })
     }
 
-    if (decoded.role !== 'sec') {
+    if (decoded.role !== 'sec' && decoded.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Only SEC users can view leaderboard'
+        message: 'Only SEC or Admin users can view leaderboard'
       })
     }
 
-    // Find which stores the current SEC user has made sales for
-    const userSalesReports = await prisma.salesReport.findMany({
-      where: {
-        secUserId: decoded.userId
-      },
-      select: {
-        storeId: true,
-        store: {
-          select: {
-            storeName: true,
-            city: true
+    // Find which stores the current SEC user has made sales for (admins won't have a user position)
+    let userSalesReports: { storeId: string; store: { storeName: string; city: string } }[] = []
+    if (decoded.role === 'sec') {
+      userSalesReports = await prisma.salesReport.findMany({
+        where: {
+          secUserId: decoded.userId
+        },
+        select: {
+          storeId: true,
+          store: {
+            select: {
+              storeName: true,
+              city: true
+            }
           }
-        }
-      },
-      distinct: ['storeId']
-    })
+        },
+        distinct: ['storeId']
+      })
+    }
 
     // Optimized single query to get all leaderboard data - excluding Test_Plan
     const leaderboardRawData = await prisma.salesReport.groupBy({

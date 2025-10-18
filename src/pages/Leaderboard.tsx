@@ -133,7 +133,7 @@ export function Leaderboard() {
       {/* Header */}
       <div className="p-3 sm:p-4 text-white">
         <button
-          onClick={() => navigate('/plan-sell-info')}
+          onClick={() => navigate(auth?.role === 'admin' ? '/admin/dashboard' : '/plan-sell-info')}
           className="flex items-center gap-2 mb-4 text-white/80 hover:text-white transition-colors text-sm"
         >
           <FaArrowLeft className="text-sm" />
