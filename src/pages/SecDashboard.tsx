@@ -41,6 +41,7 @@ export function SecDashboard() {
     return `${dd}-${mm}-${yyyy}`
   }
   const todayLabel = formatDMYFromISTMs(nowIstMs)
+  const yesterdayLabel = formatDMYFromISTMs(nowIstMs - DAY_MS)
   const [dateOfSale, setDateOfSale] = useState<string>(todayLabel)
   const [showToast, setShowToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [scanning, setScanning] = useState(false)
@@ -62,12 +63,13 @@ export function SecDashboard() {
     const t = setTimeout(() => setDateTick((v) => v + 1), ms)
     return () => clearTimeout(t)
   }, [dateTick])
-  // Always lock date to today and refresh at midnight
+  // Update date options when day changes but don't force reset
   useEffect(() => {
-    if (dateOfSale !== todayLabel) {
+    // Only reset if the current date is no longer valid (neither today nor yesterday)
+    if (dateOfSale !== todayLabel && dateOfSale !== yesterdayLabel) {
       setDateOfSale(todayLabel)
     }
-  }, [dateTick, todayLabel, dateOfSale])
+  }, [dateTick, todayLabel, yesterdayLabel, dateOfSale])
   
   const handleLogout = () => {
     logout()
@@ -318,10 +320,11 @@ const response = await fetch(`${config.apiUrl}/sec/report`, {
           <label className="block text-sm font-medium mb-1">Date of Sale</label>
           <select
             value={dateOfSale}
-            disabled
-            className="w-full px-3 py-3 border rounded-2xl bg-gray-100 text-gray-700"
+            onChange={(e) => setDateOfSale(e.target.value)}
+            className="w-full px-3 py-3 border rounded-2xl"
           >
             <option value={todayLabel}>{todayLabel}</option>
+            <option value={yesterdayLabel}>{yesterdayLabel}</option>
           </select>
         </div>
 
