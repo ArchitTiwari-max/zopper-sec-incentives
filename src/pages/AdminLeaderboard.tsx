@@ -1,0 +1,323 @@
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
+import { FaArrowLeft, FaCrown, FaTrophy, FaMedal, FaStar, FaFire, FaArrowUp, FaArrowDown, FaDownload, FaMinus } from 'react-icons/fa'
+import { useAuth } from '@/contexts/AuthContext'
+import { config } from '@/lib/config'
+import { utils, writeFileXLSX } from 'xlsx'
+
+interface LeaderboardEntry {
+  storeId: string
+  storeName: string
+  city: string
+  totalIncentive: number
+  adldIncentive: number
+  comboIncentive: number
+  totalSales: number
+  rank: number
+  rankChange?: number
+}
+
+export function AdminLeaderboard() {
+  const navigate = useNavigate()
+  const { auth } = useAuth()
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchLeaderboardData()
+  }, [])
+
+  const fetchLeaderboardData = async () => {
+    if (!auth?.token) {
+      setError('Authentication required')
+      setLoading(false)
+      return
+    }
+
+    try {
+      setLoading(true)
+      const response = await fetch(`${config.apiUrl}/admin/leaderboard`, {
+        headers: {
+          'Authorization': `Bearer ${auth.token}`
+        }
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        const next: LeaderboardEntry[] = result.data.leaderboard
+        setLeaderboard(next)
+        setError(null)
+      } else {
+        setError(result.message || 'Failed to fetch leaderboard')
+      }
+    } catch (error) {
+      console.error('Error fetching admin leaderboard:', error)
+      setError('Network error. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getRankIcon = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return <FaCrown className="text-yellow-400 text-xl drop-shadow" />
+      case 2:
+        return <FaTrophy className="text-gray-500 text-xl drop-shadow" />
+      case 3:
+        return <FaMedal className="text-amber-500 text-xl drop-shadow" />
+      default:
+        return <span className="text-indigo-700 font-bold text-lg">#{rank}</span>
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-600 to-blue-600">
+        <motion.div 
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="text-white text-4xl"
+        >
+          🏆
+        </motion.div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-red-500 to-pink-600">
+        <div className="text-center text-white">
+          <div className="text-4xl mb-4">❌</div>
+          <div className="text-xl mb-4">{error}</div>
+          <button 
+            onClick={fetchLeaderboardData}
+            className="bg-white text-red-600 px-6 py-3 rounded-2xl font-semibold hover:bg-gray-100 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 w-full m-0 p-0">
+      {/* Header */}
+      <div className="p-3 sm:p-4 text-white">
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => navigate('/admin/dashboard')}
+            className="flex items-center gap-2 text-white/80 hover:text-white transition-colors text-sm"
+          >
+            <FaArrowLeft className="text-sm" />
+            <span className="hidden xs:inline">Back to Dashboard</span>
+            <span className="xs:hidden">Back</span>
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={fetchLeaderboardData}
+              className="bg-white/20 text-white px-3 py-1.5 rounded-xl hover:bg-white/30 transition-colors text-sm"
+              title="Refresh"
+            >
+              Refresh
+            </button>
+            <button
+              onClick={() => {
+                const rows = leaderboard.map(e => ({
+                  Rank: e.rank,
+                  'Store Name': e.storeName,
+                  City: e.city,
+                  'ADLD Incentive': e.adldIncentive,
+                  'Combo Incentive': e.comboIncentive,
+                  'Total Incentive': e.totalIncentive,
+                  'Total Sales': e.totalSales,
+                }))
+                const ws = utils.json_to_sheet(rows)
+                const wb = utils.book_new()
+                utils.book_append_sheet(wb, ws, 'Leaderboard')
+                writeFileXLSX(wb, `admin-leaderboard-${new Date().toISOString().split('T')[0]}.xlsx`)
+              }}
+              className="bg-white text-purple-700 px-3 py-1.5 rounded-xl hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+            >
+              <FaDownload /> Export
+            </button>
+          </div>
+        </div>
+        
+        <div className="text-center">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="text-4xl sm:text-6xl mb-2"
+          >
+            🏆
+          </motion.div>
+          <h1 className="text-xl sm:text-3xl font-bold mb-2 leading-tight">Sales Champion Leaderboard</h1>
+          <p className="text-white/80 text-sm sm:text-base">Top stores by total incentives</p>
+        </div>
+      </div>
+
+      <div className="px-2 sm:px-4 pb-8">
+        {/* Top 3 Podium */}
+        {leaderboard.length > 0 && (
+          <motion.div 
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="mb-6 sm:mb-8 pt-6 sm:pt-8"
+          >
+            <div className="flex justify-center items-end gap-0.5 sm:gap-4 mb-6 max-w-full px-1 relative">
+              {/* Second Place */}
+              {leaderboard[1] && (
+                <motion.div
+                  initial={{ y: 100, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-center flex-1 max-w-[30%] sm:max-w-none sm:flex-none"
+                >
+                  <div className="bg-gradient-to-t from-gray-300 to-gray-500 rounded-t-lg sm:rounded-t-2xl p-1 sm:p-4 h-24 sm:h-36 flex flex-col justify-end text-white shadow-lg">
+                    <FaTrophy className="text-sm sm:text-2xl mb-1 sm:mb-2 mx-auto" />
+                    <div className="font-bold text-[9px] sm:text-sm text-center leading-tight px-0.5 break-words hyphens-auto" style={{wordBreak: 'break-word'}}>{leaderboard[1].storeName}</div>
+                    <div className="text-[8px] sm:text-xs opacity-80 text-center px-0.5 break-words" style={{wordBreak: 'break-word'}}>{leaderboard[1].city}</div>
+                    <div className="text-xs sm:text-lg font-bold">₹{leaderboard[1].totalIncentive}</div>
+                  </div>
+                  <div className="bg-gray-400 text-white py-0.5 sm:py-2 rounded-b-lg sm:rounded-b-2xl font-bold text-[10px] sm:text-sm">#2</div>
+                </motion.div>
+              )}
+
+              {/* First Place */}
+              {leaderboard[0] && (
+                <motion.div
+                  initial={{ y: 100, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-center relative flex-1 max-w-[40%] sm:max-w-none sm:flex-none"
+                >
+                  <motion.div
+                    animate={{ rotate: [0, 5, -5, 0] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="absolute -top-6 sm:-top-8 left-1/2 transform -translate-x-1/2 text-xl sm:text-4xl z-10"
+                  >
+                    👑
+                  </motion.div>
+                  <div className="bg-gradient-to-t from-yellow-400 to-yellow-600 rounded-t-lg sm:rounded-t-2xl p-1 sm:p-4 h-28 sm:h-44 flex flex-col justify-end text-white shadow-xl">
+                    <FaCrown className="text-lg sm:text-3xl mb-1 sm:mb-2 mx-auto" />
+                    <div className="font-bold text-[10px] sm:text-base text-center leading-tight px-0.5 break-words hyphens-auto" style={{wordBreak: 'break-word'}}>{leaderboard[0].storeName}</div>
+                    <div className="text-[8px] sm:text-sm opacity-80 text-center px-0.5 break-words" style={{wordBreak: 'break-word'}}>{leaderboard[0].city}</div>
+                    <div className="text-sm sm:text-xl font-bold">₹{leaderboard[0].totalIncentive}</div>
+                  </div>
+                  <div className="bg-yellow-500 text-white py-0.5 sm:py-2 rounded-b-lg sm:rounded-b-2xl font-bold text-[10px] sm:text-sm">CHAMPION</div>
+                </motion.div>
+              )}
+
+              {/* Third Place */}
+              {leaderboard[2] && (
+                <motion.div
+                  initial={{ y: 100, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-center flex-1 max-w-[30%] sm:max-w-none sm:flex-none"
+                >
+                  <div className="bg-gradient-to-t from-amber-400 to-amber-600 rounded-t-lg sm:rounded-t-2xl p-1 sm:p-4 h-20 sm:h-28 flex flex-col justify-end text-white shadow-lg">
+                    <FaMedal className="text-xs sm:text-xl mb-1 mx-auto" />
+                    <div className="font-bold text-[9px] sm:text-sm text-center leading-tight px-0.5 break-words hyphens-auto" style={{wordBreak: 'break-word'}}>{leaderboard[2].storeName}</div>
+                    <div className="text-[8px] sm:text-xs opacity-80 text-center px-0.5 break-words" style={{wordBreak: 'break-word'}}>{leaderboard[2].city}</div>
+                    <div className="text-xs sm:text-base font-bold">₹{leaderboard[2].totalIncentive}</div>
+                  </div>
+                  <div className="bg-amber-500 text-white py-0.5 sm:py-2 rounded-b-lg sm:rounded-b-2xl font-bold text-[10px] sm:text-sm">#3</div>
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Full Leaderboard Table */}
+        <motion.div
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white rounded-2xl shadow-xl overflow-hidden"
+        >
+          <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-3 sm:p-4">
+            <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <FaFire className="text-orange-400 text-sm sm:text-base" />
+              <span className="truncate">All Stores Ranking</span>
+            </h2>
+            <p className="text-xs sm:text-sm opacity-80">Complete leaderboard by total incentives earned</p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[350px]">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">Rank</th>
+                  <th className="text-left p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">Store</th>
+                  <th className="text-right p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">ADLD</th>
+                  <th className="text-right p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">Combo</th>
+                  <th className="text-right p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaderboard.map((entry, index) => (
+                  <motion.tr
+                    key={entry.storeId}
+                    initial={{ x: -50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="border-b hover:bg-gray-50"
+                  >
+                    <td className="p-1 sm:p-3">
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="scale-75 sm:scale-100">{getRankIcon(entry.rank)}</div>
+                        {entry.rank <= 3 && (
+                          <motion.div
+                            animate={{ scale: [1, 1.2, 1] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                          >
+                            <FaStar className="text-yellow-500 text-xs sm:text-sm" />
+                          </motion.div>
+                        )}
+                        {/* Rank change vs yesterday 23:59:59 */}
+                        {typeof entry.rankChange === 'number' ? (
+                          entry.rankChange > 0 ? (
+                            <span className="flex items-center gap-0.5 text-green-600 text-xs sm:text-sm" title="Improved vs yesterday">
+                              <FaArrowUp className="text-green-600" />{Math.abs(entry.rankChange)}
+                            </span>
+                          ) : entry.rankChange < 0 ? (
+                            <span className="flex items-center gap-0.5 text-red-600 text-xs sm:text-sm" title="Dropped vs yesterday">
+                              <FaArrowDown className="text-red-600" />{Math.abs(entry.rankChange)}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-0.5 text-gray-500 text-xs sm:text-sm" title="No change vs yesterday">
+                              <FaMinus />
+                            </span>
+                          )
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="p-1 sm:p-3 min-w-[120px] sm:min-w-[180px]">
+                      <div>
+                        <div className="font-semibold text-gray-800 text-xs sm:text-sm break-words leading-tight" style={{wordBreak: 'break-word'}}>{entry.storeName}</div>
+                        <div className="text-xs text-gray-500 break-words" style={{wordBreak: 'break-word'}}>{entry.city}</div>
+                      </div>
+                    </td>
+                    <td className="p-1 sm:p-3 text-right font-mono text-xs sm:text-sm">₹{entry.adldIncentive}</td>
+                    <td className="p-1 sm:p-3 text-right font-mono text-xs sm:text-sm">₹{entry.comboIncentive}</td>
+                    <td className="p-1 sm:p-3 text-right">
+                      <div className="font-bold text-sm sm:text-lg text-green-600">₹{entry.totalIncentive}</div>
+                      <div className="text-xs text-gray-500">{entry.totalSales} sales</div>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  )
+}

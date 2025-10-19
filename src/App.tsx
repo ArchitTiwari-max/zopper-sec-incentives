@@ -10,11 +10,12 @@ import { Leaderboard } from './pages/Leaderboard'
 import { VoucherProcessor } from './pages/VoucherProcessor'
 import { AdminInvalidImeiProcessor } from './pages/AdminInvalidImeiProcessor'
 import { Footer } from './components/Footer'
+import { AdminLeaderboard } from './pages/AdminLeaderboard'
 
 export default function App() {
   const location = useLocation()
-  const showFooter = location.pathname !== '/' && location.pathname !== '/leaderboard'
-  const isFullScreenPage = location.pathname === '/leaderboard'
+  const showFooter = location.pathname !== '/' && location.pathname !== '/leaderboard' && location.pathname !== '/admin/leaderboard'
+  const isFullScreenPage = location.pathname === '/leaderboard' || location.pathname === '/admin/leaderboard'
   
   return (
     <AuthProvider>
@@ -24,6 +25,11 @@ export default function App() {
             <SECRoute>
               <Leaderboard />
             </SECRoute>
+          } />
+          <Route path="/admin/leaderboard" element={
+            <AdminRoute>
+              <AdminLeaderboard />
+            </AdminRoute>
           } />
         </Routes>
       ) : (

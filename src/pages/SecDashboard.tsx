@@ -366,7 +366,7 @@ const response = await fetch(`${config.apiUrl}/sec/report`, {
             value={planType}
             onChange={setPlanType}
             options={availablePlans
-              .filter(p => p.planType !== 'Extended_Warranty_1_Yr')
+              .filter(p => p.planType !== 'Extended_Warranty_1_Yr' && p.planType !== 'Screen_Protect_1_Yr')
               .map(p => ({ value: p.planType, label: `${formatPlanType(p.planType)}` }))}
             placeholder={!device ? 'Select device first' : loading.plans ? 'Loading plans...' : 'Search or select plan'}
             disabled={loading.plans || !device}

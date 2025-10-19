@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { utils, writeFileXLSX } from 'xlsx'
-import { FaSignOutAlt, FaSpinner } from 'react-icons/fa'
+import { FaSignOutAlt, FaSpinner, FaEllipsisH, FaDownload, FaTrophy, FaFileUpload, FaTimes } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { isAdminUser } from '@/lib/auth'
@@ -72,6 +72,7 @@ export function AdminDashboard() {
   const [bulkLoading, setBulkLoading] = useState(false)
   const [isLive, setIsLive] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [actionsOpen, setActionsOpen] = useState(false)
   
   const handleLogout = () => {
     logout()
@@ -385,39 +386,62 @@ export function AdminDashboard() {
         <StatCard title="Incentive Paid" value={`₹${totals.totalPaid}`} />
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-2 mb-3">
+      <div className="flex flex-col lg:flex-row lg:flex-wrap items-center gap-2 mb-3">
         <input
-          className="flex-1 px-3 py-2 border rounded-2xl"
-          placeholder="Search SEC / Store / Device"
+          className="flex-1 min-w-[220px] px-3 py-2 border rounded-2xl"
+          placeholder="Search SEC / Store / Device / IMEI"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <select className="px-3 py-2 border rounded-2xl" value={storeFilter} onChange={e => setStoreFilter(e.target.value)}>
+        <select className="px-3 py-2 border rounded-2xl w-56 shrink-0" value={storeFilter} onChange={e => setStoreFilter(e.target.value)}>
           <option value="">All Stores</option>
           {stores.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select className="px-3 py-2 border rounded-2xl" value={planFilter} onChange={e => setPlanFilter(e.target.value)}>
+        <select className="px-3 py-2 border rounded-2xl w-40 shrink-0" value={planFilter} onChange={e => setPlanFilter(e.target.value)}>
           <option value="">All Plans</option>
           {plans.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
-        <select className="px-3 py-2 border rounded-2xl" value={paymentFilter} onChange={e => setPaymentFilter(e.target.value as 'all' | 'paid' | 'unpaid')}>
+        <select className="px-3 py-2 border rounded-2xl w-28 shrink-0" value={paymentFilter} onChange={e => setPaymentFilter(e.target.value as 'all' | 'paid' | 'unpaid')}>
           <option value="all">All</option>
           <option value="paid">Paid</option>
           <option value="unpaid">Unpaid</option>
         </select>
-        <button onClick={exportExcel} className="button-gradient px-4 py-2">Export to Excel</button>
-        <button 
-          onClick={() => navigate('/admin/voucher-processor')} 
-          className="bg-green-600 text-white px-4 py-2 rounded-2xl hover:bg-green-700 transition-colors"
-        >
-          Process Voucher Excel
-        </button>
-        <button 
-          onClick={() => navigate('/admin/invalid-imei-processor')} 
-          className="bg-red-600 text-white px-4 py-2 rounded-2xl hover:bg-red-700 transition-colors"
-        >
-          Process Invalid IMEIs
-        </button>
+        <div className="relative shrink-0">
+          <button 
+            onClick={() => setActionsOpen(o => !o)} 
+            className="px-4 py-2 border rounded-2xl bg-white text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+          >
+            <FaEllipsisH /> Actions
+          </button>
+          {actionsOpen && (
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border z-20">
+              <button 
+                onClick={() => { setActionsOpen(false); exportExcel() }} 
+                className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
+              >
+                <FaDownload /> Export to Excel
+              </button>
+              <button 
+                onClick={() => { setActionsOpen(false); navigate('/admin/leaderboard') }} 
+                className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
+              >
+                <FaTrophy /> View Leaderboard
+              </button>
+              <button 
+                onClick={() => { setActionsOpen(false); navigate('/admin/voucher-processor') }} 
+                className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
+              >
+                <FaFileUpload /> Process Voucher Excel
+              </button>
+              <button 
+                onClick={() => { setActionsOpen(false); navigate('/admin/invalid-imei-processor') }} 
+                className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
+              >
+                <FaTimes /> Process Invalid IMEIs
+              </button>
+            </div>
+          )}
+        </div>
         
         {!showMultiSelect ? (
           <button 

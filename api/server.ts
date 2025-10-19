@@ -9,12 +9,13 @@ import { utils, read } from 'xlsx'
 
 const app = express()
 const prisma = new PrismaClient()
-const PORT = process.env.PORT || 3001
-const JWT_SECRET = process.env.JWT_SECRET
+const PORT = Number(process.env.PORT) || 3001
+// In dev, fall back to an insecure default to avoid crashing; require real secret in production
+const JWT_SECRET: string = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'dev-insecure-secret')
 
-// Check if JWT_SECRET is properly configured
+// Enforce secret only in production (dev uses fallback above)
 if (!JWT_SECRET) {
-  console.error('❌ CRITICAL: JWT_SECRET environment variable is not set!')
+  console.error('❌ CRITICAL: JWT_SECRET environment variable is not set! Set JWT_SECRET in the environment.')
   process.exit(1)
 }
 
@@ -2026,6 +2027,128 @@ app.get('/api/leaderboard', async (req, res) => {
       message: 'Failed to fetch leaderboard',
       error: error instanceof Error ? error.message : 'Unknown error'
     })
+  }
+})
+
+// Admin leaderboard (no user ranking section)
+app.get('/api/admin/leaderboard', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only admin users can view leaderboard' })
+    }
+
+    // Current (all-time cumulative, excluding Test_Plan)
+    const leaderboardRawData = await prisma.salesReport.groupBy({
+      by: ['storeId'],
+      where: {
+        plan: { planType: { not: 'Test_Plan' } }
+      },
+      _sum: { incentiveEarned: true },
+      _count: { id: true }
+    })
+
+    const storeIds = leaderboardRawData.map(stat => stat.storeId)
+    const stores = await prisma.store.findMany({
+      where: { id: { in: storeIds } },
+      select: { id: true, storeName: true, city: true }
+    })
+
+    const adldIncentives = await prisma.salesReport.groupBy({
+      by: ['storeId'],
+      where: { storeId: { in: storeIds }, plan: { planType: 'ADLD_1_Yr' } },
+      _sum: { incentiveEarned: true }
+    })
+
+    const comboIncentives = await prisma.salesReport.groupBy({
+      by: ['storeId'],
+      where: { storeId: { in: storeIds }, plan: { planType: 'Combo_2Yrs' } },
+      _sum: { incentiveEarned: true }
+    })
+
+    const storeMap = new Map(stores.map(store => [store.id, store]))
+    const adldMap = new Map(adldIncentives.map(item => [item.storeId, item._sum.incentiveEarned || 0]))
+    const comboMap = new Map(comboIncentives.map(item => [item.storeId, item._sum.incentiveEarned || 0]))
+
+    const detailedStats = leaderboardRawData.map(storeStat => {
+      const store = storeMap.get(storeStat.storeId)
+      return {
+        storeId: storeStat.storeId,
+        storeName: store?.storeName || 'Unknown Store',
+        city: store?.city || 'Unknown City',
+        totalIncentive: storeStat._sum.incentiveEarned || 0,
+        adldIncentive: adldMap.get(storeStat.storeId) || 0,
+        comboIncentive: comboMap.get(storeStat.storeId) || 0,
+        totalSales: storeStat._count.id
+      }
+    })
+
+    const sortedStats = detailedStats
+      .sort((a, b) => {
+        if (b.totalIncentive !== a.totalIncentive) return b.totalIncentive - a.totalIncentive
+        if (b.comboIncentive !== a.comboIncentive) return b.comboIncentive - a.comboIncentive
+        return a.storeName.localeCompare(b.storeName, 'en', { numeric: true, sensitivity: 'base' })
+      })
+      .map((stat, index) => ({ ...stat, rank: index + 1 }))
+
+    // Previous snapshot: up to yesterday 23:59:59 (server-local time)
+    const now = new Date()
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const endOfYesterday = new Date(startOfToday.getTime() - 1)
+
+    const prevRaw = await prisma.salesReport.groupBy({
+      by: ['storeId'],
+      where: {
+        submittedAt: { lte: endOfYesterday },
+        plan: { planType: { not: 'Test_Plan' } }
+      },
+      _sum: { incentiveEarned: true }
+    })
+
+    // Build previous ranking list (only stores with any historical sales up to yesterday)
+    const prevStoreIds = prevRaw.map(s => s.storeId)
+    const prevTotals = new Map(prevRaw.map(s => [s.storeId, s._sum.incentiveEarned || 0]))
+
+    // Compose previous stats comparable to current (names just for potential future use)
+    const prevStats = prevStoreIds.map(id => ({
+      storeId: id,
+      totalIncentive: prevTotals.get(id) || 0,
+      comboIncentive: 0,
+      storeName: storeMap.get(id)?.storeName || '',
+    }))
+    const prevSorted = prevStats
+      .sort((a, b) => {
+        if ((b.totalIncentive || 0) !== (a.totalIncentive || 0)) return (b.totalIncentive || 0) - (a.totalIncentive || 0)
+        // tie-breaker: store name
+        return (a.storeName || '').localeCompare(b.storeName || '', 'en', { numeric: true, sensitivity: 'base' })
+      })
+      .map((s, i) => ({ storeId: s.storeId, rank: i + 1 }))
+
+    const prevRankMap = new Map(prevSorted.map(x => [x.storeId, x.rank]))
+
+    const withChange = sortedStats.map(s => ({
+      ...s,
+      rankChange: (prevRankMap.get(s.storeId) ?? s.rank) - s.rank
+    }))
+
+    console.log(`✅ Admin leaderboard fetched with ${withChange.length} stores (yesterday snapshot @ ${endOfYesterday.toISOString()})`)
+    return res.json({ success: true, data: { leaderboard: withChange } })
+  } catch (error) {
+    console.error('❌ Error fetching admin leaderboard:', error)
+    return res.status(500).json({ success: false, message: 'Failed to fetch admin leaderboard' })
   }
 })
 
