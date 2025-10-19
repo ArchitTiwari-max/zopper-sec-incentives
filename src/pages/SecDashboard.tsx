@@ -11,6 +11,7 @@ import {
   fetchSamsungSKUs, 
   fetchPlansForSKU, 
   formatPlanType,
+  formatPrice,
   type Store, 
   type SamsungSKU, 
   type Plan 
@@ -48,6 +49,7 @@ export function SecDashboard() {
   const [scanning, setScanning] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [congratsAmount, setCongratsAmount] = useState<number | null>(null)
+  const [showConfirm, setShowConfirm] = useState(false)
   // Force re-render at midnight so today/yesterday labels update without refresh
   const [dateTick, setDateTick] = useState(0)
   useEffect(() => {
@@ -199,9 +201,9 @@ export function SecDashboard() {
     setPlanType('')
   }, [device])
   
-  const submit = async (e: React.FormEvent) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Validate required fields
     if (!store || !device || !planType || !imei) {
       setShowToast({ type: 'error', message: 'Please fill in all fields' })
@@ -214,17 +216,22 @@ export function SecDashboard() {
       setTimeout(() => setShowToast(null), 3000)
       return
     }
-    
+
     if (!auth?.token) {
       setShowToast({ type: 'error', message: 'Authentication required' })
       setTimeout(() => setShowToast(null), 3000)
       return
     }
-    
+
+    // Open confirmation modal instead of immediate submit
+    setShowConfirm(true)
+  }
+
+  const performSubmit = async () => {
+    if (!auth?.token) return
     setLoading(prev => ({ ...prev, submit: true }))
-    
     try {
-const response = await fetch(`${config.apiUrl}/sec/report`, {
+      const response = await fetch(`${config.apiUrl}/sec/report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -238,17 +245,18 @@ const response = await fetch(`${config.apiUrl}/sec/report`, {
           dateOfSale
         })
       })
-      
+
       const data = await response.json()
-      
+
       if (data.success) {
-        // Reset form
+        // Close confirmation and reset form
+        setShowConfirm(false)
         setStore('')
         setDevice('')
         setPlanType('')
         setImei('')
         setDateOfSale(todayLabel)
-        
+
         // Show congratulations modal with incentive amount
         const earned = data?.data?.incentiveEarned ?? data?.incentiveEarned ?? 0
         setCongratsAmount(earned)
@@ -443,6 +451,29 @@ const response = await fetch(`${config.apiUrl}/sec/report`, {
         onProfileUpdated={handleProfileUpdated}
       />
 
+      {showConfirm && (
+        <ConfirmModal
+          details={{
+            secId: secId || '',
+            dateOfSale,
+            storeLabel: stores.find(s => s.id === store) ? `${stores.find(s => s.id === store)!.storeName} - ${stores.find(s => s.id === store)!.city}` : '',
+            deviceLabel: (() => {
+              const sku = samsungSKUs.find(s => s.id === device)
+              return sku ? `${sku.Category} - ${sku.ModelName}` : ''
+            })(),
+            planLabel: planType ? formatPlanType(planType) : '',
+            planPrice: (() => {
+              const p = availablePlans.find(p => p.planType === planType)
+              return p ? formatPrice(p.price) : ''
+            })(),
+            imei: imei.trim(),
+          }}
+          onCancel={() => setShowConfirm(false)}
+          onConfirm={performSubmit}
+          loading={loading.submit}
+        />
+      )}
+
       {congratsAmount !== null && (
         <CongratsModal
           amount={congratsAmount}
@@ -453,6 +484,66 @@ const response = await fetch(`${config.apiUrl}/sec/report`, {
         />
       )}
     </motion.div>
+  )
+}
+
+function ConfirmModal({
+  details,
+  onCancel,
+  onConfirm,
+  loading,
+}: {
+  details: {
+    secId: string
+    dateOfSale: string
+    storeLabel: string
+    deviceLabel: string
+    planLabel: string
+    planPrice: string
+    imei: string
+  }
+  onCancel: () => void
+  onConfirm: () => void
+  loading: boolean
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
+      <div className="relative bg-white rounded-2xl shadow-xl p-6 max-w-md w-full">
+        <h3 className="text-lg font-semibold mb-1">Confirm Plan Sale</h3>
+        <p className="text-sm text-gray-500 mb-4">Review the details below before submitting.</p>
+
+        <div className="space-y-2 text-sm">
+          <Row label="SEC ID" value={details.secId || '-'} />
+          <Row label="Date of Sale" value={details.dateOfSale} />
+          <Row label="Store Name" value={details.storeLabel} />
+          <Row label="Device" value={details.deviceLabel} />
+          <Row label="Plan Type" value={details.planLabel} />
+          <Row label="Plan Price" value={details.planPrice || '-'} />
+          <Row label="IMEI" value={details.imei} mono />
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <button onClick={onCancel} className="px-4 py-2 rounded-xl border">Cancel</button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="button-gradient py-2 rounded-xl disabled:opacity-60"
+          >
+            {loading ? 'Submitting…' : 'Confirm & Submit'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Row({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex justify-between gap-3">
+      <div className="text-gray-500">{label}</div>
+      <div className={`font-medium ${mono ? 'font-mono' : ''}`}>{value}</div>
+    </div>
   )
 }
 
