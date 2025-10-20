@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { FaArrowLeft, FaCrown, FaTrophy, FaMedal, FaStar, FaFire } from 'react-icons/fa'
+import { FaArrowLeft, FaCrown, FaTrophy, FaMedal, FaStar, FaFire, FaArrowUp, FaArrowDown, FaMinus } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { config } from '@/lib/config'
 
@@ -14,6 +14,8 @@ interface LeaderboardEntry {
   comboIncentive: number
   totalSales: number
   rank: number
+  rankChange?: number
+  isNewToday?: boolean
 }
 
 interface UserPosition {
@@ -151,6 +153,19 @@ export function Leaderboard() {
           </motion.div>
           <h1 className="text-xl sm:text-3xl font-bold mb-2 leading-tight">Sales Champion Leaderboard</h1>
           <p className="text-white/80 text-sm sm:text-base">Who will claim the crown this month?</p>
+          <div className="text-white/80 text-xs mt-2 flex items-center justify-center gap-3">
+            <span>
+              Rank movement is calculated against yesterday 23:59:59.
+            </span>
+            <span className="hidden sm:inline">•</span>
+            <span className="flex items-center gap-1" title="Improved vs yesterday 23:59:59">
+              <FaArrowUp className="text-green-500" /> Up = improved rank
+            </span>
+            <span className="hidden sm:inline">•</span>
+            <span className="flex items-center gap-1" title="Dropped vs yesterday 23:59:59">
+              <FaArrowDown className="text-red-500" /> Down = dropped rank
+            </span>
+          </div>
         </div>
       </div>
 
@@ -244,6 +259,23 @@ export function Leaderboard() {
                 <div className="flex items-center justify-center sm:justify-end gap-2 mb-2">
                   <div className="scale-75 sm:scale-100">{getRankIcon(userPosition.rank)}</div>
                   <span className="text-xl sm:text-2xl font-bold">#{userPosition.rank}</span>
+                  {/* Movement for user's best store */}
+                  {(() => {
+                    const change = leaderboard.find(e => e.storeId === userPosition.storeId)?.rankChange ?? 0
+                    return change > 0 ? (
+                      <span className="flex items-center gap-1 text-green-600 text-sm" title="Improved vs yesterday 23:59:59">
+                        <FaArrowUp className="text-green-600" />{Math.abs(change)}
+                      </span>
+                    ) : change < 0 ? (
+                      <span className="flex items-center gap-1 text-red-600 text-sm" title="Dropped vs yesterday 23:59:59">
+                        <FaArrowDown className="text-red-600" />{Math.abs(change)}
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-gray-500 text-sm" title="No change vs yesterday 23:59:59">
+                        <FaMinus />
+                      </span>
+                    )
+                  })()}
                 </div>
                 <div className="text-lg sm:text-xl font-bold">₹{userPosition.totalIncentive}</div>
               </div>
@@ -299,7 +331,11 @@ export function Leaderboard() {
             <table className="w-full min-w-[350px]">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">Rank</th>
+                  <th className="text-left p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">
+                    <span className="inline-flex items-center gap-1">Rank
+                      <span title="Rank movement is calculated against yesterday 23:59:59. Up = improved, Down = dropped" className="text-blue-600 cursor-help">ℹ️</span>
+                    </span>
+                  </th>
                   <th className="text-left p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">Store</th>
                   <th className="text-right p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">ADLD</th>
                   <th className="text-right p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">Combo</th>
@@ -328,11 +364,35 @@ export function Leaderboard() {
                             <FaStar className="text-yellow-500 text-xs sm:text-sm" />
                           </motion.div>
                         )}
+                        {/* Rank change vs yesterday 23:59:59 */}
+                        {(() => {
+                          const change = entry.rankChange ?? 0
+                          return change > 0 ? (
+                            <span className="flex items-center gap-0.5 text-green-600 text-xs sm:text-sm" title="Improved vs yesterday 23:59:59">
+                              <FaArrowUp className="text-green-600" />{Math.abs(change)}
+                            </span>
+                          ) : change < 0 ? (
+                            <span className="flex items-center gap-0.5 text-red-600 text-xs sm:text-sm" title="Dropped vs yesterday 23:59:59">
+                              <FaArrowDown className="text-red-600" />{Math.abs(change)}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-0.5 text-gray-500 text-xs sm:text-sm" title="No change vs yesterday 23:59:59">
+                              <FaMinus />
+                            </span>
+                          )
+                        })()}
                       </div>
                     </td>
                     <td className="p-1 sm:p-3 min-w-[120px] sm:min-w-[180px]">
                       <div>
-                        <div className="font-semibold text-gray-800 text-xs sm:text-sm break-words leading-tight" style={{wordBreak: 'break-word'}}>{entry.storeName}</div>
+                        <div className="font-semibold text-gray-800 text-xs sm:text-sm break-words leading-tight flex items-center gap-2" style={{wordBreak: 'break-word'}}>
+                          {entry.storeName}
+                          {entry.isNewToday === true && (
+                            <>
+                            <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full whitespace-nowrap inline-block" title="First submission today">New</span>
+                            </>
+                          )}
+                        </div>
                         <div className="text-xs text-gray-500 break-words" style={{wordBreak: 'break-word'}}>{entry.city}</div>
                       </div>
                     </td>

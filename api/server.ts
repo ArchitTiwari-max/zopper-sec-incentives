@@ -1954,26 +1954,51 @@ app.get('/api/leaderboard', async (req, res) => {
       }
     })
 
+    // Latest and first submission per store (for tie-breakers and "New" badge)
+    const lastSubmissions = await prisma.salesReport.groupBy({
+      by: ['storeId'],
+      where: { storeId: { in: storeIds }, plan: { planType: { not: 'Test_Plan' } } },
+      _max: { submittedAt: true }
+    })
+    const firstSubmissions = await prisma.salesReport.groupBy({
+      by: ['storeId'],
+      where: { storeId: { in: storeIds }, plan: { planType: { not: 'Test_Plan' } } },
+      _min: { submittedAt: true }
+    })
+
+    const now = new Date()
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
     // Create lookup maps for efficient data combination
     const storeMap = new Map(stores.map(store => [store.id, store]))
     const adldMap = new Map(adldIncentives.map(item => [item.storeId, item._sum.incentiveEarned || 0]))
     const comboMap = new Map(comboIncentives.map(item => [item.storeId, item._sum.incentiveEarned || 0]))
+    const lastMap = new Map(lastSubmissions.map(item => [item.storeId, item._max.submittedAt || null]))
+    const firstMap = new Map(firstSubmissions.map(item => [item.storeId, item._min.submittedAt || null]))
 
     // Combine all data efficiently
-    const detailedStats = leaderboardRawData.map(storeStat => {
-      const store = storeMap.get(storeStat.storeId)
-      return {
-        storeId: storeStat.storeId,
-        storeName: store?.storeName || 'Unknown Store',
-        city: store?.city || 'Unknown City',
-        totalIncentive: storeStat._sum.incentiveEarned || 0,
-        adldIncentive: adldMap.get(storeStat.storeId) || 0,
-        comboIncentive: comboMap.get(storeStat.storeId) || 0,
-        totalSales: storeStat._count.id
-      }
-    })
+    const detailedStats = leaderboardRawData
+      .map(storeStat => {
+        const store = storeMap.get(storeStat.storeId)
+        const first = firstMap.get(storeStat.storeId) as Date | null
+        const isNewToday = first ? first >= startOfToday : false
+        return {
+          storeId: storeStat.storeId,
+          storeName: store?.storeName || 'Unknown Store',
+          city: store?.city || 'Unknown City',
+          totalIncentive: storeStat._sum.incentiveEarned || 0,
+          adldIncentive: adldMap.get(storeStat.storeId) || 0,
+          comboIncentive: comboMap.get(storeStat.storeId) || 0,
+          lastSubmittedAt: lastMap.get(storeStat.storeId) || null,
+          firstSubmittedAt: first,
+          isNewToday,
+          totalSales: storeStat._count.id
+        }
+      })
+      // Exclude specific stores from leaderboard
+      .filter(stat => (stat.storeName || '').replace(/\s+/g, '').toLowerCase() !== 'teststore')
 
-    // Sort with multi-level criteria: Total (desc) -> Combo (desc) -> Store Name (asc)
+    // Sort with multi-level criteria: Total (desc) -> ADLD (desc) -> Latest submission (desc)
     const sortedStats = detailedStats
       .sort((a, b) => {
         // Primary sort: Total incentive (descending - higher is better)
@@ -1981,12 +2006,17 @@ app.get('/api/leaderboard', async (req, res) => {
           return b.totalIncentive - a.totalIncentive
         }
         
-        // Secondary sort: Combo incentive (descending - higher is better)
-        if (b.comboIncentive !== a.comboIncentive) {
-          return b.comboIncentive - a.comboIncentive
+        // Secondary sort: ADLD incentive (descending - higher is better)
+        if (b.adldIncentive !== a.adldIncentive) {
+          return b.adldIncentive - a.adldIncentive
         }
         
-        // Tertiary sort: Store name (ascending - alphabetical)
+        // Tertiary sort: Most recent submission (descending - newer is better)
+        const bt = b.lastSubmittedAt ? new Date(b.lastSubmittedAt).getTime() : 0
+        const at = a.lastSubmittedAt ? new Date(a.lastSubmittedAt).getTime() : 0
+        if (bt !== at) return bt - at
+
+        // Final fallback: Store name alphabetical
         return a.storeName.localeCompare(b.storeName, 'en', { 
           numeric: true, 
           sensitivity: 'base' 
@@ -1997,28 +2027,60 @@ app.get('/api/leaderboard', async (req, res) => {
         rank: index + 1
       }))
 
+    // Compute previous snapshot up to yesterday 23:59:59 to derive rank movement
+    const endOfYesterday = new Date(startOfToday.getTime() - 1)
+
+    const prevRaw = await prisma.salesReport.groupBy({
+      by: ['storeId'],
+      where: {
+        submittedAt: { lte: endOfYesterday },
+        plan: { planType: { not: 'Test_Plan' } }
+      },
+      _sum: { incentiveEarned: true }
+    })
+
+    const prevStoreIds = prevRaw.map(s => s.storeId)
+    const prevTotals = new Map(prevRaw.map(s => [s.storeId, s._sum.incentiveEarned || 0]))
+    const prevStats = prevStoreIds.map(id => ({
+      storeId: id,
+      totalIncentive: prevTotals.get(id) || 0,
+      storeName: storeMap.get(id)?.storeName || ''
+    }))
+    const prevSorted = prevStats
+      .sort((a, b) => {
+        if ((b.totalIncentive || 0) !== (a.totalIncentive || 0)) return (b.totalIncentive || 0) - (a.totalIncentive || 0)
+        return (a.storeName || '').localeCompare(b.storeName || '', 'en', { numeric: true, sensitivity: 'base' })
+      })
+      .map((s, i) => ({ storeId: s.storeId, rank: i + 1 }))
+
+    const prevRankMap = new Map(prevSorted.map(x => [x.storeId, x.rank]))
+    const withChange = sortedStats.map(s => ({
+      ...s,
+      rankChange: (prevRankMap.get(s.storeId) ?? s.rank) - s.rank
+    }))
+
     // Find current user's store position based on their sales reports
     // If user has sales for multiple stores, we'll show the best performing one
     let userPosition = null
     if (userSalesReports.length > 0) {
       // Find the best performing store where this user has made sales
       const userStorePositions = userSalesReports.map(userStore => 
-        sortedStats.find(stat => stat.storeId === userStore.storeId)
+        withChange.find(stat => stat.storeId === userStore.storeId)
       ).filter(Boolean)
       
       if (userStorePositions.length > 0) {
         // Get the store with the best rank (lowest rank number)
         userPosition = userStorePositions.reduce((best, current) => 
-          (current && (!best || current.rank < best.rank)) ? current : best
+          (current && (!best || (current as any).rank < (best as any).rank)) ? current : best
         )
       }
     }
 
-    console.log(`✅ Leaderboard fetched with ${sortedStats.length} stores`)
+    console.log(`✅ Leaderboard fetched with ${withChange.length} stores`)
     res.json({
       success: true,
       data: {
-        leaderboard: sortedStats,
+        leaderboard: withChange,
         userPosition: userPosition || null
       }
     })
@@ -2082,27 +2144,54 @@ app.get('/api/admin/leaderboard', async (req, res) => {
       _sum: { incentiveEarned: true }
     })
 
+    const lastSubmissionsAdmin = await prisma.salesReport.groupBy({
+      by: ['storeId'],
+      where: { storeId: { in: storeIds }, plan: { planType: { not: 'Test_Plan' } } },
+      _max: { submittedAt: true }
+    })
+    const firstSubmissionsAdmin = await prisma.salesReport.groupBy({
+      by: ['storeId'],
+      where: { storeId: { in: storeIds }, plan: { planType: { not: 'Test_Plan' } } },
+      _min: { submittedAt: true }
+    })
+
+    const nowAdmin = new Date()
+    const startOfTodayAdmin = new Date(nowAdmin.getFullYear(), nowAdmin.getMonth(), nowAdmin.getDate())
+
     const storeMap = new Map(stores.map(store => [store.id, store]))
     const adldMap = new Map(adldIncentives.map(item => [item.storeId, item._sum.incentiveEarned || 0]))
     const comboMap = new Map(comboIncentives.map(item => [item.storeId, item._sum.incentiveEarned || 0]))
+    const lastMapAdmin = new Map(lastSubmissionsAdmin.map(item => [item.storeId, item._max.submittedAt || null]))
+    const firstMapAdmin = new Map(firstSubmissionsAdmin.map(item => [item.storeId, item._min.submittedAt || null]))
 
-    const detailedStats = leaderboardRawData.map(storeStat => {
-      const store = storeMap.get(storeStat.storeId)
-      return {
-        storeId: storeStat.storeId,
-        storeName: store?.storeName || 'Unknown Store',
-        city: store?.city || 'Unknown City',
-        totalIncentive: storeStat._sum.incentiveEarned || 0,
-        adldIncentive: adldMap.get(storeStat.storeId) || 0,
-        comboIncentive: comboMap.get(storeStat.storeId) || 0,
-        totalSales: storeStat._count.id
-      }
-    })
+    const detailedStats = leaderboardRawData
+      .map(storeStat => {
+        const store = storeMap.get(storeStat.storeId)
+        const first = firstMapAdmin.get(storeStat.storeId) as Date | null
+        const isNewToday = first ? first >= startOfTodayAdmin : false
+        return {
+          storeId: storeStat.storeId,
+          storeName: store?.storeName || 'Unknown Store',
+          city: store?.city || 'Unknown City',
+          totalIncentive: storeStat._sum.incentiveEarned || 0,
+          adldIncentive: adldMap.get(storeStat.storeId) || 0,
+          comboIncentive: comboMap.get(storeStat.storeId) || 0,
+          lastSubmittedAt: lastMapAdmin.get(storeStat.storeId) || null,
+          firstSubmittedAt: first,
+          isNewToday,
+          totalSales: storeStat._count.id
+        }
+      })
+      // Exclude specific stores from leaderboard
+      .filter(stat => (stat.storeName || '').replace(/\s+/g, '').toLowerCase() !== 'teststore')
 
     const sortedStats = detailedStats
       .sort((a, b) => {
         if (b.totalIncentive !== a.totalIncentive) return b.totalIncentive - a.totalIncentive
-        if (b.comboIncentive !== a.comboIncentive) return b.comboIncentive - a.comboIncentive
+        if (b.adldIncentive !== a.adldIncentive) return b.adldIncentive - a.adldIncentive
+        const bt = b.lastSubmittedAt ? new Date(b.lastSubmittedAt).getTime() : 0
+        const at = a.lastSubmittedAt ? new Date(a.lastSubmittedAt).getTime() : 0
+        if (bt !== at) return bt - at
         return a.storeName.localeCompare(b.storeName, 'en', { numeric: true, sensitivity: 'base' })
       })
       .map((stat, index) => ({ ...stat, rank: index + 1 }))

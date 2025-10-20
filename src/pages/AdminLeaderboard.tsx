@@ -16,6 +16,7 @@ interface LeaderboardEntry {
   totalSales: number
   rank: number
   rankChange?: number
+  isNewToday?: boolean
 }
 
 export function AdminLeaderboard() {
@@ -159,6 +160,19 @@ export function AdminLeaderboard() {
           </motion.div>
           <h1 className="text-xl sm:text-3xl font-bold mb-2 leading-tight">Sales Champion Leaderboard</h1>
           <p className="text-white/80 text-sm sm:text-base">Top stores by total incentives</p>
+          <div className="text-white/80 text-xs mt-2 flex items-center justify-center gap-3">
+            <span>
+              Rank movement is calculated against yesterday 23:59:59.
+            </span>
+            <span className="hidden sm:inline">•</span>
+            <span className="flex items-center gap-1" title="Improved vs yesterday 23:59:59">
+              <FaArrowUp className="text-green-500" /> Up = improved rank
+            </span>
+            <span className="hidden sm:inline">•</span>
+            <span className="flex items-center gap-1" title="Dropped vs yesterday 23:59:59">
+              <FaArrowDown className="text-red-500" /> Down = dropped rank
+            </span>
+          </div>
         </div>
       </div>
 
@@ -254,7 +268,11 @@ export function AdminLeaderboard() {
             <table className="w-full min-w-[350px]">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">Rank</th>
+                  <th className="text-left p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">
+                    <span className="inline-flex items-center gap-1">Rank
+                      <span title="Rank movement is calculated against yesterday 23:59:59. Up = improved, Down = dropped" className="text-blue-600 cursor-help">ℹ️</span>
+                    </span>
+                  </th>
                   <th className="text-left p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">Store</th>
                   <th className="text-right p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">ADLD</th>
                   <th className="text-right p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">Combo</th>
@@ -284,11 +302,11 @@ export function AdminLeaderboard() {
                         {/* Rank change vs yesterday 23:59:59 */}
                         {typeof entry.rankChange === 'number' ? (
                           entry.rankChange > 0 ? (
-                            <span className="flex items-center gap-0.5 text-green-600 text-xs sm:text-sm" title="Improved vs yesterday">
+                            <span className="flex items-center gap-0.5 text-green-600 text-xs sm:text-sm" title="Improved vs yesterday 23:59:59">
                               <FaArrowUp className="text-green-600" />{Math.abs(entry.rankChange)}
                             </span>
                           ) : entry.rankChange < 0 ? (
-                            <span className="flex items-center gap-0.5 text-red-600 text-xs sm:text-sm" title="Dropped vs yesterday">
+                            <span className="flex items-center gap-0.5 text-red-600 text-xs sm:text-sm" title="Dropped vs yesterday 23:59:59">
                               <FaArrowDown className="text-red-600" />{Math.abs(entry.rankChange)}
                             </span>
                           ) : (
@@ -301,7 +319,14 @@ export function AdminLeaderboard() {
                     </td>
                     <td className="p-1 sm:p-3 min-w-[120px] sm:min-w-[180px]">
                       <div>
-                        <div className="font-semibold text-gray-800 text-xs sm:text-sm break-words leading-tight" style={{wordBreak: 'break-word'}}>{entry.storeName}</div>
+                        <div className="font-semibold text-gray-800 text-xs sm:text-sm break-words leading-tight flex items-center gap-2" style={{wordBreak: 'break-word'}}>
+                          {entry.storeName}
+                          {entry.isNewToday === true && (
+                            <>
+                            <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full whitespace-nowrap inline-block" title="First submission today">New</span>
+                            </>
+                          )}
+                        </div>
                         <div className="text-xs text-gray-500 break-words" style={{wordBreak: 'break-word'}}>{entry.city}</div>
                       </div>
                     </td>

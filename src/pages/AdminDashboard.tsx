@@ -139,6 +139,9 @@ export function AdminDashboard() {
 
   const filtered = useMemo(() => {
     return data.filter(r => {
+      // Exclude 'teststore' from all admin stats
+      const isTestStore = (r.store.storeName || '').replace(/\s+/g, '').toLowerCase() === 'teststore'
+      if (isTestStore) return false
       const matchesQuery = [
         r.secUser.secId || r.secUser.phone, 
         r.store.storeName, 
@@ -162,7 +165,8 @@ export function AdminDashboard() {
     const totalIncentive = filtered.reduce((s, r) => s + r.incentiveEarned, 0)
     const totalPaid = filtered.filter(r => r.isPaid).reduce((s, r) => s + r.incentiveEarned, 0)
     const totalSECs = new Set(filtered.map(r => r.secUser.secId || r.secUser.phone)).size
-    return { totalSECs, totalReports: filtered.length, totalIncentive, totalPaid }
+    const activeStores = new Set(filtered.map(r => r.store.id)).size
+    return { totalSECs, totalReports: filtered.length, totalIncentive, totalPaid, activeStores }
   }, [filtered])
 
   const exportExcel = () => {
@@ -379,7 +383,8 @@ export function AdminDashboard() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+        <StatCard title="Active Stores" value={totals.activeStores.toString()} />
         <StatCard title="SECs Active" value={totals.totalSECs.toString()} />
         <StatCard title="Reports Submitted" value={totals.totalReports.toString()} />
         <StatCard title="Incentive Earned" value={`₹${totals.totalIncentive}`} />
