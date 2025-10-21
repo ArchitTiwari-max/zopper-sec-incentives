@@ -430,6 +430,14 @@ export function SecDashboard() {
       <button onClick={() => navigate('/reporting')} className="button-gradient w-full py-3 mt-3">View Incentive Passbook</button>
       
       <button 
+        onClick={() => navigate('/referral')} 
+        className="w-full py-3 mt-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
+      >
+        <span className="text-xl">🤝</span>
+        Referral Program
+      </button>
+
+      <button 
         onClick={() => navigate('/leaderboard')} 
         className="w-full py-3 mt-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-2xl font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
       >

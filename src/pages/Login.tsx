@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { FaWhatsapp, FaPhone } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
@@ -17,6 +17,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -57,6 +58,8 @@ export function LoginPage() {
   }
 
   const verifyOtp = async () => {
+    const params = new URLSearchParams(location.search)
+    const referralCode = params.get('referal_code') || params.get('referal') || undefined
     if (otp.length < 4) {
       setToast({ message: 'Enter the complete OTP', type: 'error' })
       return
@@ -67,7 +70,7 @@ export function LoginPage() {
       const response = await fetch(`${config.apiUrl}/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp })
+        body: JSON.stringify({ phone, otp, referralCode })
       })
 
       const data = await response.json()

@@ -129,3 +129,24 @@ model IncentiveDeduction {
   @@index([processedAt])
 }
 
+enum ReferralStatus {
+  joined
+  report_submitted
+  voucher_initiated
+}
+
+model Referral {
+  id             String          @id @default(auto()) @map("_id") @db.ObjectId
+  referrerPhone  String          // 10-digit string of referrer (SEC)
+  refereePhone   String          // 10-digit string of referee (SEC)
+  status         ReferralStatus  @default(joined)
+  referrerVoucher String?
+  refereeVoucher  String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([referrerPhone])
+  @@index([refereePhone])
+  @@unique([referrerPhone, refereePhone])
+}
+

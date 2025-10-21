@@ -8,7 +8,7 @@ import multer from 'multer'
 import { utils, read } from 'xlsx'
 
 const app = express()
-const prisma = new PrismaClient()
+const prisma = new PrismaClient({ log: ['warn', 'error'] })
 const PORT = Number(process.env.PORT) || 3001
 // In dev, fall back to an insecure default to avoid crashing; require real secret in production
 const JWT_SECRET: string = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'dev-insecure-secret')
@@ -196,6 +196,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
  */
 app.post('/api/auth/verify-otp', async (req, res) => {
   try {
+    console.log('🔎 /verify-otp called', { query: req.query, bodyKeys: Object.keys(req.body || {}) })
     const { phone, otp } = req.body
 
     if (!phone || !otp) {
@@ -257,7 +258,9 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 
     // Find or create SEC user using upsert to avoid race conditions
     let secUser
+    let newUserCreated = false
     try {
+      console.log('🔎 Checking SEC user existence for', phone)
       // First try to find existing user
       secUser = await prisma.sECUser.findUnique({
         where: { phone },
@@ -273,6 +276,7 @@ app.post('/api/auth/verify-otp', async (req, res) => {
         })
         console.log(`✅ Existing SEC user found and updated for phone: ${phone}`)
       } else {
+        console.log('🔎 Creating new SEC user for', phone)
         // Create new user - don't set secId at all to avoid unique constraint issues
         secUser = await prisma.sECUser.create({
           data: {
@@ -282,11 +286,41 @@ app.post('/api/auth/verify-otp', async (req, res) => {
           },
           include: { store: true }
         })
+        newUserCreated = true
         console.log(`✅ New SEC user created for phone: ${phone}`)
       }
     } catch (dbError) {
       console.error(`❌ Failed to find/create SEC user for ${phone}:`, dbError)
       throw dbError
+    }
+
+    // Referral capture: only on first user creation and if valid referal_code present in query
+    try {
+      const referralCodeRaw = (req.query.referal_code || req.query.referral_code || req.query.referal || req.body?.referralCode) as string | undefined
+      const referralCode = referralCodeRaw?.trim()
+      console.log('🔎 Referral capture check', { newUserCreated, referralCode })
+      if (newUserCreated && referralCode && /^\d{10}$/.test(referralCode) && referralCode !== phone) {
+        // Check referrer exists as SEC user
+        console.log('🔎 Looking up referrer', referralCode)
+        const referrer = await prisma.sECUser.findUnique({ where: { phone: referralCode } })
+        if (referrer) {
+          // Ensure pair not already created
+          console.log('🔎 Checking existing referral pair')
+          const existingPair = await prisma.referral.findUnique({
+            where: { referrerPhone_refereePhone: { referrerPhone: referralCode, refereePhone: phone } }
+          })
+          if (!existingPair) {
+            await prisma.referral.create({
+              data: { referrerPhone: referralCode, refereePhone: phone, status: 'joined' as any }
+            })
+            console.log(`🤝 Referral recorded: ${referralCode} -> ${phone}`)
+          }
+        } else {
+          console.log(`ℹ️ Referral code ${referralCode} not linked to any SEC; skipping.`)
+        }
+      }
+    } catch (refErr) {
+      console.warn('⚠️ Referral capture failed (non-blocking):', refErr)
     }
 
     // Generate JWT token
@@ -518,6 +552,112 @@ function calculateIncentive(planType: string): number {
 }
 
 // API Routes
+
+/**
+ * POST /api/referrals/join
+ * A SEC logs in with a referral code to join as referee.
+ */
+app.post('/api/referrals/join', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+    const token = authHeader.split(' ')[1]
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (e) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({ success: false, message: 'Only SEC users can join referrals' })
+    }
+
+    const { referralCode } = req.body as { referralCode?: string }
+    const refereePhone = decoded.phone || decoded?.phone || decoded?.userPhone || decoded?.user?.phone || decoded?.sub || null
+    const cleanRef = (referralCode || '').trim()
+
+    if (!cleanRef || !/^\d{10}$/.test(cleanRef)) {
+      return res.status(400).json({ success: false, message: 'Valid 10-digit referral code is required' })
+    }
+    if (!refereePhone || !/^\d{10}$/.test(refereePhone)) {
+      return res.status(400).json({ success: false, message: 'Your account does not have a valid 10-digit phone' })
+    }
+    if (cleanRef === refereePhone) {
+      return res.status(400).json({ success: false, message: 'You cannot refer yourself' })
+    }
+
+    // Prevent duplicates per pair
+    const existing = await prisma.referral.findUnique({
+      where: { referrerPhone_refereePhone: { referrerPhone: cleanRef, refereePhone } }
+    })
+    if (existing) return res.json({ success: true, data: existing })
+
+            console.log('🔎 Creating referral record')
+            const created = await prisma.referral.create({
+      data: { referrerPhone: cleanRef, refereePhone, status: 'joined' as any }
+    })
+
+    return res.json({ success: true, data: created })
+  } catch (error) {
+    console.error('❌ Referral join failed:', error)
+    return res.status(500).json({ success: false, message: 'Failed to join referral' })
+  }
+})
+
+/**
+ * GET /api/referrals/me
+ * Fetch referrals where the SEC is a referrer or referee.
+ */
+app.get('/api/referrals/me', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+    const token = authHeader.split(' ')[1]
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (e) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({ success: false, message: 'Only SEC users can view referrals' })
+    }
+
+    const phone = decoded.phone || decoded?.phone || null
+    if (!phone) return res.status(400).json({ success: false, message: 'Phone not available in token' })
+
+    const [asReferrer, asReferee] = await Promise.all([
+      prisma.referral.findMany({ where: { referrerPhone: phone }, orderBy: { createdAt: 'desc' } }),
+      prisma.referral.findMany({ where: { refereePhone: phone }, orderBy: { createdAt: 'desc' } })
+    ])
+
+    // Map to include only their voucher side for safety on client
+    const sanitize = (r: any, role: 'referrer' | 'referee') => ({
+      id: r.id,
+      referrerPhone: r.referrerPhone,
+      refereePhone: r.refereePhone,
+      status: r.status,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      voucher: role === 'referrer' ? r.referrerVoucher : r.refereeVoucher,
+      role,
+    })
+
+    const data = [
+      ...asReferrer.map(r => sanitize(r, 'referrer')),
+      ...asReferee.map(r => sanitize(r, 'referee'))
+    ]
+
+    return res.json({ success: true, data, count: data.length })
+  } catch (error) {
+    console.error('❌ Fetch referrals failed:', error)
+    return res.status(500).json({ success: false, message: 'Failed to fetch referrals' })
+  }
+})
 
 /**
  * GET /api/stores
@@ -815,6 +955,9 @@ app.post('/api/reports/submit', async (req, res) => {
       })
     }
 
+    // Check if this is the first sale for this SEC (before creating new one)
+    const existingSalesCount = await prisma.salesReport.count({ where: { secUserId: decoded.userId } })
+
     // Get the plan details from database to calculate incentive
     const plan = await prisma.plan.findUnique({
       where: { id: planId },
@@ -855,6 +998,21 @@ app.post('/api/reports/submit', async (req, res) => {
     
     console.log(`✅ Sales report saved to database! Report ID: ${salesReport.id}, SEC: ${decoded.userId}, IMEI: ${trimmedImei}, Incentive: ₹${incentiveEarned}`)
     
+    // If this was the first sale for this SEC, update referral status to report_submitted
+    try {
+      if (existingSalesCount === 0 && decoded?.phone) {
+        const updated = await prisma.referral.updateMany({
+          where: { refereePhone: decoded.phone, status: 'joined' as any },
+          data: { status: 'report_submitted' as any }
+        })
+        if (updated.count > 0) {
+          console.log(`🤝 Referral status updated to report_submitted for referee ${decoded.phone}`)
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ Failed to update referral status (non-blocking):', e)
+    }
+
     res.json({
       success: true,
       message: 'Sales report submitted and saved successfully',
@@ -912,6 +1070,9 @@ app.post('/api/sec/report', async (req, res) => {
       return res.status(409).json({ success: false, message: 'IMEI already exists — duplicate entry not allowed.' })
     }
 
+    // First-sale check for this SEC (before insert)
+    const existingSalesCountAlias = await prisma.salesReport.count({ where: { secUserId: decoded.userId } })
+
     const plan = await prisma.plan.findUnique({ where: { id: planId } })
     if (!plan) return res.status(404).json({ success: false, message: 'Plan not found' })
 
@@ -929,6 +1090,19 @@ app.post('/api/sec/report', async (req, res) => {
         submittedAt: new Date()
       }
     })
+
+    // If first sale, update referral status
+    try {
+      if (existingSalesCountAlias === 0 && decoded?.phone) {
+        const updated = await prisma.referral.updateMany({
+          where: { refereePhone: decoded.phone, status: 'joined' as any },
+          data: { status: 'report_submitted' as any }
+        })
+        if (updated.count > 0) console.log(`🤝 Referral status updated (alias route) for referee ${decoded.phone}`)
+      }
+    } catch (e) {
+      console.warn('⚠️ Failed to update referral status (alias, non-blocking):', e)
+    }
 
     return res.json({
       success: true,

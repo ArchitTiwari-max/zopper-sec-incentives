@@ -11,6 +11,7 @@ import { VoucherProcessor } from './pages/VoucherProcessor'
 import { AdminInvalidImeiProcessor } from './pages/AdminInvalidImeiProcessor'
 import { Footer } from './components/Footer'
 import { AdminLeaderboard } from './pages/AdminLeaderboard'
+import { ReferralPage } from './pages/Referral'
 
 export default function App() {
   const location = useLocation()
@@ -59,6 +60,11 @@ export default function App() {
               <Route path="/reporting" element={
                 <SECRoute>
                   <ReportPage />
+                </SECRoute>
+              } />
+              <Route path="/referral" element={
+                <SECRoute>
+                  <ReferralPage />
                 </SECRoute>
               } />
               {/* Backward compat redirects */}
