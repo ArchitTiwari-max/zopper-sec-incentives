@@ -2275,8 +2275,9 @@ app.get('/api/leaderboard', async (req, res) => {
       _min: { submittedAt: true }
     })
 
-    const now = new Date()
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    // Calculate IST (UTC+5:30) timezone dates
+    const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+    const startOfToday = new Date(nowIST.getFullYear(), nowIST.getMonth(), nowIST.getDate())
 
     // Create lookup maps for efficient data combination
     const storeMap = new Map(stores.map(store => [store.id, store]))
@@ -2505,9 +2506,9 @@ app.get('/api/admin/leaderboard', async (req, res) => {
       })
       .map((stat, index) => ({ ...stat, rank: index + 1 }))
 
-    // Previous snapshot: up to yesterday 23:59:59 (server-local time)
-    const now = new Date()
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    // Previous snapshot: up to yesterday 23:59:59 IST (Indian Standard Time)
+    const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+    const startOfToday = new Date(nowIST.getFullYear(), nowIST.getMonth(), nowIST.getDate())
     const endOfYesterday = new Date(startOfToday.getTime() - 1)
 
     const prevRaw = await prisma.salesReport.groupBy({

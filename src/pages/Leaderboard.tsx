@@ -155,14 +155,14 @@ export function Leaderboard() {
           <p className="text-white/80 text-sm sm:text-base">Who will claim the crown this month?</p>
           <div className="text-white/80 text-xs mt-2 flex items-center justify-center gap-3">
             <span>
-              Rank movement is calculated against yesterday 23:59:59.
+              Rank movement is calculated against yesterday 23:59:59 IST.
             </span>
             <span className="hidden sm:inline">•</span>
-            <span className="flex items-center gap-1" title="Improved vs yesterday 23:59:59">
+            <span className="flex items-center gap-1" title="Improved vs yesterday 23:59:59 IST">
               <FaArrowUp className="text-green-500" /> Up = improved rank
             </span>
             <span className="hidden sm:inline">•</span>
-            <span className="flex items-center gap-1" title="Dropped vs yesterday 23:59:59">
+            <span className="flex items-center gap-1" title="Dropped vs yesterday 23:59:59 IST">
               <FaArrowDown className="text-red-500" /> Down = dropped rank
             </span>
           </div>
@@ -263,15 +263,15 @@ export function Leaderboard() {
                   {(() => {
                     const change = leaderboard.find(e => e.storeId === userPosition.storeId)?.rankChange ?? 0
                     return change > 0 ? (
-                      <span className="flex items-center gap-1 text-green-600 text-sm" title="Improved vs yesterday 23:59:59">
+                      <span className="flex items-center gap-1 text-green-600 text-sm" title="Improved vs yesterday 23:59:59 IST">
                         <FaArrowUp className="text-green-600" />{Math.abs(change)}
                       </span>
                     ) : change < 0 ? (
-                      <span className="flex items-center gap-1 text-red-600 text-sm" title="Dropped vs yesterday 23:59:59">
+                      <span className="flex items-center gap-1 text-red-600 text-sm" title="Dropped vs yesterday 23:59:59 IST">
                         <FaArrowDown className="text-red-600" />{Math.abs(change)}
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1 text-gray-500 text-sm" title="No change vs yesterday 23:59:59">
+                      <span className="flex items-center gap-1 text-gray-500 text-sm" title="No change vs yesterday 23:59:59 IST">
                         <FaMinus />
                       </span>
                     )
@@ -333,7 +333,7 @@ export function Leaderboard() {
                 <tr>
                   <th className="text-left p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">
                     <span className="inline-flex items-center gap-1">Rank
-                      <span title="Rank movement is calculated against yesterday 23:59:59. Up = improved, Down = dropped" className="text-blue-600 cursor-help">ℹ️</span>
+                      <span title="Rank movement is calculated against yesterday 23:59:59 IST. Up = improved, Down = dropped" className="text-blue-600 cursor-help">ℹ️</span>
                     </span>
                   </th>
                   <th className="text-left p-2 sm:p-3 font-semibold text-gray-700 text-xs sm:text-sm">Store</th>
@@ -364,19 +364,19 @@ export function Leaderboard() {
                             <FaStar className="text-yellow-500 text-xs sm:text-sm" />
                           </motion.div>
                         )}
-                        {/* Rank change vs yesterday 23:59:59 */}
+                        {/* Rank change vs yesterday 23:59:59 IST */}
                         {(() => {
                           const change = entry.rankChange ?? 0
                           return change > 0 ? (
-                            <span className="flex items-center gap-0.5 text-green-600 text-xs sm:text-sm" title="Improved vs yesterday 23:59:59">
+                            <span className="flex items-center gap-0.5 text-green-600 text-xs sm:text-sm" title="Improved vs yesterday 23:59:59 IST">
                               <FaArrowUp className="text-green-600" />{Math.abs(change)}
                             </span>
                           ) : change < 0 ? (
-                            <span className="flex items-center gap-0.5 text-red-600 text-xs sm:text-sm" title="Dropped vs yesterday 23:59:59">
+                            <span className="flex items-center gap-0.5 text-red-600 text-xs sm:text-sm" title="Dropped vs yesterday 23:59:59 IST">
                               <FaArrowDown className="text-red-600" />{Math.abs(change)}
                             </span>
                           ) : (
-                            <span className="flex items-center gap-0.5 text-gray-500 text-xs sm:text-sm" title="No change vs yesterday 23:59:59">
+                            <span className="flex items-center gap-0.5 text-gray-500 text-xs sm:text-sm" title="No change vs yesterday 23:59:59 IST">
                               <FaMinus />
                             </span>
                           )
