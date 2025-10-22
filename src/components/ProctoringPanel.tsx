@@ -11,6 +11,7 @@ interface ProctoringPanelProps {
 export function ProctoringPanel({ secId, sessionToken, onFlag }: ProctoringPanelProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [active, setActive] = useState(false)
+  const [minimized, setMinimized] = useState(false)
   const [faceApiReady, setFaceApiReady] = useState(false)
   const [flags, setFlags] = useState<string[]>([])
 
@@ -126,27 +127,48 @@ export function ProctoringPanel({ secId, sessionToken, onFlag }: ProctoringPanel
 
   const stop = () => {
     setActive(false)
+    setMinimized(false)
     if (videoRef.current && videoRef.current.srcObject) {
       ;(videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop())
       videoRef.current.srcObject = null
     }
   }
 
+  // Floating compact icon when minimized
+  const CompactIcon = () => (
+    <button
+      aria-label="Proctoring On"
+      className="fixed bottom-4 right-4 z-50 rounded-full bg-green-600 text-white px-3 py-2 shadow-lg text-xs"
+      onClick={() => setMinimized(false)}
+    >
+      📷 Proctoring On
+    </button>
+  )
+
   return (
-    <div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg p-3 w-64 z-50">
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-sm font-semibold">Proctoring</div>
-        {!active ? (
-          <button className="px-2 py-1 text-xs bg-blue-600 text-white rounded" onClick={start}>Start</button>
-        ) : (
-          <button className="px-2 py-1 text-xs bg-gray-200 rounded" onClick={stop}>Stop</button>
-        )}
+    <>
+      {active && minimized && <CompactIcon />}
+      <div className={`fixed bottom-4 right-4 bg-white shadow-lg rounded-lg p-3 w-64 z-50 ${active && minimized ? 'hidden' : ''}`}>
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm font-semibold">Proctoring</div>
+          <div className="flex items-center gap-2">
+            {active && (
+              <button className="px-2 py-1 text-xs bg-gray-200 rounded" onClick={() => setMinimized(true)}>Minimize</button>
+            )}
+            {!active ? (
+              <button className="px-2 py-1 text-xs bg-blue-600 text-white rounded" onClick={start}>Start</button>
+            ) : (
+              <button className="px-2 py-1 text-xs bg-gray-200 rounded" onClick={stop}>Stop</button>
+            )}
+          </div>
+        </div>
+        {/* Keep video element mounted even when minimized (hidden via parent) so stream continues */}
+        <video ref={videoRef} className="w-full h-32 bg-black rounded object-cover" muted playsInline></video>
+        <div className="mt-2 text-[10px] text-gray-600 h-14 overflow-y-auto">
+          {flags.length === 0 ? 'No alerts yet.' : flags.slice(-5).map((f, i) => <div key={i}>{f}</div>)}
+        </div>
+        <div className="mt-1 text-[10px] text-gray-400">Face detection: {faceApiReady ? 'on' : 'loading...'}</div>
       </div>
-      <video ref={videoRef} className="w-full h-32 bg-black rounded object-cover" muted playsInline></video>
-      <div className="mt-2 text-[10px] text-gray-600 h-14 overflow-y-auto">
-        {flags.length === 0 ? 'No alerts yet.' : flags.slice(-5).map((f, i) => <div key={i}>{f}</div>)}
-      </div>
-      <div className="mt-1 text-[10px] text-gray-400">Face detection: {faceApiReady ? 'on' : 'loading...'}</div>
-    </div>
+    </>
   )
 }
