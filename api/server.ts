@@ -3,6 +3,7 @@ import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import crypto from 'crypto'
 import { PrismaClient } from '@prisma/client'
 import multer from 'multer'
 import { utils, read } from 'xlsx'
@@ -12,6 +13,15 @@ const prisma = new PrismaClient({ log: ['warn', 'error'] })
 const PORT = Number(process.env.PORT) || 3001
 // In dev, fall back to an insecure default to avoid crashing; require real secret in production
 const JWT_SECRET: string = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'dev-insecure-secret')
+
+// Test invite configuration
+const APP_BASE_URL = (process.env.APP_BASE_URL || process.env.PUBLIC_APP_URL || '').replace(/\/$/, '')
+const LINK_SIGNING_SECRET = process.env.LINK_SIGNING_SECRET || process.env.WHATSAPP_LINK_SECRET || ''
+const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN || ''
+const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || ''
+const COMIFY_API_KEY = process.env.COMIFY_API_KEY || ''
+const COMIFY_BASE_URL = process.env.COMIFY_BASE_URL || 'https://commify.transify.tech/v1'
+const COMIFY_TEMPLATE_NAME_LINK = process.env.COMIFY_TEMPLATE_NAME_LINK || ''
 
 // Enforce secret only in production (dev uses fallback above)
 if (!JWT_SECRET) {
@@ -2540,6 +2550,232 @@ app.get('/api/admin/leaderboard', async (req, res) => {
   } catch (error) {
     console.error('❌ Error fetching admin leaderboard:', error)
     return res.status(500).json({ success: false, message: 'Failed to fetch admin leaderboard' })
+  }
+})
+
+// ========== Test Invites: link signing, verification, and WhatsApp sending ==========
+function hmac(data: string): string {
+  if (!LINK_SIGNING_SECRET) throw new Error('LINK_SIGNING_SECRET is not set')
+  return crypto.createHmac('sha256', LINK_SIGNING_SECRET).update(data).digest('hex')
+}
+
+function buildAppUrl(req: express.Request) {
+  if (APP_BASE_URL) return APP_BASE_URL
+  const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol
+  const host = req.get('host')
+  return `${proto}://${host}`
+}
+
+function createSignedLink(req: express.Request, secId: string, expiresInSeconds = 72 * 3600) {
+  const ts = Math.floor(Date.now() / 1000) + expiresInSeconds // expiry timestamp (seconds)
+  const data = `${secId}.${ts}`
+  const sig = hmac(data)
+  const base = buildAppUrl(req)
+  const link = `${base}/test?secId=${encodeURIComponent(secId)}&ts=${ts}&sig=${sig}`
+  return { link, sig, ts }
+}
+
+function verifySignature(secId: string, ts: number, sig: string) {
+  const now = Math.floor(Date.now() / 1000)
+  if (!ts || ts < now) return { valid: false, reason: 'expired' }
+  const expected = hmac(`${secId}.${ts}`)
+  const valid = crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
+  return { valid, reason: valid ? undefined : 'invalid_signature' }
+}
+
+async function sendWhatsAppInviteMinimal(phone: string, message: string) {
+  // Prefer Comify template if configured
+  if (COMIFY_API_KEY && COMIFY_TEMPLATE_NAME_LINK) {
+    // Expect template to have variables: {link}
+    const formattedPhone = phone.startsWith('91') ? phone : `91${phone}`
+    const resp = await fetch(`${COMIFY_BASE_URL}/comm`, {
+      method: 'POST',
+      headers: { 'Authorization': `ApiKey ${COMIFY_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: COMIFY_TEMPLATE_NAME_LINK,
+        payload: { phone: formattedPhone, link: message },
+        type: 'whatsappTemplate'
+      })
+    })
+    const json = await resp.json()
+    if (!resp.ok) throw new Error(`Comify error: ${json?.message || 'unknown'}`)
+    return json
+  }
+
+  // Fallback to WhatsApp Cloud API plain text
+  if (WHATSAPP_ACCESS_TOKEN && WHATSAPP_PHONE_NUMBER_ID) {
+    const resp = await fetch(`https://graph.facebook.com/v20.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'text',
+        text: { preview_url: true, body: message }
+      })
+    })
+    const json = await resp.json()
+    if (!resp.ok) throw new Error(`WhatsApp API error: ${json?.error?.message || 'unknown'}`)
+    return json
+  }
+
+  throw new Error('No WhatsApp provider configured (set COMIFY_* or WHATSAPP_* env vars)')
+}
+
+// Sign a test link
+app.post('/api/tests/sign', (req, res) => {
+  try {
+    const { secId, expiresInSeconds } = req.body || {}
+    if (!secId || typeof secId !== 'string') return res.status(400).json({ success: false, message: 'secId is required' })
+    if (!LINK_SIGNING_SECRET) return res.status(500).json({ success: false, message: 'LINK_SIGNING_SECRET not configured' })
+    const result = createSignedLink(req, secId, Number(expiresInSeconds) || undefined)
+    return res.json({ success: true, ...result })
+  } catch (e: any) {
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
+// Verify a signed link
+app.get('/api/tests/verify', (req, res) => {
+  try {
+    const secId = String(req.query.secId || '')
+    const ts = Number(req.query.ts || 0)
+    const sig = String(req.query.sig || '')
+    if (!secId || !ts || !sig) return res.json({ valid: false, reason: 'missing_params' })
+    const result = verifySignature(secId, ts, sig)
+    return res.json(result)
+  } catch (e) {
+    return res.status(500).json({ valid: false, reason: 'internal_error' })
+  }
+})
+
+// Send single invite
+app.post('/api/tests/invite', async (req, res) => {
+  try {
+    const { secId, phone, expiresInSeconds } = req.body || {}
+    if (!secId || !phone) return res.status(400).json({ success: false, message: 'secId and phone are required' })
+    const { link } = createSignedLink(req, secId, Number(expiresInSeconds) || undefined)
+    const msg = `Your SEC assessment link:\n${link}\n\nThis link expires soon. Please complete within the allotted time.`
+    const provider = await sendWhatsAppInviteMinimal(phone, msg)
+    return res.json({ success: true, link, provider })
+  } catch (e: any) {
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
+// Bulk invites
+app.post('/api/tests/invite-bulk', async (req, res) => {
+  try {
+    const { invites, expiresInSeconds } = req.body || {}
+    if (!Array.isArray(invites) || invites.length === 0) {
+      return res.status(400).json({ success: false, message: 'invites array required' })
+    }
+    const results: any[] = []
+    for (const item of invites) {
+      const { secId, phone } = item || {}
+      try {
+        const result = await (await fetch(`${buildAppUrl(req)}/api/tests/invite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ secId, phone, expiresInSeconds })
+        })).json()
+        results.push({ secId, phone, ...result })
+      } catch (e: any) {
+        results.push({ secId, phone, success: false, message: e?.message || 'error' })
+      }
+    }
+    return res.json({ success: true, results })
+  } catch (e: any) {
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
+// Proctoring event endpoints
+const inMemoryProctoringEvents: any[] = []
+
+app.post('/api/proctoring/event', async (req, res) => {
+  try {
+    const { secId, sessionToken, eventType, details } = req.body || {}
+    if (!secId || !eventType) return res.status(400).json({ success: false, message: 'secId and eventType are required' })
+
+    // Try Prisma if model exists; otherwise, store in-memory
+    try {
+      // @ts-ignore
+      if (prisma.proctoringEvent) {
+        // @ts-ignore
+        const saved = await prisma.proctoringEvent.create({ data: { secId, sessionToken, eventType, details } })
+        return res.json({ success: true, data: saved })
+      }
+    } catch (e) {
+      console.warn('Proctoring DB write failed, falling back to memory:', e)
+    }
+
+    const ev = { id: `${Date.now()}`, secId, sessionToken, eventType, details, createdAt: new Date().toISOString() }
+    inMemoryProctoringEvents.push(ev)
+    return res.json({ success: true, data: ev })
+  } catch (e: any) {
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
+app.get('/api/proctoring/events', async (req, res) => {
+  try {
+    const secId = req.query.secId ? String(req.query.secId) : undefined
+    try {
+      // @ts-ignore
+      if (prisma.proctoringEvent) {
+        // @ts-ignore
+        const where = secId ? { where: { secId }, orderBy: { createdAt: 'desc' } } : { orderBy: { createdAt: 'desc' } }
+        // @ts-ignore
+        const events = await prisma.proctoringEvent.findMany(where)
+        return res.json({ success: true, data: events })
+      }
+    } catch (e) {
+      console.warn('Proctoring DB read failed, using memory:', e)
+    }
+
+    const events = secId ? inMemoryProctoringEvents.filter(e => e.secId === secId) : inMemoryProctoringEvents
+    return res.json({ success: true, data: events })
+  } catch (e: any) {
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
+app.get('/api/proctoring/score', async (req, res) => {
+  try {
+    const secId = String(req.query.secId || '')
+    if (!secId) return res.status(400).json({ success: false, message: 'secId required' })
+
+    const weights: Record<string, number> = {
+      tab_switch: 15,
+      window_blur: 10,
+      no_face: 25,
+      multi_face: 40,
+      loud_noise: 10,
+      mic_active: 5,
+      video_off: 30,
+    }
+
+    let events: any[] = []
+    try {
+      // @ts-ignore
+      if (prisma.proctoringEvent) {
+        // @ts-ignore
+        events = await prisma.proctoringEvent.findMany({ where: { secId } })
+      }
+    } catch {
+      events = inMemoryProctoringEvents.filter(e => e.secId === secId)
+    }
+
+    const penalty = events.reduce((sum, e) => sum + (weights[e.eventType] || 0), 0)
+    const score = Math.max(0, 100 - penalty)
+
+    return res.json({ success: true, secId, score, events })
+  } catch (e: any) {
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
   }
 })
 
