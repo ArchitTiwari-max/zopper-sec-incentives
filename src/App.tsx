@@ -12,6 +12,8 @@ import { AdminInvalidImeiProcessor } from './pages/AdminInvalidImeiProcessor'
 import { Footer } from './components/Footer'
 import { AdminLeaderboard } from './pages/AdminLeaderboard'
 import { ReferralPage } from './pages/Referral'
+import { AdminReferrals } from './pages/AdminReferrals'
+import { AdminReferralVoucherProcessor } from './pages/AdminReferralVoucherProcessor'
 
 export default function App() {
   const location = useLocation()
@@ -85,6 +87,16 @@ export default function App() {
               <Route path="/admin/invalid-imei-processor" element={
                 <AdminRoute>
                   <AdminInvalidImeiProcessor />
+                </AdminRoute>
+              } />
+              <Route path="/admin/referrals" element={
+                <AdminRoute>
+                  <AdminReferrals />
+                </AdminRoute>
+              } />
+              <Route path="/admin/referrals/process" element={
+                <AdminRoute>
+                  <AdminReferralVoucherProcessor />
                 </AdminRoute>
               } />
               

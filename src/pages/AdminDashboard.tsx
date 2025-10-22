@@ -433,6 +433,18 @@ export function AdminDashboard() {
                 <FaTrophy /> View Leaderboard
               </button>
               <button 
+                onClick={() => { setActionsOpen(false); navigate('/admin/referrals') }} 
+                className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
+              >
+                🧾 View Referrals
+              </button>
+              <button 
+                onClick={() => { setActionsOpen(false); navigate('/admin/referrals/process') }} 
+                className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
+              >
+                📥 Process Referral Vouchers
+              </button>
+              <button 
                 onClick={() => { setActionsOpen(false); navigate('/admin/voucher-processor') }} 
                 className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
               >

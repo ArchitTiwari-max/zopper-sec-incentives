@@ -848,6 +848,36 @@ app.get('/api/plans', async (req, res) => {
 })
 
 /**
+ * GET /api/referrals/admin - list all referrals (admin only)
+ */
+app.get('/api/referrals/admin', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+    const token = authHeader.split(' ')[1]
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (e) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only admins can view referrals' })
+    }
+
+    const list = await prisma.referral.findMany({
+      orderBy: { createdAt: 'desc' }
+    })
+    return res.json({ success: true, data: list, count: list.length })
+  } catch (error) {
+    console.error('❌ Error fetching referrals (admin):', error)
+    return res.status(500).json({ success: false, message: 'Failed to fetch referrals' })
+  }
+})
+
+/**
  * GET /api/plan-price
  * Get plan price for specific SKU and plan type
  */
@@ -1884,6 +1914,101 @@ app.post('/api/admin/process-voucher-excel', upload.single('excel'), async (req,
       message: 'Failed to process voucher Excel file',
       error: error instanceof Error ? error.message : 'Unknown error'
     })
+  }
+})
+
+// Process referral voucher Excel (admin)
+app.post('/api/admin/process-referral-excel', upload.single('excel'), async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+    const token = authHeader.split(' ')[1]
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (e) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only admin users can process referrals' })
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Excel file is required' })
+    }
+
+    const workbook = read(req.file.buffer, { type: 'buffer' })
+    const sheetName = workbook.SheetNames[0]
+    const worksheet = workbook.Sheets[sheetName]
+    const data = utils.sheet_to_json(worksheet)
+
+    const results = {
+      total: data.length,
+      processed: 0,
+      updated: 0,
+      skipped: 0,
+      errors: 0,
+      logs: [] as any[],
+      summary: {
+        updated: [] as any[],
+        skipped: [] as any[],
+        errors: [] as any[],
+      }
+    }
+
+    for (let i = 0; i < data.length; i++) {
+      const row: any = data[i]
+      results.processed++
+      const log = {
+        row: i + 1,
+        referrerPhone: String(row['Referrer Phone'] || row['referrerPhone'] || '').trim(),
+        refereePhone: String(row['Referee Phone'] || row['refereePhone'] || '').trim(),
+        referrerVoucher: String(row['Referrer Voucher'] || row['referrerVoucher'] || '').trim(),
+        refereeVoucher: String(row['Referee Voucher'] || row['refereeVoucher'] || '').trim(),
+        status: String(row['Status'] || row['status'] || '').trim(),
+        action: 'SKIP',
+        success: false,
+        message: ''
+      }
+      try {
+        if (!log.referrerPhone || !log.refereePhone) {
+          log.message = 'Missing referrer/referee phone'
+          results.skipped++; results.logs.push(log); results.summary.skipped.push(log); continue
+        }
+        // Select record
+        const referral = await prisma.referral.findUnique({
+          where: { referrerPhone_refereePhone: { referrerPhone: log.referrerPhone, refereePhone: log.refereePhone } }
+        })
+        if (!referral) {
+          log.action = 'ERROR'; log.message = 'Referral pair not found'; results.errors++; results.logs.push(log); results.summary.errors.push(log); continue
+        }
+        if (referral.status !== 'report_submitted') {
+          log.message = `Status is '${referral.status}', expected 'report_submitted'`; results.skipped++; results.logs.push(log); results.summary.skipped.push(log); continue
+        }
+        if (!log.referrerVoucher && !log.refereeVoucher) {
+          log.message = 'No vouchers provided'; results.skipped++; results.logs.push(log); results.summary.skipped.push(log); continue
+        }
+        // Update
+        await prisma.referral.update({
+          where: { id: referral.id },
+          data: {
+            referrerVoucher: log.referrerVoucher || referral.referrerVoucher,
+            refereeVoucher: log.refereeVoucher || referral.refereeVoucher,
+            status: 'voucher_initiated' as any
+          }
+        })
+        log.action = 'UPDATE'; log.success = true; log.message = 'Vouchers saved & status updated'
+        results.updated++; results.logs.push(log); results.summary.updated.push(log)
+      } catch (e: any) {
+        log.action = 'ERROR'; log.message = e?.message || 'Unknown error'; results.errors++; results.logs.push(log); results.summary.errors.push(log)
+      }
+    }
+
+    return res.json({ success: true, data: results })
+  } catch (error) {
+    console.error('❌ Error processing referral Excel:', error)
+    return res.status(500).json({ success: false, message: 'Failed to process referral Excel' })
   }
 })
 
