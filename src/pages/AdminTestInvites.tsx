@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { config } from '@/lib/config'
 import * as XLSX from 'xlsx'
+import { FaArrowLeft } from 'react-icons/fa'
 
 interface InviteRow {
   secId: string
@@ -11,6 +13,7 @@ interface InviteRow {
 }
 
 export function AdminTestInvites() {
+  const navigate = useNavigate()
   const [rows, setRows] = useState<InviteRow[]>([{ secId: '', phone: '' }])
   const [expiresHours, setExpiresHours] = useState<number>(72)
   const [bulkText, setBulkText] = useState('')
@@ -131,7 +134,16 @@ export function AdminTestInvites() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Test Invites</h1>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/admin/dashboard')}
+            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <FaArrowLeft size={16} />
+            Back
+          </button>
+          <h1 className="text-2xl font-bold text-gray-900">Test Invites</h1>
+        </div>
         <div className="flex items-center gap-3">
           <label className="text-sm text-gray-700">Expiry (hours)</label>
           <input type="number" min={1} className="w-24 border rounded px-2 py-1" value={expiresHours} onChange={e => setExpiresHours(Number(e.target.value))} />

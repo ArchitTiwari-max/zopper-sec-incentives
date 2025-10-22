@@ -65,6 +65,8 @@ export function AdminDashboard() {
   const [storeFilter, setStoreFilter] = useState('')
   const [planFilter, setPlanFilter] = useState('')
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'unpaid'>('all')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [page, setPage] = useState(1)
   const pageSize = 50
   const [showMultiSelect, setShowMultiSelect] = useState(false)
@@ -151,15 +153,21 @@ export function AdminDashboard() {
       const matchesStore = !storeFilter || r.store.storeName === storeFilter
       const matchesPlan = !planFilter || r.plan.planType === planFilter
       const matchesPayment = paymentFilter === 'all' || (paymentFilter === 'paid' ? r.isPaid : !r.isPaid)
-      return matchesQuery && matchesStore && matchesPlan && matchesPayment
+      
+      // Date filter
+      const submittedDate = new Date(r.submittedAt.includes(' ') ? r.submittedAt.replace(' ', 'T') : r.submittedAt)
+      const matchesStartDate = !startDate || submittedDate >= new Date(startDate)
+      const matchesEndDate = !endDate || submittedDate <= new Date(endDate + 'T23:59:59')
+      
+      return matchesQuery && matchesStore && matchesPlan && matchesPayment && matchesStartDate && matchesEndDate
     })
-  }, [data, query, storeFilter, planFilter, paymentFilter])
+  }, [data, query, storeFilter, planFilter, paymentFilter, startDate, endDate])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const pageData = filtered.slice((page - 1) * pageSize, page * pageSize)
   useEffect(() => {
     setPage(1)
-  }, [query, storeFilter, planFilter, paymentFilter])
+  }, [query, storeFilter, planFilter, paymentFilter, startDate, endDate])
 
   const totals = useMemo(() => {
     const totalIncentive = filtered.reduce((s, r) => s + r.incentiveEarned, 0)
@@ -411,6 +419,34 @@ export function AdminDashboard() {
           <option value="paid">Paid</option>
           <option value="unpaid">Unpaid</option>
         </select>
+        <div className="flex items-center gap-2 shrink-0">
+          <label className="text-sm text-gray-600">From:</label>
+          <input
+            type="date"
+            className="px-3 py-2 border rounded-2xl w-40"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            title="Filter from date"
+          />
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <label className="text-sm text-gray-600">To:</label>
+          <input
+            type="date"
+            className="px-3 py-2 border rounded-2xl w-40"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            title="Filter to date"
+          />
+        </div>
+        {(startDate || endDate) && (
+          <button
+            onClick={() => { setStartDate(''); setEndDate('') }}
+            className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 underline"
+          >
+            Clear Dates
+          </button>
+        )}
         <div className="relative shrink-0">
           <button 
             onClick={() => setActionsOpen(o => !o)} 

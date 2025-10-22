@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getTestSubmissions, getTestStatistics, TestSubmission } from '@/lib/testData'
 import * as XLSX from 'xlsx'
+import { FaArrowLeft } from 'react-icons/fa'
 
 export function AdminTestResults() {
+  const navigate = useNavigate()
   const [submissions, setSubmissions] = useState<TestSubmission[]>([])
   const [filteredSubmissions, setFilteredSubmissions] = useState<TestSubmission[]>([])
   const [stats, setStats] = useState({
@@ -109,7 +112,16 @@ export function AdminTestResults() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Test Results</h1>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/admin/dashboard')}
+            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <FaArrowLeft size={16} />
+            Back
+          </button>
+          <h1 className="text-2xl font-bold text-gray-900">Test Results</h1>
+        </div>
         <button
           onClick={exportToExcel}
           disabled={filteredSubmissions.length === 0}
