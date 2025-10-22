@@ -135,6 +135,28 @@ enum ReferralStatus {
   voucher_initiated
 }
 
+enum ProctoringEventType {
+  tab_switch
+  window_blur
+  no_face
+  multi_face
+  loud_noise
+  mic_active
+  video_off
+}
+
+model ProctoringEvent {
+  id            String               @id @default(auto()) @map("_id") @db.ObjectId
+  secId         String
+  sessionToken  String?
+  eventType     ProctoringEventType
+  details       String?
+  createdAt     DateTime             @default(now())
+
+  @@index([secId])
+  @@index([createdAt])
+}
+
 model Referral {
   id             String          @id @default(auto()) @map("_id") @db.ObjectId
   referrerPhone  String          // 10-digit string of referrer (SEC)
