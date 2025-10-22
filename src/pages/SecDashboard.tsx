@@ -342,7 +342,6 @@ export function SecDashboard() {
 > 
             <option value={todayLabel}>{todayLabel}</option>
             <option value={yesterdayLabel}>{yesterdayLabel}</option>
-            <option value={dayBeforeYesterdayLabel}>{dayBeforeYesterdayLabel}</option>
           </select>
         </div>
 
