@@ -44,6 +44,7 @@ export function SecDashboard() {
   }
   const todayLabel = formatDMYFromISTMs(nowIstMs)
   const yesterdayLabel = formatDMYFromISTMs(nowIstMs - DAY_MS)
+  const dayBeforeYesterdayLabel = formatDMYFromISTMs(nowIstMs - 2 * DAY_MS)
   const [dateOfSale, setDateOfSale] = useState<string>(todayLabel)
   const [showToast, setShowToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [scanning, setScanning] = useState(false)
@@ -68,11 +69,11 @@ export function SecDashboard() {
   }, [dateTick])
   // Update date options when day changes but don't force reset
   useEffect(() => {
-    // Only reset if the current date is no longer valid (neither today nor yesterday)
-    if (dateOfSale !== todayLabel && dateOfSale !== yesterdayLabel) {
+    // Only reset if the current date is no longer valid (neither today, yesterday nor day before yesterday)
+    if (dateOfSale !== todayLabel && dateOfSale !== yesterdayLabel && dateOfSale !== dayBeforeYesterdayLabel) {
       setDateOfSale(todayLabel)
     }
-  }, [dateTick, todayLabel, yesterdayLabel, dateOfSale])
+  }, [dateTick, todayLabel, yesterdayLabel, dayBeforeYesterdayLabel, dateOfSale])
   
   const handleLogout = () => {
     logout()
@@ -341,6 +342,7 @@ export function SecDashboard() {
           >
             <option value={todayLabel}>{todayLabel}</option>
             <option value={yesterdayLabel}>{yesterdayLabel}</option>
+            <option value={dayBeforeYesterdayLabel}>{dayBeforeYesterdayLabel}</option>
           </select>
         </div>
 
