@@ -172,3 +172,33 @@ model Referral {
   @@unique([referrerPhone, refereePhone])
 }
 
+enum HelpRequestType {
+  voucher_issue
+  general_assistance
+}
+
+enum HelpRequestStatus {
+  pending
+  in_progress
+  resolved
+}
+
+model HelpRequest {
+  id          String             @id @default(auto()) @map("_id") @db.ObjectId
+  secUserId   String             @db.ObjectId
+  secPhone    String             // Store phone for quick reference
+  secName     String?            // Store SEC name for display
+  requestType HelpRequestType
+  description String
+  status      HelpRequestStatus  @default(pending)
+  adminNotes  String?            // Notes added by admin
+  resolvedBy  String?            // Admin who resolved the request
+  resolvedAt  DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([secUserId])
+  @@index([status])
+  @@index([createdAt])
+}
+

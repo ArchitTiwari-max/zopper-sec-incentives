@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import CameraScanner from '@/components/CameraScanner'
 import { ProfileModal } from '@/components/ProfileModal'
 import { motion } from 'framer-motion'
-import { FaBarcode, FaStore, FaMobileAlt, FaListAlt, FaIdBadge, FaSpinner, FaSignOutAlt } from 'react-icons/fa'
+import { FaBarcode, FaStore, FaMobileAlt, FaListAlt, FaIdBadge, FaSpinner, FaSignOutAlt, FaQuestionCircle } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { isSECUser, SECAuthData } from '@/lib/auth'
@@ -436,6 +436,14 @@ export function SecDashboard() {
       >
         <span className="text-xl">🤝</span>
         Referral Program
+      </button>
+
+      <button 
+        onClick={() => navigate('/help')} 
+        className="w-full py-3 mt-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
+      >
+        <FaQuestionCircle size={18} />
+        Help & Support
       </button>
 
       <button 

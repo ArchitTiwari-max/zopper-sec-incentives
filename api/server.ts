@@ -2780,6 +2780,216 @@ app.get('/api/proctoring/score', async (req, res) => {
   }
 })
 
+// ========== Help Request Endpoints ==========
+
+// POST /api/help-requests - SEC users submit help requests
+app.post('/api/help-requests', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({ success: false, message: 'Only SEC users can submit help requests' })
+    }
+
+    const { requestType, description } = req.body
+
+    if (!requestType || !description) {
+      return res.status(400).json({ success: false, message: 'Request type and description are required' })
+    }
+
+    // Validate request type
+    const validTypes = ['voucher_issue', 'general_assistance']
+    if (!validTypes.includes(requestType)) {
+      return res.status(400).json({ success: false, message: 'Invalid request type' })
+    }
+
+    // Fetch SEC user details
+    const secUser = await prisma.sECUser.findUnique({
+      where: { id: decoded.userId }
+    })
+
+    if (!secUser) {
+      return res.status(404).json({ success: false, message: 'SEC user not found' })
+    }
+
+    // Create help request
+    const helpRequest = await prisma.helpRequest.create({
+      data: {
+        secUserId: decoded.userId,
+        secPhone: secUser.phone,
+        secName: secUser.name || null,
+        requestType,
+        description,
+        status: 'pending'
+      }
+    })
+
+    console.log(`✅ Help request created: ${helpRequest.id} by SEC ${secUser.phone}`)
+    
+    res.json({
+      success: true,
+      message: 'Help request submitted successfully',
+      data: helpRequest
+    })
+  } catch (error) {
+    console.error('❌ Error creating help request:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit help request',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// GET /api/help-requests - SEC users view their own requests
+app.get('/api/help-requests', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({ success: false, message: 'Only SEC users can view their help requests' })
+    }
+
+    const requests = await prisma.helpRequest.findMany({
+      where: { secUserId: decoded.userId },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    res.json({
+      success: true,
+      data: requests
+    })
+  } catch (error) {
+    console.error('❌ Error fetching help requests:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch help requests',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// GET /api/admin/help-requests - Admin view all help requests
+app.get('/api/admin/help-requests', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin access required' })
+    }
+
+    const { status } = req.query
+    const where: any = {}
+    if (status && typeof status === 'string') {
+      where.status = status
+    }
+
+    const requests = await prisma.helpRequest.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+    })
+
+    console.log(`✅ Admin fetched ${requests.length} help requests`)
+    res.json({
+      success: true,
+      data: requests
+    })
+  } catch (error) {
+    console.error('❌ Error fetching help requests for admin:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch help requests',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// PUT /api/admin/help-requests/:id - Admin update help request
+app.put('/api/admin/help-requests/:id', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin access required' })
+    }
+
+    const { id } = req.params
+    const { status, adminNotes } = req.body
+
+    const updateData: any = {}
+    if (status) updateData.status = status
+    if (adminNotes !== undefined) updateData.adminNotes = adminNotes
+    
+    if (status === 'resolved') {
+      updateData.resolvedBy = decoded.username || decoded.userId
+      updateData.resolvedAt = new Date()
+    }
+
+    const helpRequest = await prisma.helpRequest.update({
+      where: { id },
+      data: updateData
+    })
+
+    console.log(`✅ Help request ${id} updated by admin ${decoded.username}`)
+    res.json({
+      success: true,
+      message: 'Help request updated successfully',
+      data: helpRequest
+    })
+  } catch (error) {
+    console.error('❌ Error updating help request:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update help request',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({

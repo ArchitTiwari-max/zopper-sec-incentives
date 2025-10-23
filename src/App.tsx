@@ -18,6 +18,8 @@ import { TestPage } from './pages/TestPage'
 import { AdminTestResults } from './pages/AdminTestResults'
 import { AdminTestInvites } from './pages/AdminTestInvites'
 import { AdminProctoringAlerts } from './pages/AdminProctoringAlerts'
+import { HelpPage } from './pages/Help'
+import { AdminHelpRequests } from './pages/AdminHelpRequests'
 
 export default function App() {
   const location = useLocation()
@@ -76,6 +78,11 @@ export default function App() {
                   <ReferralPage />
                 </SECRoute>
               } />
+              <Route path="/help" element={
+                <SECRoute>
+                  <HelpPage />
+                </SECRoute>
+              } />
               {/* Backward compat redirects */}
               <Route path="/dashboard" element={<Navigate to="/plan-sell-info" replace />} />
               <Route path="/report" element={<Navigate to="/reporting" replace />} />
@@ -119,6 +126,11 @@ export default function App() {
               <Route path="/admin/proctoring" element={
                 <AdminRoute>
                   <AdminProctoringAlerts />
+                </AdminRoute>
+              } />
+              <Route path="/admin/help-requests" element={
+                <AdminRoute>
+                  <AdminHelpRequests />
                 </AdminRoute>
               } />
               
