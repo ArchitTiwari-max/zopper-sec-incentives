@@ -18,6 +18,7 @@ interface HelpRequest {
   adminNotes?: string
   createdAt: string
   updatedAt: string
+  store?: { storeName: string; city: string }
 }
 
 export function HelpPage() {
