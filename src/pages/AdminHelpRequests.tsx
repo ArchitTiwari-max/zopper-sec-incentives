@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { config } from '@/lib/config'
+import { authFetch } from '@/lib/http'
 import { FaArrowLeft, FaGift, FaQuestionCircle, FaSpinner, FaFilter } from 'react-icons/fa'
 import { motion } from 'framer-motion'
 
@@ -49,8 +50,8 @@ export function AdminHelpRequests() {
         ? `${config.apiUrl}/admin/help-requests`
         : `${config.apiUrl}/admin/help-requests?status=${filterStatus}`
       
-      const response = await fetch(url, {
-        headers: {
+const response = await authFetch(url, {
+      headers: {
           'Authorization': `Bearer ${auth.token}`
         }
       })
@@ -77,7 +78,7 @@ export function AdminHelpRequests() {
 
     setUpdating(true)
     try {
-      const response = await fetch(`${config.apiUrl}/admin/help-requests/${selectedRequest.id}`, {
+const response = await authFetch(`${config.apiUrl}/admin/help-requests/${selectedRequest.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { isAdminUser } from '@/lib/auth'
 import { config } from '@/lib/config'
+import { authFetch } from '@/lib/http'
 
 interface SalesReport {
   id: string
@@ -92,7 +93,7 @@ export function AdminDashboard() {
     try {
       if (isInitialLoad) setLoading(true)
       
-      const response = await fetch(`${config.apiUrl}/reports/admin`, {
+const response = await authFetch(`${config.apiUrl}/reports/admin`, {
         headers: {
           'Authorization': `Bearer ${auth.token}`
         }
@@ -209,7 +210,7 @@ export function AdminDashboard() {
     if (!auth?.token) return
     
     try {
-      const response = await fetch(`${config.apiUrl}/reports/${report.id}/payment`, {
+const response = await authFetch(`${config.apiUrl}/reports/${report.id}/payment`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -259,7 +260,7 @@ export function AdminDashboard() {
     setBulkLoading(true)
     try {
       const promises = Array.from(selectedReports).map(reportId =>
-        fetch(`${config.apiUrl}/reports/${reportId}/payment`, {
+authFetch(`${config.apiUrl}/reports/${reportId}/payment`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -302,7 +303,7 @@ export function AdminDashboard() {
     if (!auth?.token) return
     
     try {
-      const response = await fetch(`${config.apiUrl}/reports/${reportId}`, {
+const response = await authFetch(`${config.apiUrl}/reports/${reportId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${auth.token}`

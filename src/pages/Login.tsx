@@ -16,6 +16,8 @@ export function LoginPage() {
 
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [sessionModalOpen, setSessionModalOpen] = useState(false)
+  const [sessionMessage, setSessionMessage] = useState<string>('Your session has expired. Please sign in again.')
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -25,6 +27,17 @@ export function LoginPage() {
       else if (isSEC) navigate('/plan-sell-info', { replace: true })
     }
   }, [isAuthenticated, isAdmin, isSEC, navigate])
+
+  // Show session expired popup if set by authFetch
+  useEffect(() => {
+    const msg = localStorage.getItem('auth:logout_message')
+    if (msg) {
+      setSessionMessage(msg)
+      setSessionModalOpen(true)
+      localStorage.removeItem('auth:logout_message')
+      localStorage.removeItem('auth:logout_reason')
+    }
+  }, [])
 
   // SEC handlers
   const sendOtp = async () => {
@@ -157,6 +170,18 @@ export function LoginPage() {
               : 'bg-red-100 text-red-700'
           }`}>
             {toast.message}
+          </div>
+        </div>
+      )}
+
+      {sessionModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5">
+            <div className="text-lg font-semibold mb-2">Session expired</div>
+            <div className="text-sm text-gray-600 mb-5">{sessionMessage}</div>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setSessionModalOpen(false)} className="px-4 py-2 rounded-2xl bg-blue-600 text-white hover:bg-blue-700">OK</button>
+            </div>
           </div>
         </div>
       )}

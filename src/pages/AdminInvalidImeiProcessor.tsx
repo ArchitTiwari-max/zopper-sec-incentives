@@ -4,6 +4,7 @@ import { FaUpload, FaSpinner, FaArrowLeft } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { config } from '@/lib/config'
+import { authFetch } from '@/lib/http'
 
 interface ProcessResult {
   total: number
@@ -60,7 +61,7 @@ export function AdminInvalidImeiProcessor() {
       const formData = new FormData()
       formData.append('excel', file)
 
-      const response = await fetch(`${config.apiUrl}/admin/process-invalid-imeis`, {
+const response = await authFetch(`${config.apiUrl}/admin/process-invalid-imeis`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${auth.token}`

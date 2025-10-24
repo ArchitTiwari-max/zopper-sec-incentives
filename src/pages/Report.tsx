@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { FaSpinner, FaArrowLeft } from 'react-icons/fa'
 import { config } from '@/lib/config'
 import { utils, writeFileXLSX } from 'xlsx'
+import { authFetch } from '@/lib/http'
 
 // Real sales report interface from database
 interface SalesReport {
@@ -184,7 +185,7 @@ export function ReportPage() {
       
       try {
         setLoading(true)
-        const response = await fetch(`${config.apiUrl}/sec/reports`, {
+const response = await authFetch(`${config.apiUrl}/sec/reports`, {
           headers: {
             'Authorization': `Bearer ${auth.token}`
           }
@@ -215,7 +216,7 @@ export function ReportPage() {
       
       try {
         setVoucherLoading(true)
-        const response = await fetch(`${config.apiUrl}/vouchers/sec`, {
+const response = await authFetch(`${config.apiUrl}/vouchers/sec`, {
           headers: {
             'Authorization': `Bearer ${auth.token}`
           }
@@ -247,7 +248,7 @@ export function ReportPage() {
       
       try {
         setDeductionLoading(true)
-        const response = await fetch(`${config.apiUrl}/sec/deductions`, {
+const response = await authFetch(`${config.apiUrl}/sec/deductions`, {
           headers: {
             'Authorization': `Bearer ${auth.token}`
           }

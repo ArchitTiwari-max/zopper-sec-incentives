@@ -3,6 +3,7 @@ import { FaBell, FaSpinner } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { config } from '@/lib/config'
 import { formatPlanType } from '@/lib/api'
+import { authFetch } from '@/lib/http'
 
 interface DeductionItem {
   id: string
@@ -51,7 +52,7 @@ export default function SecDeductionsBell() {
     if (!auth?.token) return
     setLoading(true)
     try {
-      const res = await fetch(`${config.apiUrl}/sec/deductions`, {
+const res = await authFetch(`${config.apiUrl}/sec/deductions`, {
         headers: { 'Authorization': `Bearer ${auth.token}` }
       })
       const json = await res.json()

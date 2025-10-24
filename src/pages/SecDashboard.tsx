@@ -18,6 +18,7 @@ import {
 } from '@/lib/api'
 import SearchableSelect from '@/components/SearchableSelect'
 import { config } from '@/lib/config'
+import { authFetch } from '@/lib/http'
 import SecDeductionsBell from '@/components/SecDeductionsBell'
 
 export function SecDashboard() {
@@ -232,7 +233,7 @@ export function SecDashboard() {
     if (!auth?.token) return
     setLoading(prev => ({ ...prev, submit: true }))
     try {
-      const response = await fetch(`${config.apiUrl}/sec/report`, {
+const response = await authFetch(`${config.apiUrl}/sec/report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

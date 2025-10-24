@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { config } from '@/lib/config'
+import { authFetch } from '@/lib/http'
 import { FaArrowLeft, FaGift, FaQuestionCircle, FaSpinner } from 'react-icons/fa'
 import { motion } from 'framer-motion'
 
@@ -37,11 +38,11 @@ export function HelpPage() {
     
     setLoadingRequests(true)
     try {
-      const response = await fetch(`${config.apiUrl}/help-requests`, {
-        headers: {
-          'Authorization': `Bearer ${auth.token}`
-        }
-      })
+const response = await authFetch(`${config.apiUrl}/help-requests`, {
+      headers: {
+        'Authorization': `Bearer ${auth.token}`
+      }
+    })
       const data = await response.json()
       if (data.success) {
         setMyRequests(data.data)
@@ -70,17 +71,17 @@ export function HelpPage() {
 
     setLoading(true)
     try {
-      const response = await fetch(`${config.apiUrl}/help-requests`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${auth.token}`
-        },
-        body: JSON.stringify({
-          requestType,
-          description: description.trim()
-        })
+const response = await authFetch(`${config.apiUrl}/help-requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${auth.token}`
+      },
+      body: JSON.stringify({
+        requestType,
+        description: description.trim()
       })
+    })
 
       const data = await response.json()
 
