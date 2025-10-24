@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { config } from '@/lib/config'
 import { authFetch } from '@/lib/http'
-import { FaArrowLeft, FaGift, FaQuestionCircle, FaSpinner } from 'react-icons/fa'
+import { fetchStores, type Store } from '@/lib/api'
+import { FaArrowLeft, FaGift, FaQuestionCircle, FaSpinner, FaStore } from 'react-icons/fa'
 import { motion } from 'framer-motion'
+import SearchableSelect from '@/components/SearchableSelect'
 
 type HelpRequestType = 'voucher_issue' | 'general_assistance'
 
@@ -23,6 +25,8 @@ export function HelpPage() {
   const navigate = useNavigate()
   const [requestType, setRequestType] = useState<HelpRequestType | ''>('')
   const [description, setDescription] = useState('')
+  const [storeId, setStoreId] = useState('')
+  const [stores, setStores] = useState<Store[]>([])
   const [loading, setLoading] = useState(false)
   const [showToast, setShowToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [myRequests, setMyRequests] = useState<HelpRequest[]>([])
@@ -31,6 +35,12 @@ export function HelpPage() {
 
   useEffect(() => {
     fetchMyRequests()
+    // Load stores for optional selection
+    const loadStores = async () => {
+      const r = await fetchStores()
+      if (r.success) setStores(r.data)
+    }
+    loadStores()
   }, [])
 
   const fetchMyRequests = async () => {
@@ -57,8 +67,8 @@ const response = await authFetch(`${config.apiUrl}/help-requests`, {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!requestType || !description.trim()) {
-      setShowToast({ type: 'error', message: 'Please fill in all fields' })
+    if (!requestType || !description.trim() || !storeId.trim()) {
+      setShowToast({ type: 'error', message: 'Please fill in all fields including store selection' })
       setTimeout(() => setShowToast(null), 3000)
       return
     }
@@ -79,7 +89,8 @@ const response = await authFetch(`${config.apiUrl}/help-requests`, {
       },
       body: JSON.stringify({
         requestType,
-        description: description.trim()
+        description: description.trim(),
+        storeId: storeId || undefined
       })
     })
 
@@ -187,6 +198,17 @@ const response = await authFetch(`${config.apiUrl}/help-requests`, {
         {requestType && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
             <div>
+              <label className="block text-sm font-medium mb-1">Your Store *</label>
+              <SearchableSelect
+                value={storeId}
+                onChange={(val) => setStoreId(val)}
+                options={stores.map(s => ({ value: s.id, label: `${s.storeName} - ${s.city}` }))}
+                placeholder="Search and select your store"
+                leftIcon={<FaStore />}
+              />
+            </div>
+
+            <div>
               <label className="block text-sm font-medium mb-1">Please describe your issue</label>
               <textarea
                 value={description}
@@ -239,6 +261,12 @@ const response = await authFetch(`${config.apiUrl}/help-requests`, {
                   <span className="text-xs font-medium text-gray-700">Description: </span>
                   <span className="text-xs text-gray-600">{request.description}</span>
                 </div>
+                {request.store && (
+                  <div className="mb-2">
+                    <span className="text-xs font-medium text-gray-700">Store: </span>
+                    <span className="text-xs text-gray-600">{request.store.storeName} - {request.store.city}</span>
+                  </div>
+                )}
                 
                 {request.adminNotes && (
                   <div className="mt-2 pt-2 border-t">

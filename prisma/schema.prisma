@@ -27,6 +27,7 @@ model Store {
   city        String
   secUsers    SECUser[]     // One store can have multiple SECs
   salesReports SalesReport[] // Store sales reports
+  helpRequests HelpRequest[] // Help requests from this store
 }
 
 model SamsungSKU {
@@ -188,6 +189,8 @@ model HelpRequest {
   secUserId   String             @db.ObjectId
   secPhone    String             // Store phone for quick reference
   secName     String?            // Store SEC name for display
+  storeId     String?            // Optional: store ID selected by SEC
+  store       Store?             @relation(fields: [storeId], references: [id])
   requestType HelpRequestType
   description String
   status      HelpRequestStatus  @default(pending)

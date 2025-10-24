@@ -14,6 +14,8 @@ interface HelpRequest {
   secUserId: string
   secPhone: string
   secName?: string
+  storeId?: string
+  store?: { storeName: string; city: string }
   requestType: HelpRequestType
   description: string
   status: HelpRequestStatus
@@ -214,7 +216,7 @@ const response = await authFetch(`${config.apiUrl}/admin/help-requests/${selecte
                   <div>
                     <div className="font-medium text-sm">{getRequestTypeLabel(request.requestType)}</div>
                     <div className="text-xs text-gray-500">
-                      {request.secName || 'Unknown'} • {request.secPhone}
+                      {request.secName || 'Unknown'} • {request.secPhone} • {request.store?.storeName || '—'}
                     </div>
                   </div>
                 </div>
@@ -254,6 +256,10 @@ const response = await authFetch(`${config.apiUrl}/admin/help-requests/${selecte
                   <div>
                     <span className="text-gray-500">Request Type:</span>
                     <div className="font-medium">{getRequestTypeLabel(selectedRequest.requestType)}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Store:</span>
+                    <div className="font-medium">{selectedRequest.store?.storeName || '—'}</div>
                   </div>
                   <div>
                     <span className="text-gray-500">Submitted:</span>
