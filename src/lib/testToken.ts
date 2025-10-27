@@ -1,55 +1,64 @@
 import { config } from '@/lib/config'
 
 export interface TestSession {
-  secId: string
+  phone: string
   token: string
   startTime: string
   isActive: boolean
 }
 
 /**
- * Extract secId from URL parameters
+ * Extract phone from URL parameters (fallback to secId for backward compatibility)
  */
-export function extractSecIdFromUrl(): string | null {
+export function extractPhoneFromUrl(): string | null {
   const params = new URLSearchParams(window.location.search)
-  return params.get('secId')
+  const phone = params.get('phone')
+  if (phone) return phone
+  const legacySecId = params.get('secId')
+  return legacySecId
 }
 
 export function extractSigParams() {
   const params = new URLSearchParams(window.location.search)
   const sig = params.get('sig')
   const ts = params.get('ts')
-  return { sig, ts: ts ? Number(ts) : null }
+  const token = params.get('token')
+  return { sig, ts: ts ? Number(ts) : null, token }
 }
 
 /**
- * Validate test token: if signature present, verify with backend; else fallback to format check
+ * Validate test token: prefer JWT token; else verify HMAC sig; else fallback to phone format check
  */
-export async function validateTestToken(secId: string): Promise<boolean> {
-  if (!secId || secId.length < 3) return false
+export async function validateTestToken(phone: string): Promise<boolean> {
+  if (!phone) return false
 
-  const { sig, ts } = extractSigParams()
-  if (sig && ts) {
-    try {
-      const resp = await fetch(`${config.apiUrl}/tests/verify?secId=${encodeURIComponent(secId)}&ts=${ts}&sig=${encodeURIComponent(sig)}`)
+  const { sig, ts, token } = extractSigParams()
+  try {
+    if (token) {
+      const resp = await fetch(`${config.apiUrl}/tests/verify?token=${encodeURIComponent(token)}`)
       const j = await resp.json()
       return !!j.valid
-    } catch {
-      return false
     }
+    if (sig && ts) {
+      const resp = await fetch(`${config.apiUrl}/tests/verify?phone=${encodeURIComponent(phone)}&ts=${ts}&sig=${encodeURIComponent(sig)}`)
+      const j = await resp.json()
+      return !!j.valid
+    }
+  } catch {
+    return false
   }
   
-  // Basic format validation - alphanumeric, 3+ chars
-  const tokenPattern = /^[A-Za-z0-9]+$/
-  return tokenPattern.test(secId)
+  // Basic phone validation - 10 digits (optionally prefixed with 91)
+  const clean = phone.startsWith('91') ? phone.slice(2) : phone
+  return /^\d{10}$/.test(clean)
 }
 
 /**
  * Create test session for tracking
  */
-export function createTestSession(secId: string): TestSession {
+export function createTestSession(phone: string): TestSession {
   return {
-    secId,
+    phone,
     token: generateSessionToken(),
     startTime: new Date().toISOString(),
     isActive: true

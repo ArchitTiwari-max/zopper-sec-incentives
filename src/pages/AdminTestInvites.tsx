@@ -65,13 +65,13 @@ export function AdminTestInvites() {
 
   const signLink = async (idx: number) => {
     const row = rows[idx]
-    if (!row.secId) return
+    if (!row.phone) return
     try {
       updateRow(idx, { status: 'sending', error: undefined })
       const resp = await fetch(`${apiUrl}/tests/sign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secId: row.secId, expiresInSeconds: expiresHours * 3600 })
+        body: JSON.stringify({ phone: row.phone, expiresInSeconds: expiresHours * 3600 })
       })
       const j = await resp.json()
       if (!j.success) throw new Error(j.message || 'Failed to sign link')
@@ -90,13 +90,13 @@ export function AdminTestInvites() {
 
   const sendInvite = async (idx: number) => {
     const row = rows[idx]
-    if (!row.secId || !row.phone) return
+    if (!row.phone) return
     try {
       updateRow(idx, { status: 'sending', error: undefined })
       const resp = await fetch(`${apiUrl}/tests/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secId: row.secId, phone: row.phone, expiresInSeconds: expiresHours * 3600 })
+        body: JSON.stringify({ phone: row.phone, secId: row.secId, expiresInSeconds: expiresHours * 3600 })
       })
       const j = await resp.json()
       if (!j.success) throw new Error(j.message || 'Failed to send invite')
@@ -109,7 +109,7 @@ export function AdminTestInvites() {
   const sendBulk = async () => {
     setIsBulkSending(true)
     try {
-      const invites = rows.filter(r => r.secId && r.phone).map(r => ({ secId: r.secId, phone: r.phone }))
+      const invites = rows.filter(r => r.phone).map(r => ({ secId: r.secId, phone: r.phone }))
       const resp = await fetch(`${apiUrl}/tests/invite-bulk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

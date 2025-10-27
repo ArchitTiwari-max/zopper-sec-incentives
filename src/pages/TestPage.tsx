@@ -4,12 +4,13 @@ import { QuestionCard } from '@/components/QuestionCard'
 import { TestTimer } from '@/components/TestTimer'
 import { ProctoringPanel } from '@/components/ProctoringPanel'
 import { 
-  extractSecIdFromUrl, 
+  extractPhoneFromUrl, 
   validateTestToken, 
   createTestSession, 
   saveTestSession, 
   endTestSession 
 } from '@/lib/testToken'
+import { config } from '@/lib/config'
 import { 
   sampleQuestions, 
   TestResponse, 
@@ -24,7 +25,7 @@ const TOTAL_QUESTIONS = sampleQuestions.length
 interface TestState {
   isVerifying: boolean
   isValidToken: boolean
-  secId: string | null
+  phone: string | null
   currentQuestionIndex: number
   responses: TestResponse[]
   startTime: string
@@ -34,12 +35,19 @@ interface TestState {
   timeUp: boolean
 }
 
+interface SecDetails {
+  phone: string
+  secId?: string | null
+  name?: string | null
+  store?: { storeName: string; city?: string | null } | null
+}
+
 export function TestPage() {
   const navigate = useNavigate()
   const [testState, setTestState] = useState<TestState>({
     isVerifying: true,
     isValidToken: false,
-    secId: null,
+    phone: null,
     currentQuestionIndex: 0,
     responses: [],
     startTime: '',
@@ -47,29 +55,37 @@ export function TestPage() {
     isSubmitting: false,
     timeUp: false
   })
+  const [secDetails, setSecDetails] = useState<SecDetails | null>(null)
 
   // Initialize test on component mount
   useEffect(() => {
     const init = async () => {
-      const secId = extractSecIdFromUrl()
-      if (!secId) {
+      const phone = extractPhoneFromUrl()
+      if (!phone) {
         setTestState(prev => ({ ...prev, isValidToken: false, isVerifying: false }))
         return
       }
-      const ok = await validateTestToken(secId)
+      const ok = await validateTestToken(phone)
       if (!ok) {
         setTestState(prev => ({ ...prev, isValidToken: false, isVerifying: false }))
         return
       }
 
       // Create and save test session
-      const session = createTestSession(secId)
+      const session = createTestSession(phone)
       saveTestSession(session)
+
+      // Fetch SEC details by phone (non-blocking)
+      try {
+        const resp = await fetch(`${config.apiUrl}/sec/by-phone?phone=${encodeURIComponent(phone)}`)
+        const j = await resp.json()
+        if (j?.success && j?.data) setSecDetails(j.data)
+      } catch {}
 
       setTestState(prev => ({
         ...prev,
         isValidToken: true,
-        secId,
+        phone,
         startTime: new Date().toISOString(),
         isVerifying: false
       }))
@@ -151,15 +167,15 @@ export function TestPage() {
 
   // Submit test function
   const submitTest = async (responses: TestResponse[], startTime: string) => {
-    const secId = testState.secId
+    const identifier = (secDetails?.secId && secDetails.secId.trim()) || testState.phone
     const score = calculateScore(responses, sampleQuestions)
     const completionTime = Math.floor((Date.now() - new Date(startTime || new Date().toISOString()).getTime()) / 1000)
 
     try {
-      if (!secId) throw new Error('Missing SEC ID')
+      if (!identifier) throw new Error('Missing identifier')
 
       const submission = {
-        secId,
+        secId: identifier,
         sessionToken: 'test-token', // In production, get from session
         responses,
         score,
@@ -217,12 +233,12 @@ export function TestPage() {
   }, [testState.score, testState.responses])
 
   // Redirect only after verification completes
-  if (!testState.isVerifying && (testState.secId === null || !testState.isValidToken)) {
+  if (!testState.isVerifying && (testState.phone === null || !testState.isValidToken)) {
     return <Navigate to="/" replace />
   }
 
   // Loading state
-  if (testState.isVerifying || !testState.secId || !testState.isValidToken) {
+  if (testState.isVerifying || !testState.phone || !testState.isValidToken) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -263,8 +279,11 @@ export function TestPage() {
             </div>
           </div>
 
-          <div className="text-sm text-gray-500 space-y-1">
-            <p>SEC ID: {testState.secId}</p>
+            <div className="text-sm text-gray-500 space-y-1">
+            <p>SEC: {secDetails?.name ? `${secDetails.name} (${testState.phone})` : testState.phone}</p>
+            {secDetails?.store?.storeName && (
+              <p>Store: {secDetails.store.storeName}{secDetails.store.city ? `, ${secDetails.store.city}` : ''}</p>
+            )}
             <p>Submitted: {new Date().toLocaleString()}</p>
           </div>
 
@@ -308,7 +327,7 @@ export function TestPage() {
 
       {/* Proctoring */}
       <ProctoringPanel 
-        secId={testState.secId!}
+        secId={testState.phone!}
         sessionToken={'test-token'}
         onFlag={() => setTestState(prev => ({ ...prev, }))}
       />
@@ -319,7 +338,10 @@ export function TestPage() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-xl font-bold text-gray-900">SEC Knowledge Test</h1>
-              <p className="text-sm text-gray-600">SEC ID: {testState.secId}</p>
+              <p className="text-sm text-gray-600">
+                {secDetails?.name ? `${secDetails.name} (${testState.phone})` : `Phone: ${testState.phone}`}
+                {secDetails?.store?.storeName ? ` • ${secDetails.store.storeName}${secDetails.store.city ? `, ${secDetails.store.city}` : ''}` : ''}
+              </p>
             </div>
             <div className="text-right">
               <div className="text-sm text-gray-500">Total Questions</div>

@@ -564,6 +564,34 @@ function calculateIncentive(planType: string): number {
 // API Routes
 
 /**
+ * GET /api/sec/by-phone
+ * Fetch SEC details (name, secId, store) by phone for test access
+ */
+app.get('/api/sec/by-phone', async (req, res) => {
+  try {
+    const phone = String(req.query.phone || '').trim()
+    if (!phone) return res.status(400).json({ success: false, message: 'phone is required' })
+    const clean = phone.startsWith('91') ? phone.slice(2) : phone
+    if (!/^\d{10}$/.test(clean)) return res.status(400).json({ success: false, message: 'invalid phone' })
+
+    const user = await prisma.sECUser.findUnique({ where: { phone: clean }, include: { store: true } })
+    if (!user) return res.json({ success: true, data: { phone: clean, secId: null, name: null, store: null } })
+
+    return res.json({
+      success: true,
+      data: {
+        phone: user.phone,
+        secId: user.secId,
+        name: user.name,
+        store: user.store ? { storeName: user.store.storeName, city: user.store.city } : null
+      }
+    })
+  } catch (e) {
+    return res.status(500).json({ success: false, message: 'failed', error: e instanceof Error ? e.message : 'error' })
+  }
+})
+
+/**
  * POST /api/referrals/join
  * A SEC logs in with a referral code to join as referee.
  */
@@ -2567,6 +2595,7 @@ function buildAppUrl(req: express.Request) {
   return `${proto}://${host}`
 }
 
+// Legacy: secId-based links
 function createSignedLink(req: express.Request, secId: string, expiresInSeconds = 72 * 3600) {
   const ts = Math.floor(Date.now() / 1000) + expiresInSeconds // expiry timestamp (seconds)
   const data = `${secId}.${ts}`
@@ -2576,10 +2605,20 @@ function createSignedLink(req: express.Request, secId: string, expiresInSeconds 
   return { link, sig, ts }
 }
 
-function verifySignature(secId: string, ts: number, sig: string) {
+// New: phone-based links
+function createSignedLinkByPhone(req: express.Request, phone: string, expiresInSeconds = 72 * 3600) {
+  const ts = Math.floor(Date.now() / 1000) + expiresInSeconds
+  const data = `${phone}.${ts}`
+  const sig = hmac(data)
+  const base = buildAppUrl(req)
+  const link = `${base}/test?phone=${encodeURIComponent(phone)}&ts=${ts}&sig=${sig}`
+  return { link, sig, ts }
+}
+
+function verifySignature(dataValue: string, ts: number, sig: string) {
   const now = Math.floor(Date.now() / 1000)
   if (!ts || ts < now) return { valid: false, reason: 'expired' }
-  const expected = hmac(`${secId}.${ts}`)
+  const expected = hmac(`${dataValue}.${ts}`)
   const valid = crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
   return { valid, reason: valid ? undefined : 'invalid_signature' }
 }
@@ -2626,42 +2665,64 @@ async function sendWhatsAppInviteMinimal(phone: string, message: string) {
   throw new Error('No WhatsApp provider configured (set COMIFY_* or WHATSAPP_* env vars)')
 }
 
-// Sign a test link
+// Sign a test link (phone preferred; secId supported for legacy)
 app.post('/api/tests/sign', (req, res) => {
   try {
-    const { secId, expiresInSeconds } = req.body || {}
-    if (!secId || typeof secId !== 'string') return res.status(400).json({ success: false, message: 'secId is required' })
+    const { phone, secId, expiresInSeconds } = req.body || {}
     if (!LINK_SIGNING_SECRET) return res.status(500).json({ success: false, message: 'LINK_SIGNING_SECRET not configured' })
-    const result = createSignedLink(req, secId, Number(expiresInSeconds) || undefined)
-    return res.json({ success: true, ...result })
+    if (phone && typeof phone === 'string') {
+      const result = createSignedLinkByPhone(req, phone, Number(expiresInSeconds) || undefined)
+      return res.json({ success: true, ...result })
+    }
+    if (secId && typeof secId === 'string') {
+      const result = createSignedLink(req, secId, Number(expiresInSeconds) || undefined)
+      return res.json({ success: true, ...result })
+    }
+    return res.status(400).json({ success: false, message: 'phone is required' })
   } catch (e: any) {
     return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
   }
 })
 
-// Verify a signed link
+// Verify a signed link (supports token or HMAC for phone or legacy secId)
 app.get('/api/tests/verify', (req, res) => {
   try {
-    const secId = String(req.query.secId || '')
+    const token = req.query.token ? String(req.query.token) : undefined
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, LINK_SIGNING_SECRET || JWT_SECRET) as any
+        // Expect token to contain phone and exp
+        if (!decoded?.phone) return res.json({ valid: false, reason: 'missing_phone' })
+        return res.json({ valid: true })
+      } catch (e) {
+        return res.json({ valid: false, reason: 'invalid_token' })
+      }
+    }
+
+    const phone = req.query.phone ? String(req.query.phone) : undefined
+    const secId = req.query.secId ? String(req.query.secId) : undefined
     const ts = Number(req.query.ts || 0)
     const sig = String(req.query.sig || '')
-    if (!secId || !ts || !sig) return res.json({ valid: false, reason: 'missing_params' })
-    const result = verifySignature(secId, ts, sig)
-    return res.json(result)
+    if ((phone || secId) && ts && sig) {
+      const dataValue = phone || secId!
+      const result = verifySignature(dataValue, ts, sig)
+      return res.json(result)
+    }
+    return res.json({ valid: false, reason: 'missing_params' })
   } catch (e) {
     return res.status(500).json({ valid: false, reason: 'internal_error' })
   }
 })
 
-// Send single invite
+// Send single invite (phone-based)
 app.post('/api/tests/invite', async (req, res) => {
   try {
-    const { secId, phone, expiresInSeconds } = req.body || {}
-    if (!secId || !phone) return res.status(400).json({ success: false, message: 'secId and phone are required' })
-    const { link } = createSignedLink(req, secId, Number(expiresInSeconds) || undefined)
+    const { phone, secId, expiresInSeconds } = req.body || {}
+    if (!phone) return res.status(400).json({ success: false, message: 'phone is required' })
+    const { link } = createSignedLinkByPhone(req, phone, Number(expiresInSeconds) || undefined)
     const msg = `Your SEC assessment link:\n${link}\n\nThis link expires soon. Please complete within the allotted time.`
     const provider = await sendWhatsAppInviteMinimal(phone, msg)
-    return res.json({ success: true, link, provider })
+    return res.json({ success: true, link, provider, meta: { legacySecId: secId || null } })
   } catch (e: any) {
     return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
   }
@@ -2681,7 +2742,7 @@ app.post('/api/tests/invite-bulk', async (req, res) => {
         const result = await (await fetch(`${buildAppUrl(req)}/api/tests/invite`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ secId, phone, expiresInSeconds })
+          body: JSON.stringify({ phone, secId, expiresInSeconds })
         })).json()
         results.push({ secId, phone, ...result })
       } catch (e: any) {
@@ -2717,6 +2778,21 @@ app.post('/api/proctoring/event', async (req, res) => {
     const ev = { id: `${Date.now()}`, secId, sessionToken, eventType, details, createdAt: new Date().toISOString() }
     inMemoryProctoringEvents.push(ev)
     return res.json({ success: true, data: ev })
+  } catch (e: any) {
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
+// Optional: JWT-based link signing for tests
+app.post('/api/tests/sign-jwt', (req, res) => {
+  try {
+    const { phone, expiresInSeconds } = req.body || {}
+    if (!phone) return res.status(400).json({ success: false, message: 'phone is required' })
+    const exp = Math.floor(Date.now() / 1000) + (Number(expiresInSeconds) || 72 * 3600)
+    const token = jwt.sign({ phone, exp }, LINK_SIGNING_SECRET || JWT_SECRET)
+    const base = buildAppUrl(req)
+    const link = `${base}/test?token=${encodeURIComponent(token)}`
+    return res.json({ success: true, link, token, exp })
   } catch (e: any) {
     return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
   }
