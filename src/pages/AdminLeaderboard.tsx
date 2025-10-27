@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { FaArrowLeft, FaCrown, FaTrophy, FaMedal, FaStar, FaFire, FaArrowUp, FaArrowDown, FaDownload, FaMinus } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { config } from '@/lib/config'
+import { authFetch } from '@/lib/http'
 import { utils, writeFileXLSX } from 'xlsx'
 
 interface LeaderboardEntry {
@@ -39,7 +40,7 @@ export function AdminLeaderboard() {
 
     try {
       setLoading(true)
-      const response = await fetch(`${config.apiUrl}/admin/leaderboard`, {
+const response = await authFetch(`${config.apiUrl}/admin/leaderboard`, {
         headers: {
           'Authorization': `Bearer ${auth.token}`
         }

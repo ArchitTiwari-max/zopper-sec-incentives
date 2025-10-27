@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { config } from '@/lib/config'
+import { authFetch } from '@/lib/http'
 import { utils, writeFileXLSX } from 'xlsx'
 
 interface Referral {
@@ -25,7 +26,7 @@ export function AdminReferrals() {
       if (!auth?.token) return
       try {
         setLoading(true)
-        const r = await fetch(`${config.apiUrl}/referrals/admin`, {
+const r = await authFetch(`${config.apiUrl}/referrals/admin`, {
           headers: { Authorization: `Bearer ${auth.token}` }
         })
         const j = await r.json()

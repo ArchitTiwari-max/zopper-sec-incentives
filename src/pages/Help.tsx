@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { config } from '@/lib/config'
-import { FaArrowLeft, FaGift, FaQuestionCircle, FaSpinner } from 'react-icons/fa'
+import { authFetch } from '@/lib/http'
+import { fetchStores, type Store } from '@/lib/api'
+import { FaArrowLeft, FaGift, FaQuestionCircle, FaSpinner, FaStore } from 'react-icons/fa'
 import { motion } from 'framer-motion'
+import SearchableSelect from '@/components/SearchableSelect'
 
 type HelpRequestType = 'voucher_issue' | 'general_assistance'
 
@@ -15,6 +18,7 @@ interface HelpRequest {
   adminNotes?: string
   createdAt: string
   updatedAt: string
+  store?: { storeName: string; city: string }
 }
 
 export function HelpPage() {
@@ -22,6 +26,8 @@ export function HelpPage() {
   const navigate = useNavigate()
   const [requestType, setRequestType] = useState<HelpRequestType | ''>('')
   const [description, setDescription] = useState('')
+  const [storeId, setStoreId] = useState('')
+  const [stores, setStores] = useState<Store[]>([])
   const [loading, setLoading] = useState(false)
   const [showToast, setShowToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [myRequests, setMyRequests] = useState<HelpRequest[]>([])
@@ -30,6 +36,12 @@ export function HelpPage() {
 
   useEffect(() => {
     fetchMyRequests()
+    // Load stores for optional selection
+    const loadStores = async () => {
+      const r = await fetchStores()
+      if (r.success) setStores(r.data)
+    }
+    loadStores()
   }, [])
 
   const fetchMyRequests = async () => {
@@ -37,11 +49,11 @@ export function HelpPage() {
     
     setLoadingRequests(true)
     try {
-      const response = await fetch(`${config.apiUrl}/help-requests`, {
-        headers: {
-          'Authorization': `Bearer ${auth.token}`
-        }
-      })
+const response = await authFetch(`${config.apiUrl}/help-requests`, {
+      headers: {
+        'Authorization': `Bearer ${auth.token}`
+      }
+    })
       const data = await response.json()
       if (data.success) {
         setMyRequests(data.data)
@@ -56,8 +68,8 @@ export function HelpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!requestType || !description.trim()) {
-      setShowToast({ type: 'error', message: 'Please fill in all fields' })
+    if (!requestType || !description.trim() || !storeId.trim()) {
+      setShowToast({ type: 'error', message: 'Please fill in all fields including store selection' })
       setTimeout(() => setShowToast(null), 3000)
       return
     }
@@ -70,17 +82,18 @@ export function HelpPage() {
 
     setLoading(true)
     try {
-      const response = await fetch(`${config.apiUrl}/help-requests`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${auth.token}`
-        },
-        body: JSON.stringify({
-          requestType,
-          description: description.trim()
-        })
+const response = await authFetch(`${config.apiUrl}/help-requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${auth.token}`
+      },
+      body: JSON.stringify({
+        requestType,
+        description: description.trim(),
+        storeId: storeId || undefined
       })
+    })
 
       const data = await response.json()
 
@@ -186,6 +199,17 @@ export function HelpPage() {
         {requestType && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
             <div>
+              <label className="block text-sm font-medium mb-1">Your Store *</label>
+              <SearchableSelect
+                value={storeId}
+                onChange={(val) => setStoreId(val)}
+                options={stores.map(s => ({ value: s.id, label: `${s.storeName} - ${s.city}` }))}
+                placeholder="Search and select your store"
+                leftIcon={<FaStore />}
+              />
+            </div>
+
+            <div>
               <label className="block text-sm font-medium mb-1">Please describe your issue</label>
               <textarea
                 value={description}
@@ -238,6 +262,12 @@ export function HelpPage() {
                   <span className="text-xs font-medium text-gray-700">Description: </span>
                   <span className="text-xs text-gray-600">{request.description}</span>
                 </div>
+                {request.store && (
+                  <div className="mb-2">
+                    <span className="text-xs font-medium text-gray-700">Store: </span>
+                    <span className="text-xs text-gray-600">{request.store.storeName} - {request.store.city}</span>
+                  </div>
+                )}
                 
                 {request.adminNotes && (
                   <div className="mt-2 pt-2 border-t">

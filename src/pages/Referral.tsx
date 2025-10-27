@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { FaCopy, FaLink, FaInfoCircle } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { config } from '@/lib/config'
+import { authFetch } from '@/lib/http'
 
 interface ReferralRow {
   id: string
@@ -32,7 +33,7 @@ export function ReferralPage() {
     const params = new URLSearchParams(location.search)
     const code = params.get('referal_code') || params.get('referal')
     if (auth?.token && code && /^\d{10}$/.test(code) && code !== referralCode) {
-      fetch(`${config.apiUrl}/referrals/join`, {
+authFetch(`${config.apiUrl}/referrals/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
         body: JSON.stringify({ referralCode: code })
@@ -45,7 +46,7 @@ export function ReferralPage() {
     if (!auth?.token) return
     try {
       setLoading(true)
-      const r = await fetch(`${config.apiUrl}/referrals/me`, {
+const r = await authFetch(`${config.apiUrl}/referrals/me`, {
         headers: { Authorization: `Bearer ${auth.token}` }
       })
       const j = await r.json()

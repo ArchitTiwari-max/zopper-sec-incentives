@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { FaBell, FaCheck, FaSpinner } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { config } from '@/lib/config'
+import { authFetch } from '@/lib/http'
 
 interface NotificationItem {
   id: string
@@ -24,7 +25,7 @@ export default function NotificationsBell() {
     if (!auth?.token) return
     setLoading(true)
     try {
-      const res = await fetch(`${config.apiUrl}/notifications`, {
+const res = await authFetch(`${config.apiUrl}/notifications`, {
         headers: { 'Authorization': `Bearer ${auth.token}` }
       })
       const json = await res.json()
@@ -45,7 +46,7 @@ export default function NotificationsBell() {
   const markAllRead = async () => {
     if (!auth?.token) return
     try {
-      await fetch(`${config.apiUrl}/notifications/read-all`, {
+await authFetch(`${config.apiUrl}/notifications/read-all`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${auth.token}` }
       })

@@ -4,6 +4,7 @@ import { FaTimes, FaUser, FaIdBadge, FaSpinner } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { SECAuthData } from '@/lib/auth'
 import { config } from '@/lib/config'
+import { authFetch } from '@/lib/http'
 
 interface ProfileModalProps {
   isOpen: boolean
@@ -31,7 +32,7 @@ export function ProfileModal({ isOpen, onClose, onProfileUpdated }: ProfileModal
 
     setLoading(true)
     try {
-      const response = await fetch(`${config.apiUrl}/auth/update-profile`, {
+const response = await authFetch(`${config.apiUrl}/auth/update-profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

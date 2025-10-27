@@ -2878,7 +2878,7 @@ app.post('/api/help-requests', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Only SEC users can submit help requests' })
     }
 
-    const { requestType, description } = req.body
+    const { requestType, description, storeId } = req.body
 
     if (!requestType || !description) {
       return res.status(400).json({ success: false, message: 'Request type and description are required' })
@@ -2907,6 +2907,7 @@ app.post('/api/help-requests', async (req, res) => {
         secName: secUser.name || null,
         requestType,
         description,
+        storeId: storeId || null,
         status: 'pending'
       }
     })
@@ -2950,6 +2951,7 @@ app.get('/api/help-requests', async (req, res) => {
 
     const requests = await prisma.helpRequest.findMany({
       where: { secUserId: decoded.userId },
+      include: { store: true },
       orderBy: { createdAt: 'desc' }
     })
 
@@ -2995,6 +2997,7 @@ app.get('/api/admin/help-requests', async (req, res) => {
 
     const requests = await prisma.helpRequest.findMany({
       where,
+      include: { store: true },
       orderBy: { createdAt: 'desc' }
     })
 

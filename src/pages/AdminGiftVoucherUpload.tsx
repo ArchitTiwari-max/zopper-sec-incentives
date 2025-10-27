@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { FaArrowLeft, FaUpload, FaSpinner, FaCheckCircle, FaTimesCircle, FaList } from 'react-icons/fa'
 import { config } from '@/lib/config'
+import { authFetch } from '@/lib/http'
 
 interface InvalidRecord {
   imei: string
@@ -68,7 +69,7 @@ export function AdminGiftVoucherUpload() {
     try {
       const form = new FormData()
       form.append('excel', file)
-      const res = await fetch(`${config.apiUrl}/admin/gift-vouchers/upload`, {
+const res = await authFetch(`${config.apiUrl}/admin/gift-vouchers/upload`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${auth.token}` },
         body: form

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { config } from '@/lib/config'
+import { authFetch } from '@/lib/http'
 import { FaArrowLeft, FaGift, FaQuestionCircle, FaSpinner, FaFilter } from 'react-icons/fa'
 import { motion } from 'framer-motion'
 
@@ -13,6 +14,8 @@ interface HelpRequest {
   secUserId: string
   secPhone: string
   secName?: string
+  storeId?: string
+  store?: { storeName: string; city: string }
   requestType: HelpRequestType
   description: string
   status: HelpRequestStatus
@@ -49,8 +52,8 @@ export function AdminHelpRequests() {
         ? `${config.apiUrl}/admin/help-requests`
         : `${config.apiUrl}/admin/help-requests?status=${filterStatus}`
       
-      const response = await fetch(url, {
-        headers: {
+const response = await authFetch(url, {
+      headers: {
           'Authorization': `Bearer ${auth.token}`
         }
       })
@@ -77,7 +80,7 @@ export function AdminHelpRequests() {
 
     setUpdating(true)
     try {
-      const response = await fetch(`${config.apiUrl}/admin/help-requests/${selectedRequest.id}`, {
+const response = await authFetch(`${config.apiUrl}/admin/help-requests/${selectedRequest.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -213,7 +216,7 @@ export function AdminHelpRequests() {
                   <div>
                     <div className="font-medium text-sm">{getRequestTypeLabel(request.requestType)}</div>
                     <div className="text-xs text-gray-500">
-                      {request.secName || 'Unknown'} • {request.secPhone}
+                      {request.secName || 'Unknown'} • {request.secPhone} • {request.store?.storeName || '—'}
                     </div>
                   </div>
                 </div>
@@ -253,6 +256,10 @@ export function AdminHelpRequests() {
                   <div>
                     <span className="text-gray-500">Request Type:</span>
                     <div className="font-medium">{getRequestTypeLabel(selectedRequest.requestType)}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Store:</span>
+                    <div className="font-medium">{selectedRequest.store?.storeName || '—'}</div>
                   </div>
                   <div>
                     <span className="text-gray-500">Submitted:</span>

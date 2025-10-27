@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { FaArrowLeft, FaUpload, FaSpinner, FaCheckCircle, FaExclamationTriangle, FaTimesCircle, FaDownload, FaFileExcel } from 'react-icons/fa'
 import { config } from '@/lib/config'
+import { authFetch } from '@/lib/http'
 
 interface ProcessLog {
   row: number
@@ -77,7 +78,7 @@ export function VoucherProcessor() {
       const formData = new FormData()
       formData.append('excel', file)
 
-      const response = await fetch(`${config.apiUrl}/admin/process-voucher-excel`, {
+const response = await authFetch(`${config.apiUrl}/admin/process-voucher-excel`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${auth.token}`
