@@ -208,29 +208,29 @@ export function TestPage() {
     }, 2000)
   }
 
-  // Auto-redirect countdown (must be declared before any early returns)
-  const [redirectIn, setRedirectIn] = useState<number>(7)
-  useEffect(() => {
-    if (testState.isCompleted && !testState.isSubmitting) {
-      setRedirectIn(7)
-      const iv = setInterval(() => setRedirectIn((s) => {
-        if (s <= 1) {
-          clearInterval(iv)
-          navigate('/plan-sell-info', { replace: true })
-          return 0
-        }
-        return s - 1
-      }), 1000)
-      return () => clearInterval(iv)
-    }
-  }, [testState.isCompleted, testState.isSubmitting, navigate])
-
   // Derive score safely in UI (handles any race conditions)
   const resultScore = useMemo(() => {
     return typeof testState.score === 'number' 
       ? testState.score 
       : calculateScore(testState.responses, sampleQuestions)
   }, [testState.score, testState.responses])
+
+  // Navigate to results page on completion
+  useEffect(() => {
+    if (testState.isCompleted && !testState.isSubmitting) {
+      // Store result data for the results page
+      const resultData = {
+        phone: testState.phone!,
+        score: resultScore,
+        totalQuestions: TOTAL_QUESTIONS,
+        responses: testState.responses,
+        submittedAt: new Date().toISOString(),
+        completionTime: Math.floor((Date.now() - new Date(testState.startTime).getTime()) / 1000),
+        secDetails
+      }
+      localStorage.setItem('last_test_result', JSON.stringify(resultData))
+    }
+  }, [testState.isCompleted, testState.isSubmitting, testState.phone, testState.responses, testState.startTime, resultScore, secDetails])
 
   // Redirect only after verification completes
   if (!testState.isVerifying && (testState.phone === null || !testState.isValidToken)) {
@@ -287,13 +287,29 @@ export function TestPage() {
             <p>Submitted: {new Date().toLocaleString()}</p>
           </div>
 
-          <div className="mt-6 text-sm text-gray-600">
-            <p>Redirecting to Plan Sell Info in <span className="font-semibold">{redirectIn}s</span>...</p>
+          <div className="mt-6 flex flex-col gap-3">
             <button
-              className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+              onClick={() => {
+                const resultData = {
+                  phone: testState.phone!,
+                  score: resultScore,
+                  totalQuestions: TOTAL_QUESTIONS,
+                  responses: testState.responses,
+                  submittedAt: new Date().toISOString(),
+                  completionTime: Math.floor((Date.now() - new Date(testState.startTime).getTime()) / 1000),
+                  secDetails
+                }
+                navigate('/test-result', { state: { result: resultData }, replace: true })
+              }}
+            >
+              View Detailed Results
+            </button>
+            <button
+              className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold"
               onClick={() => navigate('/plan-sell-info', { replace: true })}
             >
-              Go now
+              Go to Dashboard
             </button>
           </div>
         </div>

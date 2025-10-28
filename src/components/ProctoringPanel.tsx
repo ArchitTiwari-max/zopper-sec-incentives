@@ -14,6 +14,7 @@ export function ProctoringPanel({ secId, sessionToken, onFlag }: ProctoringPanel
   const [minimized, setMinimized] = useState(false)
   const [faceApiReady, setFaceApiReady] = useState(false)
   const [flags, setFlags] = useState<string[]>([])
+  const [autoStarted, setAutoStarted] = useState(false)
 
   // Log and mark flagged
   const flag = async (eventType: string, details?: string) => {
@@ -24,6 +25,14 @@ export function ProctoringPanel({ secId, sessionToken, onFlag }: ProctoringPanel
     onFlag?.(true)
     await logProctoringEvent({ secId, sessionToken, eventType: eventType as any, details })
   }
+
+  // Auto-start on mount
+  useEffect(() => {
+    if (!autoStarted && secId) {
+      setAutoStarted(true)
+      start()
+    }
+  }, [autoStarted, secId])
 
   // Tab/visibility events
   useEffect(() => {
@@ -150,14 +159,12 @@ export function ProctoringPanel({ secId, sessionToken, onFlag }: ProctoringPanel
       {active && minimized && <CompactIcon />}
       <div className={`fixed bottom-4 right-4 bg-white shadow-lg rounded-lg p-3 w-64 z-50 ${active && minimized ? 'hidden' : ''}`}>
         <div className="flex items-center justify-between mb-2">
-          <div className="text-sm font-semibold">Proctoring</div>
+          <div className="text-sm font-semibold">Proctoring {active && <span className="text-green-600">●</span>}</div>
           <div className="flex items-center gap-2">
             {active && (
               <button className="px-2 py-1 text-xs bg-gray-200 rounded" onClick={() => setMinimized(true)}>Minimize</button>
             )}
-            {!active ? (
-              <button className="px-2 py-1 text-xs bg-blue-600 text-white rounded" onClick={start}>Start</button>
-            ) : (
+            {active && (
               <button className="px-2 py-1 text-xs bg-gray-200 rounded" onClick={stop}>Stop</button>
             )}
           </div>
