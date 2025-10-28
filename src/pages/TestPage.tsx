@@ -229,8 +229,9 @@ export function TestPage() {
         secDetails
       }
       localStorage.setItem('last_test_result', JSON.stringify(resultData))
+      navigate('/test-result', { state: { result: resultData }, replace: true })
     }
-  }, [testState.isCompleted, testState.isSubmitting, testState.phone, testState.responses, testState.startTime, resultScore, secDetails])
+  }, [testState.isCompleted, testState.isSubmitting, testState.phone, testState.responses, testState.startTime, resultScore, secDetails, navigate])
 
   // Redirect only after verification completes
   if (!testState.isVerifying && (testState.phone === null || !testState.isValidToken)) {
@@ -249,73 +250,6 @@ export function TestPage() {
     )
   }
 
-  // Test completed state
-  if (testState.isCompleted && !testState.isSubmitting) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8 text-center">
-          <div className="mb-6">
-            {testState.timeUp ? (
-              <div className="text-red-600 text-4xl mb-2">⏰</div>
-            ) : (
-              <div className="text-green-600 text-4xl mb-2">✅</div>
-            )}
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Test {testState.timeUp ? 'Time Up!' : 'Completed!'}
-            </h1>
-            <p className="text-gray-600">
-              {testState.timeUp 
-                ? 'The test has been automatically submitted due to time limit.'
-                : 'Thank you for completing the test.'}
-            </p>
-          </div>
-
-          <div className="bg-blue-50 rounded-lg p-4 mb-6">
-            <div className="text-3xl font-bold text-blue-600 mb-1">
-              {resultScore}%
-            </div>
-            <div className="text-sm text-gray-600">
-              {testState.responses.length} of {TOTAL_QUESTIONS} questions answered
-            </div>
-          </div>
-
-            <div className="text-sm text-gray-500 space-y-1">
-            <p>SEC: {secDetails?.name ? `${secDetails.name} (${testState.phone})` : testState.phone}</p>
-            {secDetails?.store?.storeName && (
-              <p>Store: {secDetails.store.storeName}{secDetails.store.city ? `, ${secDetails.store.city}` : ''}</p>
-            )}
-            <p>Submitted: {new Date().toLocaleString()}</p>
-          </div>
-
-          <div className="mt-6 flex flex-col gap-3">
-            <button
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-              onClick={() => {
-                const resultData = {
-                  phone: testState.phone!,
-                  score: resultScore,
-                  totalQuestions: TOTAL_QUESTIONS,
-                  responses: testState.responses,
-                  submittedAt: new Date().toISOString(),
-                  completionTime: Math.floor((Date.now() - new Date(testState.startTime).getTime()) / 1000),
-                  secDetails
-                }
-                navigate('/test-result', { state: { result: resultData }, replace: true })
-              }}
-            >
-              View Detailed Results
-            </button>
-            <button
-              className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold"
-              onClick={() => navigate('/plan-sell-info', { replace: true })}
-            >
-              Go to Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   // Submitting state
   if (testState.isSubmitting) {

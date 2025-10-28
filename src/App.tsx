@@ -21,6 +21,7 @@ import { AdminTestInvites } from './pages/AdminTestInvites'
 import { AdminProctoringAlerts } from './pages/AdminProctoringAlerts'
 import { HelpPage } from './pages/Help'
 import { AdminHelpRequests } from './pages/AdminHelpRequests'
+import { AllResults } from './pages/AllResults'
 
 export default function App() {
   const location = useLocation()
@@ -60,9 +61,10 @@ export default function App() {
               {/* Backward compat redirects */}
               <Route path="/admin" element={<Navigate to="/admin-login" replace />} />
               
-              {/* Test routes - no authentication required, token-based access */}
+{/* Test routes - no authentication required, token-based access */}
               <Route path="/test" element={<TestPage />} />
               <Route path="/test-result" element={<TestResult />} />
+              <Route path="/results" element={<AllResults />} />
               
               {/* SEC protected routes */}
               <Route path="/plan-sell-info" element={
