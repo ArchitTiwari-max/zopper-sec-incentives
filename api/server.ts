@@ -1109,7 +1109,7 @@ app.post('/api/reports/submit', async (req, res) => {
 // Alias as per SEC endpoint naming
 app.post('/api/sec/report', async (req, res) => {
   try {
-    const { storeId, samsungSKUId, planId, imei } = req.body
+    const { storeId, samsungSKUId, planId, imei, dateOfSale } = req.body
     const authHeader = req.headers.authorization
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -1146,6 +1146,17 @@ app.post('/api/sec/report', async (req, res) => {
 
     const incentiveEarned = calculateIncentive(plan.planType)
 
+    // Parse dateOfSale (format: DD-MM-YYYY) to Date object
+    let submittedAtDate = new Date()
+    if (dateOfSale && typeof dateOfSale === 'string') {
+      const [day, month, year] = dateOfSale.split('-').map(Number)
+      if (day && month && year) {
+        // Create date in IST (UTC+5:30)
+        const istOffset = 5.5 * 60 * 60 * 1000
+        submittedAtDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) - istOffset)
+      }
+    }
+
     const salesReport = await prisma.salesReport.create({
       data: {
         secUserId: decoded.userId,
@@ -1155,7 +1166,7 @@ app.post('/api/sec/report', async (req, res) => {
         imei: trimmedImei,
         planPrice: plan.price,
         incentiveEarned,
-        submittedAt: new Date()
+        submittedAt: submittedAtDate
       }
     })
 

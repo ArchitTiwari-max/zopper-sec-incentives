@@ -68,13 +68,27 @@ export function SecDashboard() {
     const t = setTimeout(() => setDateTick((v) => v + 1), ms)
     return () => clearTimeout(t)
   }, [dateTick])
-  // Update date options when day changes but don't force reset
-  useEffect(() => {
-    // Only reset if the current date is no longer valid (neither today nor yesterday)
-    if (dateOfSale !== todayLabel && dateOfSale !== yesterdayLabel) {
-      setDateOfSale(todayLabel)
+  // Build date options for 'Date of Sale' dropdown
+  const dateOptions = useMemo(() => {
+    // Fixed date range: 17-10-2025 to 26-10-2025
+    const opts: string[] = []
+    const year = 2025
+    const month = 9 // October (0-indexed)
+    
+    for (let d = 17; d <= 26; d++) {
+      const istMs = Date.UTC(year, month, d, 0, 0, 0, 0) + IST_OFFSET_MS
+      opts.push(formatDMYFromISTMs(istMs))
     }
-  }, [dateTick, todayLabel, yesterdayLabel, dayBeforeYesterdayLabel, dateOfSale])
+    return opts
+  }, [IST_OFFSET_MS])
+  
+  // Ensure current selection is valid; if not, default to latest option (today)
+  useEffect(() => {
+    if (!dateOptions.includes(dateOfSale)) {
+      const fallback = dateOptions[dateOptions.length - 1] || todayLabel
+      setDateOfSale(fallback)
+    }
+  }, [dateOptions, dateOfSale, todayLabel])
   
   const handleLogout = () => {
     logout()
@@ -340,9 +354,10 @@ const response = await authFetch(`${config.apiUrl}/sec/report`, {
             value={dateOfSale}
             onChange={(e) => setDateOfSale(e.target.value)}
             className="w-full px-3 py-3 border rounded-2xl"
-> 
-            <option value={todayLabel}>{todayLabel}</option>
-            <option value={yesterdayLabel}>{yesterdayLabel}</option>
+          >
+            {dateOptions.map((label) => (
+              <option key={label} value={label}>{label}</option>
+            ))}
           </select>
         </div>
 
