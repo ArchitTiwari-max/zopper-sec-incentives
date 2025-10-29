@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { QuestionCard } from '@/components/QuestionCard'
 import { TestTimer } from '@/components/TestTimer'
 import { ProctoringPanel } from '@/components/ProctoringPanel'
@@ -42,8 +42,15 @@ interface SecDetails {
   store?: { storeName: string; city?: string | null } | null
 }
 
+interface StoreInfo {
+  id: string
+  storeName: string
+  city: string
+}
+
 export function TestPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [testState, setTestState] = useState<TestState>({
     isVerifying: true,
     isValidToken: false,
@@ -56,6 +63,7 @@ export function TestPage() {
     timeUp: false
   })
   const [secDetails, setSecDetails] = useState<SecDetails | null>(null)
+  const [selectedStore, setSelectedStore] = useState<StoreInfo | null>(null)
 
   // Initialize test on component mount
   useEffect(() => {
@@ -70,6 +78,14 @@ export function TestPage() {
         setTestState(prev => ({ ...prev, isValidToken: false, isVerifying: false }))
         return
       }
+
+      // Check if store was selected
+      const storeFromState = location.state?.store
+      if (!storeFromState) {
+        navigate(`/test-store-selection?phone=${phone}`, { replace: true })
+        return
+      }
+      setSelectedStore(storeFromState)
 
       // Create and save test session
       const session = createTestSession(phone)
@@ -182,12 +198,17 @@ export function TestPage() {
         totalQuestions: TOTAL_QUESTIONS,
         submittedAt: new Date().toISOString(),
         completionTime,
-        isProctoringFlagged: true // set if any alerts occurred (panel marks via logs)
+        isProctoringFlagged: true, // set if any alerts occurred (panel marks via logs)
+        storeId: selectedStore?.id,
+        storeName: selectedStore?.storeName,
+        storeCity: selectedStore?.city
       }
 
       try {
-        saveTestSubmission(submission)
-      } catch {}
+        await saveTestSubmission(submission)
+      } catch (e) {
+        console.error('Failed to save submission:', e)
+      }
       try {
         endTestSession()
       } catch {}
@@ -226,7 +247,8 @@ export function TestPage() {
         responses: testState.responses,
         submittedAt: new Date().toISOString(),
         completionTime: Math.floor((Date.now() - new Date(testState.startTime).getTime()) / 1000),
-        secDetails
+        secDetails,
+        store: selectedStore
       }
       localStorage.setItem('last_test_result', JSON.stringify(resultData))
       navigate('/test-result', { state: { result: resultData }, replace: true })
@@ -267,7 +289,7 @@ export function TestPage() {
   const currentQuestion = sampleQuestions[testState.currentQuestionIndex]
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 p-4 select-none" onCopy={(e) => e.preventDefault()} onCut={(e) => e.preventDefault()}>
       {/* Timer */}
       <TestTimer 
         duration={TEST_DURATION}
@@ -290,7 +312,7 @@ export function TestPage() {
               <h1 className="text-xl font-bold text-gray-900">SEC Knowledge Test</h1>
               <p className="text-sm text-gray-600">
                 {secDetails?.name ? `${secDetails.name} (${testState.phone})` : `Phone: ${testState.phone}`}
-                {secDetails?.store?.storeName ? ` • ${secDetails.store.storeName}${secDetails.store.city ? `, ${secDetails.store.city}` : ''}` : ''}
+                {selectedStore && ` • ${selectedStore.storeName}, ${selectedStore.city}`}
               </p>
             </div>
             <div className="text-right">

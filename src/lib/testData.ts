@@ -21,6 +21,9 @@ export interface TestSubmission {
   submittedAt: string
   completionTime: number // in seconds
   isProctoringFlagged?: boolean
+  storeId?: string
+  storeName?: string
+  storeCity?: string
 }
 
 // Sample questions for the test
@@ -148,26 +151,54 @@ export const sampleQuestions: Question[] = [
 ]
 
 /**
- * Get all test submissions from localStorage
+ * Get all test submissions from API
  */
-export function getTestSubmissions(): TestSubmission[] {
-  const saved = localStorage.getItem('test_submissions')
-  if (!saved) return []
-  
+export async function getTestSubmissions(): Promise<TestSubmission[]> {
   try {
-    return JSON.parse(saved) as TestSubmission[]
-  } catch {
+    const response = await fetch('/api/test-submissions')
+    const result = await response.json()
+    if (result.success && result.data) {
+      return result.data.map((item: any) => ({
+        secId: item.secId,
+        sessionToken: item.sessionToken,
+        responses: item.responses,
+        score: item.score,
+        totalQuestions: item.totalQuestions,
+        submittedAt: item.submittedAt,
+        completionTime: item.completionTime,
+        isProctoringFlagged: item.isProctoringFlagged,
+        storeId: item.storeId,
+        storeName: item.storeName,
+        storeCity: item.storeCity
+      }))
+    }
+    return []
+  } catch (error) {
+    console.error('Error fetching test submissions:', error)
     return []
   }
 }
 
 /**
- * Save test submission to localStorage
+ * Save test submission to API
  */
-export function saveTestSubmission(submission: TestSubmission): void {
-  const submissions = getTestSubmissions()
-  submissions.push(submission)
-  localStorage.setItem('test_submissions', JSON.stringify(submissions))
+export async function saveTestSubmission(submission: TestSubmission): Promise<void> {
+  try {
+    const response = await fetch('/api/test-submissions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(submission)
+    })
+    const result = await response.json()
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to save submission')
+    }
+  } catch (error) {
+    console.error('Error saving test submission:', error)
+    throw error
+  }
 }
 
 /**
@@ -189,31 +220,26 @@ export function calculateScore(responses: TestResponse[], questions: Question[])
 /**
  * Get test statistics for admin dashboard
  */
-export function getTestStatistics() {
-  const submissions = getTestSubmissions()
-  
-  if (submissions.length === 0) {
+export async function getTestStatistics() {
+  try {
+    const response = await fetch('/api/test-submissions/statistics')
+    const result = await response.json()
+    if (result.success && result.data) {
+      return result.data
+    }
     return {
       totalSubmissions: 0,
       averageScore: 0,
       passRate: 0,
       averageTime: 0
     }
-  }
-  
-  const totalScore = submissions.reduce((sum, sub) => sum + sub.score, 0)
-  const avgScore = Math.round(totalScore / submissions.length)
-  
-  const passed = submissions.filter(sub => sub.score >= 60).length
-  const passRate = Math.round((passed / submissions.length) * 100)
-  
-  const totalTime = submissions.reduce((sum, sub) => sum + sub.completionTime, 0)
-  const avgTime = Math.round(totalTime / submissions.length)
-  
-  return {
-    totalSubmissions: submissions.length,
-    averageScore: avgScore,
-    passRate,
-    averageTime: avgTime
+  } catch (error) {
+    console.error('Error fetching test statistics:', error)
+    return {
+      totalSubmissions: 0,
+      averageScore: 0,
+      passRate: 0,
+      averageTime: 0
+    }
   }
 }

@@ -205,3 +205,19 @@ model HelpRequest {
   @@index([createdAt])
 }
 
+model TestSubmission {
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  secId                String
+  sessionToken         String
+  responses            Json     // Array of {questionId, selectedAnswer, answeredAt}
+  score                Int
+  totalQuestions       Int
+  completionTime       Int      // in seconds
+  isProctoringFlagged  Boolean  @default(false)
+  submittedAt          DateTime @default(now())
+  createdAt            DateTime @default(now())
+
+  @@index([secId])
+  @@index([submittedAt])
+}
+

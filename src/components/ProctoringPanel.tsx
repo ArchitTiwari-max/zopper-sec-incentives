@@ -164,9 +164,6 @@ export function ProctoringPanel({ secId, sessionToken, onFlag }: ProctoringPanel
             {active && (
               <button className="px-2 py-1 text-xs bg-gray-200 rounded" onClick={() => setMinimized(true)}>Minimize</button>
             )}
-            {active && (
-              <button className="px-2 py-1 text-xs bg-gray-200 rounded" onClick={stop}>Stop</button>
-            )}
           </div>
         </div>
         {/* Keep video element mounted even when minimized (hidden via parent) so stream continues */}

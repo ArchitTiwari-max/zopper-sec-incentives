@@ -15,6 +15,7 @@ interface SalesReport {
   incentiveEarned: number
   isPaid: boolean
   submittedAt: string
+  createdAt: string
   voucherCode?: string
   secUser: {
     secId: string | null
@@ -567,14 +568,15 @@ const response = await authFetch(`${config.apiUrl}/reports/${reportId}`, {
                   </div>
                 </th>
               )}
-              <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[10%]' : 'w-[11%]'}`}>Timestamp</th>
+              <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[9%]' : 'w-[10%]'}`}>Timestamp</th>
+              <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[9%]' : 'w-[10%]'}`}>Date of Sale</th>
               <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[8%]' : 'w-[9%]'}`}>SEC ID</th>
-              <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[16%]' : 'w-[18%]'}`}>Store Name</th>
-              <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[11%]' : 'w-[12%]'}`}>Device Name</th>
+              <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[15%]' : 'w-[17%]'}`}>Store Name</th>
+              <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[10%]' : 'w-[11%]'}`}>Device Name</th>
               <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[7%]' : 'w-[8%]'}`}>Plan Type</th>
-              <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[13%]' : 'w-[15%]'}`}>IMEI</th>
-              <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[9%]' : 'w-[10%]'}`}>Incentive Earned</th>
-              <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[8%]' : 'w-[9%]'}`}>Status</th>
+              <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[12%]' : 'w-[14%]'}`}>IMEI</th>
+              <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[8%]' : 'w-[9%]'}`}>Incentive Earned</th>
+              <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[7%]' : 'w-[8%]'}`}>Status</th>
               <th className={`p-1 lg:p-2 text-xs lg:text-sm ${showMultiSelect ? 'w-[7%]' : 'w-[8%]'}`}>Actions</th>
             </tr>
           </thead>
@@ -594,8 +596,13 @@ const response = await authFetch(`${config.apiUrl}/reports/${reportId}`, {
                 )}
                 <td className="p-1 lg:p-2 text-xs text-left">
                   <div className="flex flex-col">
+                    <div className="font-medium">{formatDateWithTime(r.createdAt).date}</div>
+                    <div className="text-gray-600">{formatDateWithTime(r.createdAt).time}</div>
+                  </div>
+                </td>
+                <td className="p-1 lg:p-2 text-xs text-left">
+                  <div className="flex flex-col">
                     <div className="font-medium">{formatDateWithTime(r.submittedAt).date}</div>
-                    <div className="text-gray-600">{formatDateWithTime(r.submittedAt).time}</div>
                   </div>
                 </td>
                 <td className="p-1 lg:p-2 text-xs">{r.secUser.secId || r.secUser.phone}</td>
