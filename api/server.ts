@@ -2845,6 +2845,7 @@ app.get('/api/proctoring/score', async (req, res) => {
       loud_noise: 10,
       mic_active: 5,
       video_off: 30,
+      snapshot: 0, // neutral event; just for tracking
     }
 
     let events: any[] = []
@@ -2864,6 +2865,56 @@ app.get('/api/proctoring/score', async (req, res) => {
     return res.json({ success: true, secId, score, events })
   } catch (e: any) {
     return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
+// Cloudinary signature endpoint for signed uploads
+app.get('/api/cloudinary-signature', (req, res) => {
+  try {
+    // Prefer consolidated CLOUDINARY_URL; fallback to discrete env vars
+    const envUrl = process.env.CLOUDINARY_URL || ''
+    let cloudName = process.env.CLOUDINARY_CLOUD_NAME || ''
+    let apiKey = process.env.CLOUDINARY_API_KEY || ''
+    let apiSecret = process.env.CLOUDINARY_API_SECRET || ''
+
+    if (envUrl) {
+      try {
+        const u = new URL(envUrl)
+        if (!cloudName) cloudName = u.hostname
+        if (!apiKey) apiKey = decodeURIComponent(u.username)
+        if (!apiSecret) apiSecret = decodeURIComponent(u.password)
+      } catch {}
+    }
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      return res.status(500).json({ success: false, message: 'Cloudinary not configured' })
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000)
+    const folder = (typeof req.query.folder === 'string' ? req.query.folder : undefined) || undefined
+    const upload_preset = (typeof req.query.upload_preset === 'string' ? req.query.upload_preset : undefined) || undefined
+
+    // Build params to sign (alphabetically sorted keys)
+    const params: Record<string, string | number> = { timestamp }
+    if (folder) params.folder = folder
+    if (upload_preset) params.upload_preset = upload_preset
+
+    const toSign = Object.keys(params)
+      .sort()
+      .map((k) => `${k}=${params[k]}`)
+      .join('&')
+
+    const signature = crypto.createHash('sha1').update(toSign + apiSecret).digest('hex')
+
+    return res.json({
+      cloudName,
+      apiKey,
+      timestamp,
+      signature,
+      uploadPreset: upload_preset || null,
+    })
+  } catch (e) {
+    return res.status(500).json({ success: false, message: 'signature_error' })
   }
 })
 

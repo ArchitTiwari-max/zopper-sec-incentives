@@ -8,6 +8,7 @@ export type ProctoringEventType =
   | 'loud_noise'
   | 'mic_active'
   | 'video_off'
+  | 'snapshot'
 
 export async function logProctoringEvent(params: {
   secId: string

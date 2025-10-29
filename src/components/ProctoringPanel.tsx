@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { logProctoringEvent } from '@/lib/proctoring'
+import { config } from '@/lib/config'
+import { uploadImageBlobToCloudinary } from '@/lib/cloudinary'
 
 interface ProctoringPanelProps {
   secId: string
@@ -26,11 +28,138 @@ export function ProctoringPanel({ secId, sessionToken, onFlag }: ProctoringPanel
     await logProctoringEvent({ secId, sessionToken, eventType: eventType as any, details })
   }
 
+  // ===== Random snapshot uploader =====
+  const snapshotTimerRef = useRef<number | null>(null)
+  const cfg = {
+    minMs: 20_000,
+    maxMs: 45_000,
+    mimeType: 'image/jpeg' as const,
+    quality: 0.9,
+  }
+
+  const rand = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min
+
+  function stopRandomSnapshots() {
+    if (snapshotTimerRef.current) {
+      window.clearTimeout(snapshotTimerRef.current)
+      snapshotTimerRef.current = null
+    }
+  }
+
+  function scheduleNextSnapshot() {
+    stopRandomSnapshots()
+    snapshotTimerRef.current = window.setTimeout(tickSnapshot, rand(cfg.minMs, cfg.maxMs))
+  }
+
+  function captureBlobFromVideo(video: HTMLVideoElement, { type, quality }: { type: string; quality: number }) {
+    const canvas = document.createElement('canvas')
+    const w = video.videoWidth || 640
+    const h = video.videoHeight || 480
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(video, 0, 0, w, h)
+    return new Promise<Blob>((resolve) => canvas.toBlob(b => resolve(b as Blob), type, quality))
+  }
+
+  async function tickSnapshot() {
+    console.log('📸 tickSnapshot called')
+    try {
+      console.log('📸 About to check conditions...')
+      console.log('📸 Checking conditions:', {
+        hasVideoRef: !!videoRef.current,
+        active,
+        documentHidden: document.hidden,
+        videoWidth: videoRef.current?.videoWidth
+      })
+      
+      if (!videoRef.current || !videoRef.current.srcObject) {
+        console.debug('📸 Skip snapshot: video not ready or no stream')
+        return scheduleNextSnapshot()
+      }
+      if (document.hidden) {
+        console.debug('📸 Skip snapshot: document hidden')
+        return scheduleNextSnapshot()
+      }
+      // wait for readiness
+      if (!videoRef.current.videoWidth) {
+        console.debug('📸 Skip snapshot: video dimensions not ready')
+        return scheduleNextSnapshot()
+      }
+
+      console.debug('📸 Capturing snapshot...')
+      const blob = await captureBlobFromVideo(videoRef.current, { type: cfg.mimeType, quality: cfg.quality })
+      console.debug('📸 Blob captured:', blob.size, 'bytes')
+
+      const cld = config.cloudinary
+      console.debug('📸 Cloudinary config:', { cloudName: cld?.cloudName, uploadPreset: cld?.uploadPreset, signed: cld?.signed, folder: cld?.folder })
+      
+      if (!cld?.cloudName || !(cld.uploadPreset || cld.signed)) {
+        console.warn('📸 No Cloudinary config; skipping upload')
+        return scheduleNextSnapshot()
+      }
+
+      let result: any
+      if (cld.uploadPreset) {
+        console.debug('📸 Using unsigned upload')
+        // Unsigned upload path (quick start)
+        result = await uploadImageBlobToCloudinary(blob, {
+          cloudName: cld.cloudName,
+          uploadPreset: cld.uploadPreset,
+          folder: cld.folder,
+        })
+      } else if (cld.signed) {
+        console.debug('📸 Using signed upload')
+        // Signed upload path — get signature from server
+        const sigUrl = `${config.apiUrl}/cloudinary-signature?${cld.folder ? `folder=${encodeURIComponent(cld.folder)}` : ''}`
+        console.debug('📸 Fetching signature from:', sigUrl)
+        const sigRes = await fetch(sigUrl)
+        if (!sigRes.ok) throw new Error(`signature_fetch_failed: ${sigRes.status}`)
+        const sig = await sigRes.json()
+        console.debug('📸 Got signature:', { cloudName: sig.cloudName, apiKey: sig.apiKey?.slice(0, 6) + '...', timestamp: sig.timestamp })
+        result = await uploadImageBlobToCloudinary(blob, {
+          cloudName: sig.cloudName || cld.cloudName,
+          apiKey: sig.apiKey,
+          timestamp: sig.timestamp,
+          signature: sig.signature,
+          folder: cld.folder,
+        })
+      } else {
+        console.warn('📸 No upload method configured')
+        return scheduleNextSnapshot()
+      }
+
+      console.debug('📸 Upload result:', result)
+      
+      await logProctoringEvent({
+        secId,
+        sessionToken,
+        eventType: 'snapshot',
+        details: result?.public_id ? `public_id=${result.public_id}` : undefined,
+      })
+
+      console.log('📸 Snapshot uploaded successfully:', result.secure_url)
+    } catch (e) {
+      console.error('📸 Snapshot upload error:', e)
+      console.error('📸 Error stack:', e instanceof Error ? e.stack : e)
+    } finally {
+      console.log('📸 tickSnapshot finally block')
+      scheduleNextSnapshot()
+    }
+  }
+
+  function startRandomSnapshots() {
+    scheduleNextSnapshot()
+  }
+
   // Auto-start on mount
   useEffect(() => {
     if (!autoStarted && secId) {
       setAutoStarted(true)
       start()
+    }
+    return () => {
+      stopRandomSnapshots()
     }
   }, [autoStarted, secId])
 
@@ -51,13 +180,18 @@ export function ProctoringPanel({ secId, sessionToken, onFlag }: ProctoringPanel
 
   // Start camera/mic
   const start = async () => {
+    console.log('📸 Starting proctoring...')
     try {
+      console.log('📸 Getting user media...')
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      console.log('📸 Got stream, setting up video...')
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
+        console.log('📸 Video playing, setting active to true')
       }
       setActive(true)
+      console.log('📸 Active state set to true')
       flag('mic_active')
       // Mic noise detection
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -85,6 +219,20 @@ export function ProctoringPanel({ secId, sessionToken, onFlag }: ProctoringPanel
         requestAnimationFrame(loop)
       }
       loop()
+
+      // Start random snapshot uploads to Cloudinary
+      console.log('📸 Proctoring started, config:', config.cloudinary)
+      startRandomSnapshots()
+      
+      // Test snapshot after everything is set up
+      setTimeout(() => {
+        console.log('📸 Testing immediate snapshot after setup...')
+        try {
+          tickSnapshot()
+        } catch (e) {
+          console.error('📸 Error calling tickSnapshot:', e)
+        }
+      }, 2000)
 
       // Lazy-load face-api from CDN and run basic detection if available
       try {
@@ -137,6 +285,7 @@ export function ProctoringPanel({ secId, sessionToken, onFlag }: ProctoringPanel
   const stop = () => {
     setActive(false)
     setMinimized(false)
+    stopRandomSnapshots()
     if (videoRef.current && videoRef.current.srcObject) {
       ;(videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop())
       videoRef.current.srcObject = null
