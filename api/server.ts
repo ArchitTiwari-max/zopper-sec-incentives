@@ -1337,7 +1337,7 @@ app.get('/api/reports/admin', async (req, res) => {
         plan: true
       },
       orderBy: {
-        submittedAt: 'desc'
+        createdAt: 'desc'
       }
     })
 
@@ -2915,6 +2915,96 @@ app.get('/api/cloudinary-signature', (req, res) => {
     })
   } catch (e) {
     return res.status(500).json({ success: false, message: 'signature_error' })
+  }
+})
+
+// ========== Test Submission Endpoints ==========
+
+// POST /api/test-submissions - Submit a test result
+app.post('/api/test-submissions', async (req, res) => {
+  try {
+    const { secId, sessionToken, responses, score, totalQuestions, completionTime, isProctoringFlagged } = req.body
+    
+    if (!secId || !responses || score === undefined || !totalQuestions) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' })
+    }
+
+    const submission = await prisma.testSubmission.create({
+      data: {
+        secId,
+        sessionToken: sessionToken || 'test-token',
+        responses,
+        score,
+        totalQuestions,
+        completionTime: completionTime || 0,
+        isProctoringFlagged: isProctoringFlagged || false
+      }
+    })
+
+    console.log(`✅ Test submission created for SEC ${secId}, Score: ${score}%`)
+    return res.json({ success: true, data: submission })
+  } catch (e: any) {
+    console.error('❌ Error creating test submission:', e)
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
+// GET /api/test-submissions/statistics - Get test statistics (must come before generic GET)
+app.get('/api/test-submissions/statistics', async (req, res) => {
+  try {
+    const submissions = await prisma.testSubmission.findMany()
+    
+    if (submissions.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          totalSubmissions: 0,
+          averageScore: 0,
+          passRate: 0,
+          averageTime: 0
+        }
+      })
+    }
+    
+    const totalScore = submissions.reduce((sum, sub) => sum + sub.score, 0)
+    const avgScore = Math.round(totalScore / submissions.length)
+    
+    const passed = submissions.filter(sub => sub.score >= 60).length
+    const passRate = Math.round((passed / submissions.length) * 100)
+    
+    const totalTime = submissions.reduce((sum, sub) => sum + sub.completionTime, 0)
+    const avgTime = Math.round(totalTime / submissions.length)
+    
+    return res.json({
+      success: true,
+      data: {
+        totalSubmissions: submissions.length,
+        averageScore: avgScore,
+        passRate,
+        averageTime: avgTime
+      }
+    })
+  } catch (e: any) {
+    console.error('❌ Error calculating statistics:', e)
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
+// GET /api/test-submissions - Get all test submissions
+app.get('/api/test-submissions', async (req, res) => {
+  try {
+    const secId = req.query.secId ? String(req.query.secId) : undefined
+    
+    const where = secId ? { secId } : {}
+    const submissions = await prisma.testSubmission.findMany({
+      where,
+      orderBy: { submittedAt: 'desc' }
+    })
+
+    return res.json({ success: true, data: submissions })
+  } catch (e: any) {
+    console.error('❌ Error fetching test submissions:', e)
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
   }
 })
 

@@ -15,6 +15,7 @@ import { ReferralPage } from './pages/Referral'
 import { AdminReferrals } from './pages/AdminReferrals'
 import { AdminReferralVoucherProcessor } from './pages/AdminReferralVoucherProcessor'
 import { TestPage } from './pages/TestPage'
+import { TestStoreSelection } from './pages/TestStoreSelection'
 import { TestResult } from './pages/TestResult'
 import { AdminTestResults } from './pages/AdminTestResults'
 import { AdminTestInvites } from './pages/AdminTestInvites'
@@ -62,6 +63,7 @@ export default function App() {
               <Route path="/admin" element={<Navigate to="/admin-login" replace />} />
               
 {/* Test routes - no authentication required, token-based access */}
+              <Route path="/test-store-selection" element={<TestStoreSelection />} />
               <Route path="/test" element={<TestPage />} />
               <Route path="/test-result" element={<TestResult />} />
               <Route path="/results" element={<AllResults />} />

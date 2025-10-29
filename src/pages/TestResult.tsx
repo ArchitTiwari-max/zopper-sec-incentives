@@ -65,15 +65,12 @@ return (
       {/* Header Card */}
       <div className="bg-white rounded-lg shadow-lg p-8 mb-6 relative overflow-hidden">
         <div className="text-center mb-6">
-          <div className={`text-5xl mb-3 ${isPassed ? 'text-green-600' : 'text-yellow-600'}`}>
-            {isPassed ? '🎉' : '💪'}
-          </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             {isPassed ? 'You Passed!' : 'Great effort!'}
           </h1>
           <p className="text-gray-600">
             {isPassed 
-              ? 'Fantastic work — you cleared the assessment.'
+              ? 'Fantastic work — you cleared the assessment. 🎉'
               : 'Keep learning and improving — success is on the way 💪'}
           </p>
         </div>

@@ -7,15 +7,15 @@ export function AllResults() {
   const [submissions, setSubmissions] = useState<TestSubmission[]>([])
 
   useEffect(() => {
-    setSubmissions(getTestSubmissions())
+    const fetchSubmissions = async () => {
+      const data = await getTestSubmissions()
+      setSubmissions(data)
+    }
+    fetchSubmissions()
   }, [])
 
-  const { passed, notPassed } = useMemo(() => {
-    const all = [...submissions].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-    return {
-      passed: all.filter(s => s.score >= 60),
-      notPassed: all.filter(s => s.score < 60)
-    }
+  const allResults = useMemo(() => {
+    return [...submissions].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
   }, [submissions])
 
   const Card = ({ s }: { s: TestSubmission }) => (
@@ -59,35 +59,13 @@ export function AllResults() {
             <p>No results yet. Complete a test to see it here.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Passed */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-semibold text-green-700">60% and above</h2>
-                <span className="text-sm text-gray-500">{passed.length}</span>
-              </div>
-              <div className="space-y-3">
-                {passed.length === 0 ? (
-                  <div className="p-6 bg-white rounded-lg shadow text-sm text-gray-500">No results in this category yet.</div>
-                ) : (
-                  passed.map(s => <Card key={s.secId + s.submittedAt} s={s} />)
-                )}
-              </div>
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xl font-semibold text-gray-900">All Results</h2>
+              <span className="text-sm text-gray-500">{allResults.length}</span>
             </div>
-
-            {/* Below 60 */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-semibold text-yellow-700">Below 60%</h2>
-                <span className="text-sm text-gray-500">{notPassed.length}</span>
-              </div>
-              <div className="space-y-3">
-                {notPassed.length === 0 ? (
-                  <div className="p-6 bg-white rounded-lg shadow text-sm text-gray-500">No results in this category yet.</div>
-                ) : (
-                  notPassed.map(s => <Card key={s.secId + s.submittedAt} s={s} />)
-                )}
-              </div>
+            <div className="space-y-3">
+              {allResults.map(s => <Card key={s.secId + s.submittedAt} s={s} />)}
             </div>
           </div>
         )}
