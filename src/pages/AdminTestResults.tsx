@@ -220,6 +220,9 @@ export function AdminTestResults() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -264,6 +267,16 @@ export function AdminTestResults() {
                         <span className="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
                           ⚠️ FLAGGED
                         </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {submission.isProctoringFlagged && (
+                        <button
+                          onClick={() => navigate(`/admin/proctoring?secId=${encodeURIComponent(submission.secId)}`)}
+                          className="text-xs bg-orange-600 text-white px-3 py-1 rounded hover:bg-orange-700 transition-colors"
+                        >
+                          View Alerts
+                        </button>
                       )}
                     </td>
                   </tr>

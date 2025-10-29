@@ -23,6 +23,7 @@ import { AdminProctoringAlerts } from './pages/AdminProctoringAlerts'
 import { HelpPage } from './pages/Help'
 import { AdminHelpRequests } from './pages/AdminHelpRequests'
 import { AllResults } from './pages/AllResults'
+import { TestDetails } from './pages/TestDetails'
 
 export default function App() {
   const location = useLocation()
@@ -67,6 +68,7 @@ export default function App() {
               <Route path="/test" element={<TestPage />} />
               <Route path="/test-result" element={<TestResult />} />
               <Route path="/results" element={<AllResults />} />
+              <Route path="/test-details" element={<TestDetails />} />
               
               {/* SEC protected routes */}
               <Route path="/plan-sell-info" element={

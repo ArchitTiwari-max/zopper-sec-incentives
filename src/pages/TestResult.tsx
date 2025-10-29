@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Confetti } from '@/components/Confetti'
+import { ZopperLogo } from '@/components/ZopperLogo'
 
 interface ResultData {
   phone: string
@@ -59,60 +60,103 @@ const isPassed = result.score >= 60
 const correctCount = Math.round((result.score / 100) * result.totalQuestions)
 
 return (
-  <div className="min-h-screen bg-gray-50 p-4">
+  <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50 p-4 py-12">
     {isPassed && <Confetti />}
     <div className="max-w-4xl mx-auto">
-      {/* Header Card */}
-      <div className="bg-white rounded-lg shadow-lg p-8 mb-6 relative overflow-hidden">
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {isPassed ? 'You Passed!' : 'Great effort!'}
+      {/* Certificate Card */}
+      <div className="bg-white rounded-2xl shadow-2xl p-12 mb-6 relative overflow-hidden border-8 border-double border-[#0B2C5F]">
+        {/* Decorative Corner Ornaments */}
+        <div className="absolute top-0 left-0 w-24 h-24 border-t-4 border-l-4 border-blue-200 rounded-tl-2xl"></div>
+        <div className="absolute top-0 right-0 w-24 h-24 border-t-4 border-r-4 border-blue-200 rounded-tr-2xl"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 border-b-4 border-l-4 border-blue-200 rounded-bl-2xl"></div>
+        <div className="absolute bottom-0 right-0 w-24 h-24 border-b-4 border-r-4 border-blue-200 rounded-br-2xl"></div>
+
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <ZopperLogo className="text-3xl" />
+        </div>
+
+        {/* Certificate Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-[#0B2C5F] mb-2 leading-tight">
+            Certificate of Achievement
           </h1>
-          <p className="text-gray-600">
-            {isPassed 
-              ? 'Fantastic work — you cleared the assessment. 🎉'
-              : 'Keep learning and improving — success is on the way 💪'}
-          </p>
+          <div className="w-32 h-1 bg-gradient-to-r from-transparent via-blue-600 to-transparent mx-auto"></div>
         </div>
 
-        {/* Score Card */}
-        <div className="bg-blue-50 rounded-lg p-6 mb-6">
-          <div className="text-center">
-            <div className="text-5xl font-bold text-blue-600 mb-2">
-              {result.score}%
-            </div>
-            <div className="text-gray-700 text-lg mb-3">
-              {correctCount} out of {result.totalQuestions} correct
-            </div>
-            <div className="flex justify-center gap-8 text-sm text-gray-600">
-              <div>
-                <span className="font-semibold">Pass Mark:</span> 60%
-              </div>
-              <div>
-                <span className="font-semibold">Time:</span> {Math.floor(result.completionTime / 60)}m {result.completionTime % 60}s
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* SEC Details */}
-        <div className="border-t pt-6 text-center text-sm text-gray-600 space-y-1">
-          <p>
-            <span className="font-semibold">SEC:</span>{' '}
-            {result.secDetails?.name 
-              ? `${result.secDetails.name} (${result.phone})`
-              : result.phone}
-          </p>
+        {/* Recipient */}
+        <div className="text-center mb-10">
+          <p className="text-gray-600 text-sm uppercase tracking-widest mb-2">This is to certify that</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-1">
+            {result.secDetails?.name || result.phone}
+          </h2>
           {result.secDetails?.store?.storeName && (
-            <p>
-              <span className="font-semibold">Store:</span>{' '}
+            <p className="text-gray-600 text-sm">
               {result.secDetails.store.storeName}
               {result.secDetails.store.city ? `, ${result.secDetails.store.city}` : ''}
             </p>
           )}
-          <p>
-            <span className="font-semibold">Submitted:</span>{' '}
-            {new Date(result.submittedAt).toLocaleString()}
+        </div>
+
+        {/* Achievement Statement */}
+        <div className="text-center mb-8">
+          <p className="text-gray-700 text-lg leading-relaxed">
+            has successfully completed the assessment with a score of
+          </p>
+        </div>
+
+        {/* Score Badge */}
+        <div className="flex justify-center mb-8">
+          <div className="relative">
+            <div className="w-40 h-40 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-xl">
+              <div className="w-36 h-36 rounded-full bg-white flex flex-col items-center justify-center">
+                <div className="text-5xl font-bold text-blue-600">
+                  {result.score}%
+                </div>
+                <div className="text-xs text-gray-600 mt-1">
+                  {correctCount}/{result.totalQuestions} correct
+                </div>
+              </div>
+            </div>
+            {isPassed && (
+              <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                ✓ PASSED
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Details Grid */}
+        <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto mb-8 pt-8 border-t border-gray-200">
+          <div className="text-center">
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Pass Mark</p>
+            <p className="text-lg font-semibold text-gray-900">60%</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Time Taken</p>
+            <p className="text-lg font-semibold text-gray-900">
+              {Math.floor(result.completionTime / 60)}m {result.completionTime % 60}s
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Date</p>
+            <p className="text-lg font-semibold text-gray-900">
+              {new Date(result.submittedAt).toLocaleDateString()}
+            </p>
+          </div>
+        </div>
+
+        {/* Certificate ID */}
+        <div className="text-center text-xs text-gray-500 mb-6">
+          <p>Certificate ID: {result.secDetails?.secId || result.phone.slice(-9)}</p>
+        </div>
+
+        {/* Motivational Footer */}
+        <div className="text-center border-t border-gray-200 pt-6">
+          <p className="text-sm italic text-gray-600">
+            {isPassed 
+              ? '"Excellence is not a destination, it is a continuous journey."'
+              : '"Every expert was once a beginner. Keep learning and growing!"'}
           </p>
         </div>
       </div>
@@ -121,19 +165,19 @@ return (
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <button
           onClick={() => navigate('/plan-sell-info')}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+          className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-lg hover:shadow-xl transition-all"
         >
           Go to Dashboard
         </button>
         <button
           onClick={() => window.print()}
-          className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold"
+          className="px-8 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-semibold shadow-lg hover:shadow-xl transition-all"
         >
-          Print Results
+          Print Certificate
         </button>
         <button
           onClick={() => navigate('/results')}
-          className="px-6 py-3 bg-white text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 font-semibold"
+          className="px-8 py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 font-semibold shadow-lg hover:shadow-xl transition-all"
         >
           View All Results
         </button>

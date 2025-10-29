@@ -33,7 +33,10 @@ export function AllResults() {
   }, [submissions])
 
   const Card = ({ s }: { s: TestSubmission }) => (
-    <div className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow">
+    <div 
+      className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-all cursor-pointer hover:scale-[1.01]"
+      onClick={() => navigate('/test-details', { state: { submission: s } })}
+    >
       <div className="flex items-center justify-between">
         <div>
           <div className="text-sm text-gray-500">SEC ID</div>
@@ -50,9 +53,6 @@ export function AllResults() {
         <span>Time: {Math.floor(s.completionTime/60)}m {s.completionTime%60}s</span>
       </div>
       <div className="mt-1 text-xs text-gray-500">Submitted: {new Date(s.submittedAt).toLocaleString()}</div>
-      {s.isProctoringFlagged && (
-        <div className="mt-2 text-xs inline-flex items-center px-2 py-1 rounded-full bg-orange-100 text-orange-800">⚠️ Proctoring flagged</div>
-      )}
     </div>
   )
 

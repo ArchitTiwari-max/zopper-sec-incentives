@@ -18,13 +18,16 @@ export function ProctoringPanel({ secId, sessionToken, onFlag }: ProctoringPanel
   const [flags, setFlags] = useState<string[]>([])
   const [autoStarted, setAutoStarted] = useState(false)
 
-  // Log and mark flagged
+  // Log and mark flagged (excluding benign events like mic_active or snapshot)
   const flag = async (eventType: string, details?: string) => {
-    setFlags(prev => {
-      const next = prev.length < 50 ? [...prev, `${new Date().toLocaleTimeString()} • ${eventType}${details ? ` • ${details}` : ''}`] : prev
-      return next
-    })
-    onFlag?.(true)
+    const isBenign = eventType === 'mic_active' || eventType === 'snapshot'
+    if (!isBenign) {
+      setFlags(prev => {
+        const next = prev.length < 50 ? [...prev, `${new Date().toLocaleTimeString()} • ${eventType}${details ? ` • ${details}` : ''}`] : prev
+        return next
+      })
+      onFlag?.(true)
+    }
     await logProctoringEvent({ secId, sessionToken, eventType: eventType as any, details })
   }
 

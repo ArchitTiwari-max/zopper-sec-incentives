@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { config } from '@/lib/config'
+import { FaArrowLeft } from 'react-icons/fa'
 
 export function AdminProctoringAlerts() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [events, setEvents] = useState<any[]>([])
-  const [secId, setSecId] = useState('')
+  const [secId, setSecId] = useState(searchParams.get('secId') || '')
   const [score, setScore] = useState<number | null>(null)
 
   const load = async () => {
@@ -18,7 +22,7 @@ export function AdminProctoringAlerts() {
     } else setScore(null)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [secId])
 
   const grouped = useMemo(() => {
     const map = new Map<string, any[]>()
@@ -32,6 +36,16 @@ export function AdminProctoringAlerts() {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          onClick={() => navigate('/admin/test-results')}
+          className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <FaArrowLeft size={16} />
+          Back to Test Results
+        </button>
+        <h1 className="text-2xl font-bold text-gray-900">Proctoring Alerts</h1>
+      </div>
       <div className="flex items-center gap-2">
         <input className="border rounded px-3 py-2" placeholder="Filter by SEC ID" value={secId} onChange={e => setSecId(e.target.value)} />
         <button className="px-3 py-2 bg-blue-600 text-white rounded" onClick={load}>Refresh</button>

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 
 interface ConfettiProps {
   count?: number
@@ -7,6 +7,8 @@ interface ConfettiProps {
 }
 
 export function Confetti({ count = 120, colors = ['#16a34a', '#22c55e', '#10b981', '#34d399', '#86efac', '#a7f3d0'], zIndex = 50 }: ConfettiProps) {
+  const [isVisible, setIsVisible] = useState(true)
+  
   const pieces = useMemo(() => (
     Array.from({ length: count }).map((_, i) => ({
       id: i,
@@ -20,6 +22,22 @@ export function Confetti({ count = 120, colors = ['#16a34a', '#22c55e', '#10b981
       shape: Math.random() > 0.5 ? 'square' : 'circle'
     }))
   ), [count, colors])
+  
+  // Find max animation duration + delay
+  const maxDuration = useMemo(() => {
+    return Math.max(...pieces.map(p => p.duration + p.delay))
+  }, [pieces])
+  
+  useEffect(() => {
+    // Hide confetti after animation completes
+    const timer = setTimeout(() => {
+      setIsVisible(false)
+    }, maxDuration * 1000)
+    
+    return () => clearTimeout(timer)
+  }, [maxDuration])
+  
+  if (!isVisible) return null
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex }} aria-hidden>
@@ -41,20 +59,6 @@ export function Confetti({ count = 120, colors = ['#16a34a', '#22c55e', '#10b981
           }}
         />
       ))}
-
-      {/* Extras: a few emoji poppers */}
-      <div
-        style={{
-          position: 'absolute',
-          left: '50%',
-          top: '20%',
-          transform: 'translateX(-50%)',
-          fontSize: 28,
-          animation: 'pop 1s ease-out',
-        }}
-      >
-        🎉
-      </div>
 
       <style>{`
         @keyframes confetti-fall {
