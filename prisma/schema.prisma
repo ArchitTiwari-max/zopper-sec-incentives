@@ -214,6 +214,9 @@ model TestSubmission {
   totalQuestions       Int
   completionTime       Int      // in seconds
   isProctoringFlagged  Boolean  @default(false)
+  storeId              String?
+  storeName            String?
+  storeCity            String?
   submittedAt          DateTime @default(now())
   createdAt            DateTime @default(now())
 

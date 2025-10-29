@@ -155,9 +155,14 @@ export const sampleQuestions: Question[] = [
  */
 export async function getTestSubmissions(): Promise<TestSubmission[]> {
   try {
-    const response = await fetch('/api/test-submissions')
+    const apiUrl = 'http://localhost:3001/api/test-submissions'
+    console.log('🔍 Fetching test submissions from', apiUrl)
+    const response = await fetch(apiUrl)
+    console.log('📡 Response status:', response.status, response.statusText)
     const result = await response.json()
+    console.log('📦 API result:', result)
     if (result.success && result.data) {
+      console.log(`✅ Found ${result.data.length} test submissions`)
       return result.data.map((item: any) => ({
         secId: item.secId,
         sessionToken: item.sessionToken,
@@ -172,9 +177,10 @@ export async function getTestSubmissions(): Promise<TestSubmission[]> {
         storeCity: item.storeCity
       }))
     }
+    console.warn('⚠️ No data found in API response')
     return []
   } catch (error) {
-    console.error('Error fetching test submissions:', error)
+    console.error('❌ Error fetching test submissions:', error)
     return []
   }
 }
@@ -184,7 +190,7 @@ export async function getTestSubmissions(): Promise<TestSubmission[]> {
  */
 export async function saveTestSubmission(submission: TestSubmission): Promise<void> {
   try {
-    const response = await fetch('/api/test-submissions', {
+    const response = await fetch('http://localhost:3001/api/test-submissions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -222,7 +228,7 @@ export function calculateScore(responses: TestResponse[], questions: Question[])
  */
 export async function getTestStatistics() {
   try {
-    const response = await fetch('/api/test-submissions/statistics')
+    const response = await fetch('http://localhost:3001/api/test-submissions/statistics')
     const result = await response.json()
     if (result.success && result.data) {
       return result.data

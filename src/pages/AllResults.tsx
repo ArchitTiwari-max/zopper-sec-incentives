@@ -5,11 +5,25 @@ import { getTestSubmissions, TestSubmission } from '@/lib/testData'
 export function AllResults() {
   const navigate = useNavigate()
   const [submissions, setSubmissions] = useState<TestSubmission[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchSubmissions = async () => {
-      const data = await getTestSubmissions()
-      setSubmissions(data)
+      try {
+        console.log('🎯 AllResults: Starting to fetch submissions...')
+        setLoading(true)
+        const data = await getTestSubmissions()
+        console.log('🎯 AllResults: Received data:', data)
+        console.log('🎯 AllResults: Data length:', data.length)
+        setSubmissions(data)
+        setError(null)
+      } catch (err) {
+        console.error('🎯 AllResults: Error:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load submissions')
+      } finally {
+        setLoading(false)
+      }
     }
     fetchSubmissions()
   }, [])
@@ -53,7 +67,23 @@ export function AllResults() {
           </div>
         </div>
 
-        {submissions.length === 0 ? (
+        {loading ? (
+          <div className="text-center text-gray-600 py-20 bg-white rounded-lg shadow">
+            <div className="text-4xl mb-2">⏳</div>
+            <p>Loading test results...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center text-red-600 py-20 bg-white rounded-lg shadow">
+            <div className="text-4xl mb-2">❌</div>
+            <p>Error: {error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Retry
+            </button>
+          </div>
+        ) : submissions.length === 0 ? (
           <div className="text-center text-gray-600 py-20 bg-white rounded-lg shadow">
             <div className="text-4xl mb-2">📄</div>
             <p>No results yet. Complete a test to see it here.</p>

@@ -2923,7 +2923,7 @@ app.get('/api/cloudinary-signature', (req, res) => {
 // POST /api/test-submissions - Submit a test result
 app.post('/api/test-submissions', async (req, res) => {
   try {
-    const { secId, sessionToken, responses, score, totalQuestions, completionTime, isProctoringFlagged } = req.body
+    const { secId, sessionToken, responses, score, totalQuestions, completionTime, isProctoringFlagged, storeId, storeName, storeCity } = req.body
     
     if (!secId || !responses || score === undefined || !totalQuestions) {
       return res.status(400).json({ success: false, message: 'Missing required fields' })
@@ -2937,7 +2937,10 @@ app.post('/api/test-submissions', async (req, res) => {
         score,
         totalQuestions,
         completionTime: completionTime || 0,
-        isProctoringFlagged: isProctoringFlagged || false
+        isProctoringFlagged: isProctoringFlagged || false,
+        storeId: storeId || null,
+        storeName: storeName || null,
+        storeCity: storeCity || null
       }
     })
 

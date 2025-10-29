@@ -1,6 +1,6 @@
 
 > sec-incentive@0.1.0 dev:api
-> tsx server/app.ts
+> tsx api/server.ts
 
 🚀 API Server running on http://localhost:3001
 📍 Available endpoints:
@@ -22,49 +22,54 @@
    GET /api/reports/sec - Get SEC user reports
    GET /api/reports/admin - Get all reports (admin)
 📍 Fetching all stores...
-📱 Fetching Samsung SKUs...
+✅ Found 714 stores
+📍 Fetching all stores...
+✅ Found 714 stores
+✅ Test submission created for SEC 9569310917, Score: 70%
+📍 Fetching all stores...
+✅ Found 714 stores
+📍 Fetching all stores...
+✅ Found 714 stores
+📍 Fetching all stores...
+✅ Found 714 stores
+📍 Fetching all stores...
+✅ Found 714 stores
 📍 Fetching all stores...
 📱 Fetching Samsung SKUs...
-✅ Found 23 Samsung SKUs
-✅ Found 713 stores
-✅ Found 23 Samsung SKUs
-✅ Found 713 stores
-📋 Fetching plans for Samsung SKU: 68efc897efe0dedeb8077922
-🆕 Created global Test_Plan with price ₹0
-✅ Found 4 plans (including Test_Plan) for SKU 68efc897efe0dedeb8077922
+✅ Fetched 0 deductions for SEC 68f1cc510e61d44e4d4a6df8
+✅ Fetched 0 deductions for SEC 68f1cc510e61d44e4d4a6df8
+✅ Found 714 stores
 📍 Fetching all stores...
+✅ Found 24 Samsung SKUs
 📱 Fetching Samsung SKUs...
+✅ Found 24 Samsung SKUs
+✅ Found 714 stores
+✅ Fetched 0 deductions for SEC 68f1cc510e61d44e4d4a6df8
+✅ Fetched 0 deductions for SEC 68f1cc510e61d44e4d4a6df8
+✅ Fetched 0 deductions for SEC 68f1cc510e61d44e4d4a6df8
 📍 Fetching all stores...
-📱 Fetching Samsung SKUs...
-✅ Found 23 Samsung SKUs
-✅ Found 23 Samsung SKUs
-✅ Found 713 stores
-✅ Found 713 stores
+✅ Found 714 stores
 📍 Fetching all stores...
-📱 Fetching Samsung SKUs...
-📍 Fetching all stores...
-📱 Fetching Samsung SKUs...
-✅ Found 23 Samsung SKUs
-✅ Found 23 Samsung SKUs
-✅ Found 713 stores
-✅ Found 713 stores
-📱 Fetching Samsung SKUs...
-📱 Fetching Samsung SKUs...
-📍 Fetching all stores...
-📍 Fetching all stores...
-✅ Found 23 Samsung SKUs
-✅ Found 23 Samsung SKUs
-✅ Found 713 stores
-✅ Found 713 stores
-📱 Fetching Samsung SKUs...
-📍 Fetching all stores...
-📱 Fetching Samsung SKUs...
-📍 Fetching all stores...
-✅ Found 23 Samsung SKUs
-✅ Found 23 Samsung SKUs
-✅ Found 713 stores
-✅ Found 713 stores
+✅ Found 714 stores
 🗑️ Deleted all previous OTP records for 9569310917
-📱 Sending OTP 644960 to WhatsApp number: 919569310917
+📱 Sending OTP 715621 to WhatsApp number: 919569310917
 ✅ WhatsApp OTP sent successfully via Comify to 919569310917
-✅ New OTP sent to 9569310917, Session ID: 68f12e6488c17233653f4b37
+✅ New OTP sent to 9569310917, Session ID: 6902130ad0c5857ab8910bed
+🔎 /verify-otp called { query: [Object: null prototype] {}, bodyKeys: [ 'phone', 'otp' ] }
+✅ Valid OTP found for 9569310917, Session ID: 6902130ad0c5857ab8910bed
+🔎 Checking SEC user existence for 9569310917
+✅ Existing SEC user found and updated for phone: 9569310917
+🔎 Referral capture check { newUserCreated: false, referralCode: undefined }
+🔐 Generating JWT for user 68f1cc510e61d44e4d4a6df8, phone: 9569310917
+✅ JWT token generated successfully for 9569310917
+✅ SEC with phone 9569310917 logged in successfully
+📍 Fetching all stores...
+📱 Fetching Samsung SKUs...
+✅ Found 24 Samsung SKUs
+📱 Fetching Samsung SKUs...
+✅ Fetched 0 deductions for SEC 68f1cc510e61d44e4d4a6df8
+✅ Found 24 Samsung SKUs
+✅ Fetched 0 deductions for SEC 68f1cc510e61d44e4d4a6df8
+✅ Found 714 stores
+📍 Fetching all stores...
+✅ Found 714 stores
