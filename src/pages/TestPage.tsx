@@ -144,7 +144,19 @@ export function TestPage() {
     }
 
     setTestState(prev => {
-      const newResponses = [...prev.responses, response]
+      // Update or add response for current question
+      const existingIndex = prev.responses.findIndex(r => r.questionId === currentQuestion.id)
+      let newResponses: TestResponse[]
+      
+      if (existingIndex >= 0) {
+        // Update existing response
+        newResponses = [...prev.responses]
+        newResponses[existingIndex] = response
+      } else {
+        // Add new response
+        newResponses = [...prev.responses, response]
+      }
+      
       const isLastQuestion = prev.currentQuestionIndex === TOTAL_QUESTIONS - 1
 
       if (isLastQuestion) {
@@ -165,6 +177,16 @@ export function TestPage() {
       }
     })
   }, [testState.currentQuestionIndex, testState.isCompleted, testState.isSubmitting, testState.startTime])
+
+  // Handle previous question
+  const handlePreviousQuestion = useCallback(() => {
+    if (testState.currentQuestionIndex === 0) return
+    
+    setTestState(prev => ({
+      ...prev,
+      currentQuestionIndex: prev.currentQuestionIndex - 1
+    }))
+  }, [testState.currentQuestionIndex])
 
   // Handle time up
   const handleTimeUp = useCallback(() => {
@@ -287,6 +309,10 @@ export function TestPage() {
 
   // Main test interface
   const currentQuestion = sampleQuestions[testState.currentQuestionIndex]
+  
+  // Get existing answer for current question if it exists
+  const existingResponse = testState.responses.find(r => r.questionId === currentQuestion.id)
+  const initialSelectedAnswer = existingResponse?.selectedAnswer || ''
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 select-none" onCopy={(e) => e.preventDefault()} onCut={(e) => e.preventDefault()}>
@@ -329,13 +355,15 @@ export function TestPage() {
         questionNumber={testState.currentQuestionIndex + 1}
         totalQuestions={TOTAL_QUESTIONS}
         onAnswer={handleAnswerSubmit}
+        onPrev={handlePreviousQuestion}
+        initialSelectedAnswer={initialSelectedAnswer}
         isSubmitting={testState.isSubmitting}
       />
 
       {/* Instructions */}
       <div className="max-w-2xl mx-auto mt-6 text-center text-xs text-gray-500">
         <p>Read each question carefully and select the best answer.</p>
-        <p>Once you submit an answer, you cannot go back to change it.</p>
+        <p>You can navigate back to review or change previous answers.</p>
       </div>
     </div>
   )

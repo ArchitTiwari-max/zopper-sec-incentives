@@ -6,6 +6,8 @@ interface QuestionCardProps {
   questionNumber: number
   totalQuestions: number
   onAnswer: (selectedAnswer: string) => void
+  onPrev?: () => void
+  initialSelectedAnswer?: string
   isSubmitting?: boolean
 }
 
@@ -14,9 +16,11 @@ export function QuestionCard({
   questionNumber, 
   totalQuestions, 
   onAnswer, 
+  onPrev,
+  initialSelectedAnswer = '',
   isSubmitting = false 
 }: QuestionCardProps) {
-  const [selectedAnswer, setSelectedAnswer] = useState<string>('')
+  const [selectedAnswer, setSelectedAnswer] = useState<string>(initialSelectedAnswer)
 
   const handleOptionSelect = (option: string) => {
     if (isSubmitting) return
@@ -74,8 +78,19 @@ export function QuestionCard({
         </div>
       </div>
 
-      {/* Submit button */}
-      <div className="flex justify-center">
+      {/* Navigation Buttons */}
+      <div className="flex items-center justify-between gap-3">
+        <button
+          onClick={onPrev}
+          disabled={!onPrev || questionNumber === 1 || isSubmitting}
+          className={`px-4 py-3 rounded-lg font-medium border transition-all duration-200 ${
+            onPrev && questionNumber > 1 && !isSubmitting
+              ? 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300'
+              : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+          }`}
+        >
+          Previous
+        </button>
         <button
           onClick={handleSubmit}
           disabled={!selectedAnswer || isSubmitting}
@@ -98,9 +113,8 @@ export function QuestionCard({
         </button>
       </div>
 
-      {/* Warning about no back navigation */}
       <p className="text-xs text-gray-500 text-center mt-4">
-        ⚠️ You cannot go back to previous questions once submitted
+        You can review previous questions before submitting the test.
       </p>
     </div>
   )

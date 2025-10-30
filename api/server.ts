@@ -2945,6 +2945,33 @@ app.post('/api/test-submissions', async (req, res) => {
     })
 
     console.log(`✅ Test submission created for SEC ${secId}, Score: ${score}%`)
+    
+    // Create notification for the SEC user
+    try {
+      // Find SEC user by secId
+      const secUser = await prisma.sECUser.findFirst({ where: { secId } })
+      
+      if (secUser) {
+        const isPassed = score >= 60
+        const title = isPassed ? '🎉 Congratulations!' : '📝 Test Completed'
+        const message = `You have successfully attempted the exam and scored ${score}%. ${isPassed ? 'Great job!' : 'Keep learning and try again!'}`
+        
+        await prisma.notification.create({
+          data: {
+            secUserId: secUser.id,
+            type: 'test_result',
+            title,
+            message
+          }
+        })
+        
+        console.log(`✅ Notification created for SEC ${secId}`)
+      }
+    } catch (notifError) {
+      console.error('⚠️ Failed to create notification (non-critical):', notifError)
+      // Don't fail the request if notification creation fails
+    }
+    
     return res.json({ success: true, data: submission })
   } catch (e: any) {
     console.error('❌ Error creating test submission:', e)
@@ -3007,6 +3034,75 @@ app.get('/api/test-submissions', async (req, res) => {
     return res.json({ success: true, data: submissions })
   } catch (e: any) {
     console.error('❌ Error fetching test submissions:', e)
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
+// ========== Notification Endpoints ==========
+
+// GET /api/notifications - Get notifications for SEC user
+app.get('/api/notifications', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({ success: false, message: 'Only SEC users can view notifications' })
+    }
+
+    const notifications = await prisma.notification.findMany({
+      where: { secUserId: decoded.userId },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    return res.json({ success: true, data: notifications })
+  } catch (e: any) {
+    console.error('❌ Error fetching notifications:', e)
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
+// PUT /api/notifications/read-all - Mark all notifications as read
+app.put('/api/notifications/read-all', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+
+    if (decoded.role !== 'sec') {
+      return res.status(403).json({ success: false, message: 'Only SEC users can update notifications' })
+    }
+
+    await prisma.notification.updateMany({
+      where: { 
+        secUserId: decoded.userId,
+        readAt: null
+      },
+      data: { readAt: new Date() }
+    })
+
+    return res.json({ success: true, message: 'All notifications marked as read' })
+  } catch (e: any) {
+    console.error('❌ Error marking notifications as read:', e)
     return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
   }
 })

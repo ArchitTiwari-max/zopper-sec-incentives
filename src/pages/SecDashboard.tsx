@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import CameraScanner from '@/components/CameraScanner'
 import { ProfileModal } from '@/components/ProfileModal'
 import { motion } from 'framer-motion'
-import { FaBarcode, FaStore, FaMobileAlt, FaListAlt, FaIdBadge, FaSpinner, FaSignOutAlt, FaQuestionCircle } from 'react-icons/fa'
+import { FaBarcode, FaStore, FaMobileAlt, FaListAlt, FaIdBadge, FaSpinner, FaSignOutAlt, FaQuestionCircle, FaEllipsisH, FaClipboardList } from 'react-icons/fa'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { isSECUser, SECAuthData } from '@/lib/auth'
@@ -19,7 +19,7 @@ import {
 import SearchableSelect from '@/components/SearchableSelect'
 import { config } from '@/lib/config'
 import { authFetch } from '@/lib/http'
-import SecDeductionsBell from '@/components/SecDeductionsBell'
+import CombinedNotificationsBell from '@/components/CombinedNotificationsBell'
 
 export function SecDashboard() {
   const { auth, logout, user, updateUser } = useAuth()
@@ -52,6 +52,7 @@ export function SecDashboard() {
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [congratsAmount, setCongratsAmount] = useState<number | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [showMore, setShowMore] = useState(false)
   // Force re-render at midnight so today/yesterday labels update without refresh
   const [dateTick, setDateTick] = useState(0)
   useEffect(() => {
@@ -318,9 +319,8 @@ const response = await authFetch(`${config.apiUrl}/sec/report`, {
         </div>
         <div className="flex items-center gap-2">
           <div className="hidden sm:block"><span className="sr-only">Notifications</span></div>
-          {/* Notification bell for invalid IMEI deductions */}
-          {/* Placed next to Logout at top-right of the dashboard */}
-          <SecDeductionsBell />
+          {/* Single notifications bell (general + deductions) */}
+          <CombinedNotificationsBell />
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -446,29 +446,49 @@ const response = await authFetch(`${config.apiUrl}/sec/report`, {
 
       <button onClick={() => navigate('/reporting')} className="button-gradient w-full py-3 mt-3">View Incentive Passbook</button>
       
-      <button 
-        onClick={() => navigate('/referral')} 
-        className="w-full py-3 mt-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
-      >
-        <span className="text-xl">🤝</span>
-        Referral Program
-      </button>
-
-      <button 
-        onClick={() => navigate('/help')} 
-        className="w-full py-3 mt-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
-      >
-        <FaQuestionCircle size={18} />
-        Help & Support
-      </button>
-
-      <button 
-        onClick={() => navigate('/leaderboard')} 
-        className="w-full py-3 mt-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-2xl font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
-      >
-        <span className="text-xl">🏆</span>
-        View Leaderboard
-      </button>
+      <div className="mt-3">
+        <button
+          onClick={() => setShowMore((v) => !v)}
+          className="w-full py-3 bg-gradient-to-r from-gray-600 to-gray-800 text-white rounded-2xl font-semibold hover:from-gray-700 hover:to-black transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
+          aria-expanded={showMore}
+          aria-controls="more-actions-panel"
+        >
+          <FaEllipsisH />
+          More Actions
+        </button>
+        {showMore && (
+          <div id="more-actions-panel" className="mt-2 rounded-2xl border bg-white shadow p-2 space-y-2">
+            <button 
+              onClick={() => { setShowMore(false); navigate('/results') }} 
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              <FaClipboardList size={18} />
+              All Results
+            </button>
+            <button 
+              onClick={() => { setShowMore(false); navigate('/referral') }} 
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              <span className="text-xl">🤝</span>
+              Referral Program
+            </button>
+            <button 
+              onClick={() => { setShowMore(false); navigate('/help') }} 
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              <FaQuestionCircle size={18} />
+              Help & Support
+            </button>
+            <button 
+              onClick={() => { setShowMore(false); navigate('/leaderboard') }} 
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              <span className="text-xl">🏆</span>
+              View Leaderboard
+            </button>
+          </div>
+        )}
+      </div>
 
       {showToast && (
         <div className="fixed inset-x-0 bottom-6 flex justify-center">
