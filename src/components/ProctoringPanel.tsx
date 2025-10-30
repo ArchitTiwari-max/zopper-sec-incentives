@@ -5,12 +5,13 @@ import { uploadImageBlobToCloudinary } from '@/lib/cloudinary'
 
 interface ProctoringPanelProps {
   secId: string
+  phone?: string
   sessionToken?: string
   onFlag?: (flagged: boolean) => void
 }
 
 // Lightweight proctoring: camera preview, mic noise detection, tab switch logging, optional face detection (lazy)
-export function ProctoringPanel({ secId, sessionToken, onFlag }: ProctoringPanelProps) {
+export function ProctoringPanel({ secId, phone, sessionToken, onFlag }: ProctoringPanelProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [active, setActive] = useState(false)
   const [minimized, setMinimized] = useState(false)
@@ -28,7 +29,7 @@ export function ProctoringPanel({ secId, sessionToken, onFlag }: ProctoringPanel
       })
       onFlag?.(true)
     }
-    await logProctoringEvent({ secId, sessionToken, eventType: eventType as any, details })
+    await logProctoringEvent({ secId, phone, sessionToken, eventType: eventType as any, details })
   }
 
   // ===== Random snapshot uploader =====
@@ -136,9 +137,10 @@ export function ProctoringPanel({ secId, sessionToken, onFlag }: ProctoringPanel
       
       await logProctoringEvent({
         secId,
+        phone,
         sessionToken,
         eventType: 'snapshot',
-        details: result?.public_id ? `public_id=${result.public_id}` : undefined,
+        details: result?.secure_url || result?.url || (result?.public_id ? `public_id=${result.public_id}` : undefined),
       })
 
       console.log('📸 Snapshot uploaded successfully:', result.secure_url)

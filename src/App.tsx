@@ -20,6 +20,7 @@ import { TestResult } from './pages/TestResult'
 import { AdminTestResults } from './pages/AdminTestResults'
 import { AdminTestInvites } from './pages/AdminTestInvites'
 import { AdminProctoringAlerts } from './pages/AdminProctoringAlerts'
+import { AdminScreenshots } from './pages/AdminScreenshots'
 import { HelpPage } from './pages/Help'
 import { AdminHelpRequests } from './pages/AdminHelpRequests'
 import { AllResults } from './pages/AllResults'
@@ -134,6 +135,11 @@ export default function App() {
               <Route path="/admin/proctoring" element={
                 <AdminRoute>
                   <AdminProctoringAlerts />
+                </AdminRoute>
+              } />
+              <Route path="/admin/screenshots" element={
+                <AdminRoute>
+                  <AdminScreenshots />
                 </AdminRoute>
               } />
               <Route path="/admin/help-requests" element={

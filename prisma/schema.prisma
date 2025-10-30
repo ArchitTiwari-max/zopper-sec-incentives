@@ -149,12 +149,14 @@ enum ProctoringEventType {
 model ProctoringEvent {
   id            String               @id @default(auto()) @map("_id") @db.ObjectId
   secId         String
+  phone         String?
   sessionToken  String?
   eventType     ProctoringEventType
   details       String?
   createdAt     DateTime             @default(now())
 
   @@index([secId])
+  @@index([phone])
   @@index([createdAt])
 }
 
@@ -208,6 +210,7 @@ model HelpRequest {
 model TestSubmission {
   id                   String   @id @default(auto()) @map("_id") @db.ObjectId
   secId                String
+  phone                String?
   sessionToken         String
   responses            Json     // Array of {questionId, selectedAnswer, answeredAt}
   score                Int
@@ -221,6 +224,7 @@ model TestSubmission {
   createdAt            DateTime @default(now())
 
   @@index([secId])
+  @@index([phone])
   @@index([submittedAt])
 }
 

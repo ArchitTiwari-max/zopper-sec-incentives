@@ -12,7 +12,8 @@ import {
 } from '@/lib/testToken'
 import { config } from '@/lib/config'
 import { 
-  sampleQuestions, 
+  getQuestionsForPhone,
+  Question,
   TestResponse, 
   saveTestSubmission, 
   calculateScore 
@@ -20,7 +21,6 @@ import {
 
 // Test configuration
 const TEST_DURATION = 15 * 60 // 15 minutes in seconds
-const TOTAL_QUESTIONS = sampleQuestions.length
 
 interface TestState {
   isVerifying: boolean
@@ -64,6 +64,7 @@ export function TestPage() {
   })
   const [secDetails, setSecDetails] = useState<SecDetails | null>(null)
   const [selectedStore, setSelectedStore] = useState<StoreInfo | null>(null)
+  const [testQuestions, setTestQuestions] = useState<Question[]>([])
 
   // Initialize test on component mount
   useEffect(() => {
@@ -86,6 +87,11 @@ export function TestPage() {
         return
       }
       setSelectedStore(storeFromState)
+
+      // Generate questions for this phone number (10 random questions with at least 1 from each section)
+      const questions = getQuestionsForPhone(phone)
+      setTestQuestions(questions)
+      console.log(`✅ Generated ${questions.length} questions for phone ${phone}`)
 
       // Create and save test session
       const session = createTestSession(phone)
@@ -134,9 +140,9 @@ export function TestPage() {
 
   // Handle answer submission
   const handleAnswerSubmit = useCallback((selectedAnswer: string) => {
-    if (testState.isCompleted || testState.isSubmitting) return
+    if (testState.isCompleted || testState.isSubmitting || testQuestions.length === 0) return
 
-    const currentQuestion = sampleQuestions[testState.currentQuestionIndex]
+    const currentQuestion = testQuestions[testState.currentQuestionIndex]
     const response: TestResponse = {
       questionId: currentQuestion.id,
       selectedAnswer,
@@ -157,7 +163,7 @@ export function TestPage() {
         newResponses = [...prev.responses, response]
       }
       
-      const isLastQuestion = prev.currentQuestionIndex === TOTAL_QUESTIONS - 1
+      const isLastQuestion = prev.currentQuestionIndex === testQuestions.length - 1
 
       if (isLastQuestion) {
         // Submit test
@@ -176,7 +182,7 @@ export function TestPage() {
         currentQuestionIndex: prev.currentQuestionIndex + 1
       }
     })
-  }, [testState.currentQuestionIndex, testState.isCompleted, testState.isSubmitting, testState.startTime])
+  }, [testState.currentQuestionIndex, testState.isCompleted, testState.isSubmitting, testState.startTime, testQuestions])
 
   // Handle previous question
   const handlePreviousQuestion = useCallback(() => {
@@ -206,21 +212,38 @@ export function TestPage() {
   // Submit test function
   const submitTest = async (responses: TestResponse[], startTime: string) => {
     const identifier = (secDetails?.secId && secDetails.secId.trim()) || testState.phone
-    const score = calculateScore(responses, sampleQuestions)
+    const score = calculateScore(responses, testQuestions)
     const completionTime = Math.floor((Date.now() - new Date(startTime || new Date().toISOString()).getTime()) / 1000)
 
     try {
       if (!identifier) throw new Error('Missing identifier')
 
+      // Check if there are any proctoring violations (excluding mic_active and snapshot)
+      let isProctoringFlagged = false
+      try {
+        const proctoringRes = await fetch(`${config.apiUrl}/proctoring/events?phone=${encodeURIComponent(testState.phone || identifier)}`)
+        const proctoringData = await proctoringRes.json()
+        if (proctoringData.data && proctoringData.data.length > 0) {
+          // Filter out benign events (mic_active and snapshot) to determine if actually flagged
+          const violations = proctoringData.data.filter((e: any) => 
+            e.eventType !== 'mic_active' && e.eventType !== 'snapshot'
+          )
+          isProctoringFlagged = violations.length > 0
+        }
+      } catch (e) {
+        console.error('Failed to check proctoring events:', e)
+      }
+
       const submission = {
         secId: identifier,
+        phone: testState.phone,
         sessionToken: 'test-token', // In production, get from session
         responses,
         score,
-        totalQuestions: TOTAL_QUESTIONS,
+        totalQuestions: testQuestions.length,
         submittedAt: new Date().toISOString(),
         completionTime,
-        isProctoringFlagged: true, // set if any alerts occurred (panel marks via logs)
+        isProctoringFlagged,
         storeId: selectedStore?.id,
         storeName: selectedStore?.storeName,
         storeCity: selectedStore?.city
@@ -255,8 +278,8 @@ export function TestPage() {
   const resultScore = useMemo(() => {
     return typeof testState.score === 'number' 
       ? testState.score 
-      : calculateScore(testState.responses, sampleQuestions)
-  }, [testState.score, testState.responses])
+      : calculateScore(testState.responses, testQuestions)
+  }, [testState.score, testState.responses, testQuestions])
 
   // Navigate to results page on completion
   useEffect(() => {
@@ -265,7 +288,7 @@ export function TestPage() {
       const resultData = {
         phone: testState.phone!,
         score: resultScore,
-        totalQuestions: TOTAL_QUESTIONS,
+        totalQuestions: testQuestions.length,
         responses: testState.responses,
         submittedAt: new Date().toISOString(),
         completionTime: Math.floor((Date.now() - new Date(testState.startTime).getTime()) / 1000),
@@ -283,12 +306,12 @@ export function TestPage() {
   }
 
   // Loading state
-  if (testState.isVerifying || !testState.phone || !testState.isValidToken) {
+  if (testState.isVerifying || !testState.phone || !testState.isValidToken || testQuestions.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verifying access...</p>
+          <p className="text-gray-600">{testQuestions.length === 0 ? 'Loading questions...' : 'Verifying access...'}</p>
         </div>
       </div>
     )
@@ -308,7 +331,7 @@ export function TestPage() {
   }
 
   // Main test interface
-  const currentQuestion = sampleQuestions[testState.currentQuestionIndex]
+  const currentQuestion = testQuestions[testState.currentQuestionIndex]
   
   // Get existing answer for current question if it exists
   const existingResponse = testState.responses.find(r => r.questionId === currentQuestion.id)
@@ -326,6 +349,7 @@ export function TestPage() {
       {/* Proctoring */}
       <ProctoringPanel 
         secId={testState.phone!}
+        phone={testState.phone!}
         sessionToken={'test-token'}
         onFlag={() => setTestState(prev => ({ ...prev, }))}
       />
@@ -343,7 +367,7 @@ export function TestPage() {
             </div>
             <div className="text-right">
               <div className="text-sm text-gray-500">Total Questions</div>
-              <div className="text-lg font-bold text-blue-600">{TOTAL_QUESTIONS}</div>
+              <div className="text-lg font-bold text-blue-600">{testQuestions.length}</div>
             </div>
           </div>
         </div>
@@ -353,7 +377,7 @@ export function TestPage() {
       <QuestionCard
         question={currentQuestion}
         questionNumber={testState.currentQuestionIndex + 1}
-        totalQuestions={TOTAL_QUESTIONS}
+        totalQuestions={testQuestions.length}
         onAnswer={handleAnswerSubmit}
         onPrev={handlePreviousQuestion}
         initialSelectedAnswer={initialSelectedAnswer}

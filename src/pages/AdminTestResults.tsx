@@ -187,97 +187,106 @@ export function AdminTestResults() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full">
+            <table className="w-full table-fixed">
               <thead className="bg-gray-50">
                 <tr>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="w-[8%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('secId')}
                   >
                     SEC ID {sortBy === 'secId' && (sortOrder === 'desc' ? '↓' : '↑')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="w-[18%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Store
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('score')}
                   >
                     Score {sortBy === 'score' && (sortOrder === 'desc' ? '↓' : '↑')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Questions
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="w-[9%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Time
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="w-[18%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('submittedAt')}
                   >
                     Submitted {sortBy === 'submittedAt' && (sortOrder === 'desc' ? '↓' : '↑')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="w-[18%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                  <th className="w-[9%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    SS
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredSubmissions.map((submission) => (
-                  <tr key={submission.secId + submission.submittedAt} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                {filteredSubmissions.map((submission, i) => (
+                  <tr key={submission.id || `${submission.secId}-${submission.submittedAt}-${i}`} className="hover:bg-gray-50">
+                    <td className="px-3 py-3 text-sm font-medium text-gray-900 truncate">
                       {submission.secId}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 py-3 text-sm text-gray-900">
                       {submission.storeName ? (
-                        <div>
-                          <div className="font-medium">{submission.storeName}</div>
-                          <div className="text-gray-500 text-xs">{submission.storeCity}</div>
+                        <div className="truncate">
+                          <div className="font-medium truncate">{submission.storeName}</div>
+                          <div className="text-gray-500 text-xs truncate">{submission.storeCity}</div>
                         </div>
                       ) : (
                         <span className="text-gray-400">N/A</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getScoreColor(submission.score)}`}>
+                    <td className="px-3 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium inline-block ${getScoreColor(submission.score)}`}>
                         {submission.score}%
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 py-3 text-sm text-gray-900">
                       {submission.responses.length}/{submission.totalQuestions}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 py-3 text-sm text-gray-900">
                       {formatTime(submission.completionTime)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(submission.submittedAt).toLocaleString()}
+                    <td className="px-3 py-3 text-xs text-gray-900">
+                      {new Date(submission.submittedAt).toLocaleString('en-US', { 
+                        month: '2-digit', 
+                        day: '2-digit', 
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        submission.score >= 60 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {submission.score >= 60 ? 'PASS' : 'FAIL'}
-                      </span>
-                      {submission.isProctoringFlagged && (
-                        <span className="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
-                          ⚠️ FLAGGED
+                    <td className="px-3 py-3">
+                      <div className="flex flex-col gap-1">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full inline-block text-center ${
+                          submission.score >= 60 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {submission.score >= 60 ? 'PASS' : 'FAIL'}
                         </span>
-                      )}
+                        {submission.isProctoringFlagged && (
+                          <button
+                            onClick={() => navigate(`/admin/proctoring?phone=${encodeURIComponent(submission.phone || submission.secId)}`)}
+                            className="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800 hover:bg-orange-200 cursor-pointer transition-colors"
+                          >
+                            ⚠️ FLAG
+                          </button>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {submission.isProctoringFlagged && (
-                        <button
-                          onClick={() => navigate(`/admin/proctoring?secId=${encodeURIComponent(submission.secId)}`)}
-                          className="text-xs bg-orange-600 text-white px-3 py-1 rounded hover:bg-orange-700 transition-colors"
-                        >
-                          View Alerts
-                        </button>
-                      )}
+                    <td className="px-3 py-3">
+                      <button
+                        onClick={() => navigate(`/admin/screenshots?phone=${encodeURIComponent(submission.phone || submission.secId)}`)}
+                        className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors w-full"
+                      >
+                        📸 View
+                      </button>
                     </td>
                   </tr>
                 ))}

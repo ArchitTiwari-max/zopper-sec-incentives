@@ -95,7 +95,7 @@ export function AllResults() {
               <span className="text-sm text-gray-500">{allResults.length}</span>
             </div>
             <div className="space-y-3">
-              {allResults.map(s => <Card key={s.secId + s.submittedAt} s={s} />)}
+              {allResults.map((s, i) => <Card key={s.id || `${s.secId}-${s.submittedAt}-${i}`} s={s} />)}
             </div>
           </div>
         )}

@@ -2771,7 +2771,7 @@ const inMemoryProctoringEvents: any[] = []
 
 app.post('/api/proctoring/event', async (req, res) => {
   try {
-    const { secId, sessionToken, eventType, details } = req.body || {}
+    const { secId, phone, sessionToken, eventType, details } = req.body || {}
     if (!secId || !eventType) return res.status(400).json({ success: false, message: 'secId and eventType are required' })
 
     // Try Prisma if model exists; otherwise, store in-memory
@@ -2779,14 +2779,14 @@ app.post('/api/proctoring/event', async (req, res) => {
       // @ts-ignore
       if (prisma.proctoringEvent) {
         // @ts-ignore
-        const saved = await prisma.proctoringEvent.create({ data: { secId, sessionToken, eventType, details } })
+        const saved = await prisma.proctoringEvent.create({ data: { secId, phone, sessionToken, eventType, details } })
         return res.json({ success: true, data: saved })
       }
     } catch (e) {
       console.warn('Proctoring DB write failed, falling back to memory:', e)
     }
 
-    const ev = { id: `${Date.now()}`, secId, sessionToken, eventType, details, createdAt: new Date().toISOString() }
+    const ev = { id: `${Date.now()}`, secId, phone, sessionToken, eventType, details, createdAt: new Date().toISOString() }
     inMemoryProctoringEvents.push(ev)
     return res.json({ success: true, data: ev })
   } catch (e: any) {
@@ -2812,20 +2812,32 @@ app.post('/api/tests/sign-jwt', (req, res) => {
 app.get('/api/proctoring/events', async (req, res) => {
   try {
     const secId = req.query.secId ? String(req.query.secId) : undefined
+    const phone = req.query.phone ? String(req.query.phone) : undefined
     try {
       // @ts-ignore
       if (prisma.proctoringEvent) {
         // @ts-ignore
-        const where = secId ? { where: { secId }, orderBy: { createdAt: 'desc' } } : { orderBy: { createdAt: 'desc' } }
+        let where = {}
+        if (phone) {
+          where = { phone }
+        } else if (secId) {
+          where = { secId }
+        }
+        const query = Object.keys(where).length > 0 ? { where, orderBy: { createdAt: 'desc' } } : { orderBy: { createdAt: 'desc' } }
         // @ts-ignore
-        const events = await prisma.proctoringEvent.findMany(where)
+        const events = await prisma.proctoringEvent.findMany(query)
         return res.json({ success: true, data: events })
       }
     } catch (e) {
       console.warn('Proctoring DB read failed, using memory:', e)
     }
 
-    const events = secId ? inMemoryProctoringEvents.filter(e => e.secId === secId) : inMemoryProctoringEvents
+    let events = inMemoryProctoringEvents
+    if (phone) {
+      events = events.filter(e => e.phone === phone)
+    } else if (secId) {
+      events = events.filter(e => e.secId === secId)
+    }
     return res.json({ success: true, data: events })
   } catch (e: any) {
     return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
@@ -2834,8 +2846,9 @@ app.get('/api/proctoring/events', async (req, res) => {
 
 app.get('/api/proctoring/score', async (req, res) => {
   try {
-    const secId = String(req.query.secId || '')
-    if (!secId) return res.status(400).json({ success: false, message: 'secId required' })
+    const secId = req.query.secId ? String(req.query.secId) : undefined
+    const phone = req.query.phone ? String(req.query.phone) : undefined
+    if (!secId && !phone) return res.status(400).json({ success: false, message: 'secId or phone required' })
 
     const weights: Record<string, number> = {
       tab_switch: 15,
@@ -2843,7 +2856,7 @@ app.get('/api/proctoring/score', async (req, res) => {
       no_face: 25,
       multi_face: 40,
       loud_noise: 10,
-      mic_active: 5,
+      mic_active: 0, // neutral event; just for tracking that mic is active
       video_off: 30,
       snapshot: 0, // neutral event; just for tracking
     }
@@ -2853,16 +2866,20 @@ app.get('/api/proctoring/score', async (req, res) => {
       // @ts-ignore
       if (prisma.proctoringEvent) {
         // @ts-ignore
-        events = await prisma.proctoringEvent.findMany({ where: { secId } })
+        const where = phone ? { phone } : { secId }
+        // @ts-ignore
+        events = await prisma.proctoringEvent.findMany({ where })
       }
     } catch {
-      events = inMemoryProctoringEvents.filter(e => e.secId === secId)
+      events = phone 
+        ? inMemoryProctoringEvents.filter(e => e.phone === phone)
+        : inMemoryProctoringEvents.filter(e => e.secId === secId)
     }
 
     const penalty = events.reduce((sum, e) => sum + (weights[e.eventType] || 0), 0)
     const score = Math.max(0, 100 - penalty)
 
-    return res.json({ success: true, secId, score, events })
+    return res.json({ success: true, identifier: phone || secId, score, events })
   } catch (e: any) {
     return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
   }
@@ -2920,10 +2937,61 @@ app.get('/api/cloudinary-signature', (req, res) => {
 
 // ========== Test Submission Endpoints ==========
 
+// GET /api/questions - Get all questions from the question bank
+app.get('/api/questions', async (req, res) => {
+  try {
+    // All Samsung Care+ questions
+    const allQuestions = [
+      { id: 1, question: "A customer drops their new Samsung phone in water two weeks after buying it but didn't buy the plan. They now want to buy it. What do you say and why?", options: ["A) Yes, they can still buy it with extra charges.", "B) Yes, but it will cover only water damage.", "C) No, the plan must be bought within 7 days", "D) Yes, if they show proof of damage."], correctAnswer: "C", category: "Section A" },
+      { id: 2, question: "A Fold phone customer comes on Day 8 after purchase to buy the plan. How do you respond?", options: ["A) Eligible with late purchase fees.", "B) Accept only if diagnostics are done immediately.", "C) Not eligible — Fold/Flip models must buy within 7 days.", "D) Accept the purchase — Fold phones have 30 days to buy."], correctAnswer: "C", category: "Section A" },
+      { id: 3, question: "A customer's name is on the invoice, but their father uses the phone. Will the plan still cover the father?", options: ["A) Yes, coverage extends to spouse, children, and parents.", "B) Yes, but only if father's name is added later.", "C) No, unless a transfer fee is paid.", "D) No, coverage is only for the buyer."], correctAnswer: "A", category: "Section A" },
+      { id: 4, question: "A company buys 50 phones and 50 plans for staff. Who will be treated as the 'Customer' for claim purposes?", options: ["A) The plan provider, Zopper.", "B) Only the store where it was purchased.", "C) The company or its authorised representative/employee.", "D) Any employee who uses the phone."], correctAnswer: "C", category: "Section A" },
+      { id: 5, question: "A buyer lost the phone invoice but has the plan confirmation email. What will you advise before they raise a claim?", options: ["A) Submit only a screenshot of the My Galaxy app.", "B) They must provide both the device and plan invoice or get a copy.", "C) No issue — the email alone is enough.", "D) Ask them to file a police report first."], correctAnswer: "C", category: "Section A" },
+      { id: 6, question: "A customer's phone was damaged on the same day as buying it and the plan. Can they raise a claim immediately?", options: ["A) Yes, damage after plan activation is covered.", "B) No, because the plan starts 7 days later.", "C) Yes, but only for manufacturing defects.", "D) No, because claims before diagnostics are invalid."], correctAnswer: "A", category: "Section A" },
+      { id: 7, question: "If a customer upgrades their phone after six months, can the plan be transferred?", options: ["A) Only if the new device is Samsung.", "B) Yes, the plan moves to the new device automatically.", "C) No, the plan stays linked to the registered device.", "D) Yes, only once per customer."], correctAnswer: "C", category: "Section A" },
+      { id: 11, question: "You're trying to convince a hesitant customer. What's the strongest difference between this plan and a normal warranty?", options: ["A) Warranty covers accidental damage; plan covers only manufacturing faults.", "B) Warranty covers manufacturing faults; plan covers accidental and liquid damage.", "C) Warranty and plan both cover the same issues.", "D) Plan covers theft; warranty covers water damage."], correctAnswer: "B", category: "Section B" },
+      { id: 12, question: "If a customer made three damage claims in one year, can they still make a fourth? What's the condition?", options: ["A) Yes, unlimited claims allowed within invoice value limit.", "B) No, only three claims allowed.", "C) Yes, but only after paying an extra fee.", "D) No, unless the plan is renewed."], correctAnswer: "A", category: "Section B" },
+      { id: 13, question: "How would you explain the 'processing fee' to a customer to avoid confusion later?", options: ["A) Small fee charged per repair; varies by phone category.", "B) Fee only applies for the first claim.", "C) Fee is optional if the customer requests.", "D) Fee covers warranty extensions."], correctAnswer: "A", category: "Section B" },
+      { id: 14, question: "A customer says, 'I'll buy the plan next week.' What persuasive yet honest point can you make?", options: ["A) Encourage immediate purchase — must be bought within 7 days", "B) Accept later purchase with penalty.", "C) Advise buying next month for better coverage.", "D) Suggest buying another phone instead."], correctAnswer: "A", category: "Section B" },
+      { id: 16, question: "A customer wants to know if screen cracks are covered. How would you clarify using plan terminology?", options: ["A) Only scratches are covered.", "B) No physical damage is covered.", "C) Yes — accidental physical damage like screen cracks is included.", "D) Only water damage is covered."], correctAnswer: "C", category: "Section B" },
+      { id: 17, question: "If a device fails due to manufacturing fault, should the plan or the warranty be used first?", options: ["A) Warranty should be used first; plan covers accidental/liquid damage.", "B) Plan should be used first; warranty is optional.", "C) Either can be used interchangeably.", "D) Warranty only if phone is older than 6 months."], correctAnswer: "A", category: "Section B" },
+      { id: 18, question: "A customer says, 'I dropped my phone; only the camera glass broke.' Does the plan cover this?", options: ["A) No, camera glass is excluded.", "B) Yes, it counts as accidental physical damage.", "C) Only if entire camera module is broken.", "D) No, only screen damage is covered."], correctAnswer: "B", category: "Section B" },
+      { id: 19, question: "A buyer got the phone through a gift from a friend. Can they still buy the plan in their own name?", options: ["A) Yes, if friend transfers invoice.", "B) No — plan only valid for original purchaser from official channel.", "C) Yes, after 3-day waiting period.", "D) Only if it's a Fold/Flip phone."], correctAnswer: "B", category: "Section B" },
+      { id: 20, question: "How would you handle a customer accusing the store of hiding plan limitations?", options: ["A) Apologize and refund immediately.", "B) Stay calm, show brochure or official terms, clarify politely.", "C) Escalate to higher management only.", "D) Deny any limitations exist."], correctAnswer: "B", category: "Section B" },
+      { id: 22, question: "How long does the plan last from activation?", options: ["A) 6 months", "B) 2 years", "C) 1 year", "D) Until first claim"], correctAnswer: "C", category: "Section C" },
+      { id: 23, question: "Within how many days must a customer buy the plan after phone purchase?", options: ["A) 7 days", "B) 3 days (or 30 days with diagnostics)", "C) 15 days", "D) 60 days"], correctAnswer: "B", category: "Section C" },
+      { id: 26, question: "Can the plan be purchased for non-Samsung phones?", options: ["A) Yes, with additional fee", "B) No, only Samsung phones", "C) Only for phones under warranty", "D) Yes, if registered on My Galaxy App"], correctAnswer: "B", category: "Section C" },
+      { id: 27, question: "How many total repair claims can a customer make in one year?", options: ["A) 1", "B) 3", "C) Unlimited within invoice value limit", "D) 5"], correctAnswer: "C", category: "Section C" },
+      { id: 28, question: "What is the maximum claim value?", options: ["A) Half of invoice value", "B) Unlimited claims with each claim upto invoice value of the phone", "C) No limit", "D) Only for screen repairs"], correctAnswer: "B", category: "Section C" },
+      { id: 29, question: "Is a processing fee charged for every claim?", options: ["A) No", "B) Yes", "C) Only for the first claim", "D) Only for liquid damage claims"], correctAnswer: "B", category: "Section C" },
+      { id: 30, question: "Who else can use the phone under the same plan apart from the buyer?", options: ["A) Only spouse", "B) Spouse, children, or parents", "C) Any friend of the buyer", "D) Only business employees"], correctAnswer: "B", category: "Section C" },
+      { id: 31, question: "A customer claims their phone fell in a pool and stopped working. What 3 questions should you ask before directing them to service?", options: ["A) Was the plan active? When did damage happen?", "B) What colour is the phone? When purchased? Who gifted it?", "C) Did they buy insurance? Did they drop it before purchase? What is the IMEI?", "D) Is it Fold/Flip? Warranty status? Store location?"], correctAnswer: "A", category: "Section D" },
+      { id: 32, question: "Unsure if a customer's plan is active. How do you confirm?", options: ["A) Only Check confirmation email /Whatsapp / SMS received by Customer", "B) Only Check with Samsung Care+ Call Center team", "C) Only ask Zopper POC to confirm", "D) Confirmation of the plan activation can be obtained by using all of the mechanisms mentioned in A, B and C"], correctAnswer: "D", category: "Section D" },
+      { id: 34, question: "Parent buying a phone for child but worries about coverage. What do you say?", options: ["A) Coverage applies only to the buyer", "B) Children are covered under family provision", "C) Only spouse can use phone", "D) Child needs separate plan"], correctAnswer: "B", category: "Section D" },
+      { id: 35, question: "Explain 'Registered Device' to a confused customer.", options: ["A) Device enrolled under plan within valid time frame", "B) Any phone the customer owns", "C) Only Fold/Flip phones", "D) Phone purchased from Zopper only"], correctAnswer: "A", category: "Section D" },
+      { id: 37, question: "How do you explain 'Plan Term' to someone who thinks it means EMI period?", options: ["A) 1-year coverage, not payment period", "B) Number of claims allowed", "C) Time to repair phone", "D) Warranty period"], correctAnswer: "A", category: "Section D" },
+      { id: 39, question: "Customer thinks 'unlimited claims' means 'free repairs every time.' What do you say?", options: ["A) Unlimited claims allowed, but each has processing fee, total up to invoice value", "B) Yes, truly unlimited free repairs", "C) Only 3 free repairs allowed", "D) Fee applies only for liquid damage"], correctAnswer: "A", category: "Section D" },
+      { id: 40, question: "Another employee gives wrong plan info. How do you correct them?", options: ["A) Ignore it", "B) Correct politely using official policy documents", "C) Report immediately to manager", "D) Tell customer instead"], correctAnswer: "B", category: "Section D" },
+      { id: 41, question: "A customer's plan activation is pending; phone gets water damage. What happens?", options: ["A) Claim valid after plan activation", "B) Claim automatically rejected", "C) Claim accepted if purchased within 7 days", "D) Claim partially valid"], correctAnswer: "A", category: "Section E" },
+      { id: 42, question: "Fold phone purchased 2 days ago, plan purchased on same day. Claim for screen crack today — is it valid?", options: ["A) Yes, accidental damage is covered", "B) No, first claim only after 30 days", "C) No, only liquid damage covered", "D) Yes, but only after diagnostics"], correctAnswer: "A", category: "Section E" },
+      { id: 44, question: "Customer's spouse uses the registered device and damages it. Claim?", options: ["A) Denied — only buyer covered", "B) Covered — family members included", "C) Covered only if spouse's name added later", "D) Partially covered"], correctAnswer: "B", category: "Section E" },
+      { id: 45, question: "Customer asks if refurbished phones can have the plan.", options: ["A) Yes, with special approval", "B) No — plan not valid for refurbished or returned phones", "C) Yes, but only Fold/Flip", "D) Only if purchased online"], correctAnswer: "B", category: "Section E" },
+      { id: 47, question: "How is invoice value related to claims?", options: ["A) Maximum total repair claims equal invoice value", "B) Unlimited money reimbursed", "C) Only half invoice value covered", "D) Only processing fee covered"], correctAnswer: "A", category: "Section E" },
+      { id: 48, question: "Plan purchased on same day as phone — when does coverage start?", options: ["A) Day of purchase/activation", "B) Next day", "C) After diagnostics only", "D) After one week"], correctAnswer: "A", category: "Section E" },
+      { id: 50, question: "Employee asks if unlimited claims mean multiple free repairs. How to answer?", options: ["A) Unlimited claims, but total cost cannot exceed invoice value and processing fee applies each time", "B) Truly unlimited free repairs", "C) Only 3 repairs allowed", "D) Only one repair per 6 months"], correctAnswer: "A", category: "Section E" }
+    ]
+    
+    return res.json({ success: true, data: allQuestions })
+  } catch (e: any) {
+    console.error('❌ Error fetching questions:', e)
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
 // POST /api/test-submissions - Submit a test result
 app.post('/api/test-submissions', async (req, res) => {
   try {
-    const { secId, sessionToken, responses, score, totalQuestions, completionTime, isProctoringFlagged, storeId, storeName, storeCity } = req.body
+    const { secId, phone, sessionToken, responses, score, totalQuestions, completionTime, isProctoringFlagged, storeId, storeName, storeCity } = req.body
     
     if (!secId || !responses || score === undefined || !totalQuestions) {
       return res.status(400).json({ success: false, message: 'Missing required fields' })
@@ -2932,6 +3000,7 @@ app.post('/api/test-submissions', async (req, res) => {
     const submission = await prisma.testSubmission.create({
       data: {
         secId,
+        phone: phone || null,
         sessionToken: sessionToken || 'test-token',
         responses,
         score,

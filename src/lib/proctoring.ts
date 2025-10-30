@@ -12,6 +12,7 @@ export type ProctoringEventType =
 
 export async function logProctoringEvent(params: {
   secId: string
+  phone?: string
   sessionToken?: string
   eventType: ProctoringEventType
   details?: string

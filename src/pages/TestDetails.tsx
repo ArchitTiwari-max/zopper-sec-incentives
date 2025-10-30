@@ -1,18 +1,34 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { TestSubmission, sampleQuestions, Question } from '@/lib/testData'
+import { TestSubmission, Question } from '@/lib/testData'
 
 export function TestDetails() {
   const navigate = useNavigate()
   const location = useLocation()
   const [submission, setSubmission] = useState<TestSubmission | null>(null)
+  const [allQuestions, setAllQuestions] = useState<Question[]>([])
 
   useEffect(() => {
-    if (location.state?.submission) {
-      setSubmission(location.state.submission)
-    } else {
-      navigate('/results')
+    const fetchQuestions = async () => {
+      if (location.state?.submission) {
+        const sub = location.state.submission
+        setSubmission(sub)
+        
+        // Fetch all questions from the question bank
+        try {
+          const response = await fetch('http://localhost:3001/api/questions')
+          const result = await response.json()
+          if (result.success && result.data) {
+            setAllQuestions(result.data)
+          }
+        } catch (error) {
+          console.error('Error fetching questions:', error)
+        }
+      } else {
+        navigate('/results')
+      }
     }
+    fetchQuestions()
   }, [location, navigate])
 
   if (!submission) {
@@ -29,8 +45,8 @@ export function TestDetails() {
   const correctCount = Math.round((submission.score / 100) * submission.totalQuestions)
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50 py-6 px-4">
+      <div className="max-w-4xl mx-auto pb-20">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
@@ -72,7 +88,7 @@ export function TestDetails() {
           <h2 className="text-xl font-bold text-gray-900">Answer Review</h2>
           
           {submission.responses.map((response, index) => {
-            const question = sampleQuestions.find(q => q.id === response.questionId)
+            const question = allQuestions.find(q => q.id === response.questionId)
             if (!question) return null
             
             const isCorrect = response.selectedAnswer === question.correctAnswer
