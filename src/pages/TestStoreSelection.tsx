@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchStores, Store } from '@/lib/api'
 import { extractPhoneFromUrl, validateTestToken } from '@/lib/testToken'
+import SearchableSelect from '@/components/SearchableSelect'
+import { FaStore } from 'react-icons/fa'
 
 export function TestStoreSelection() {
   const navigate = useNavigate()
@@ -97,22 +99,16 @@ export function TestStoreSelection() {
           <label htmlFor="store" className="block text-sm font-medium text-gray-700 mb-2">
             Store
           </label>
-          <select
-            id="store"
+          <SearchableSelect
             value={selectedStore}
-            onChange={(e) => {
-              setSelectedStore(e.target.value)
+            onChange={(value) => {
+              setSelectedStore(value)
               setError(null)
             }}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">Select a store...</option>
-            {stores.map((store) => (
-              <option key={store.id} value={store.id}>
-                {store.storeName} - {store.city}
-              </option>
-            ))}
-          </select>
+            options={stores.map(s => ({ value: s.id, label: `${s.storeName} - ${s.city}` }))}
+            placeholder="Search or select store"
+            leftIcon={<FaStore />}
+          />
         </div>
 
         <button
