@@ -144,6 +144,7 @@ enum ProctoringEventType {
   loud_noise
   mic_active
   video_off
+  snapshot
 }
 
 model ProctoringEvent {
@@ -217,6 +218,7 @@ model TestSubmission {
   totalQuestions       Int
   completionTime       Int      // in seconds
   isProctoringFlagged  Boolean  @default(false)
+  screenshotUrls       String[] @default([])  // Array of Cloudinary URLs
   storeId              String?
   storeName            String?
   storeCity            String?
