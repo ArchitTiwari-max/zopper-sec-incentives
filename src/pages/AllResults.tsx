@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getTestSubmissions, TestSubmission } from '@/lib/testData'
+import { useAuth } from '@/contexts/AuthContext'
+import { isSECUser } from '@/lib/auth'
 
 export function AllResults() {
   const navigate = useNavigate()
+  const { auth } = useAuth()
   const [submissions, setSubmissions] = useState<TestSubmission[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -13,7 +16,15 @@ export function AllResults() {
       try {
         console.log('🎯 AllResults: Starting to fetch submissions...')
         setLoading(true)
-        const data = await getTestSubmissions()
+        
+        // Get the logged-in user's SEC ID to filter results
+        let userSecId: string | undefined
+        if (auth?.user && isSECUser(auth.user)) {
+          userSecId = auth.user.secId
+          console.log('🎯 AllResults: Filtering by SEC ID:', userSecId)
+        }
+        
+        const data = await getTestSubmissions(userSecId)
         console.log('🎯 AllResults: Received data:', data)
         console.log('🎯 AllResults: Data length:', data.length)
         setSubmissions(data)
@@ -26,7 +37,7 @@ export function AllResults() {
       }
     }
     fetchSubmissions()
-  }, [])
+  }, [auth])
 
   const allResults = useMemo(() => {
     return [...submissions].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())

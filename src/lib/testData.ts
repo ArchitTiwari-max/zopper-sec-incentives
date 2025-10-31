@@ -155,18 +155,29 @@ export const sampleQuestions: Question[] = allSamsungQuestions.slice(0, 10)
 
 /**
  * Get all test submissions from API
+ * @param secId Optional SEC ID to filter results for a specific user
  */
-export async function getTestSubmissions(): Promise<TestSubmission[]> {
+import { config } from '@/lib/config'
+
+export async function getTestSubmissions(secId?: string): Promise<TestSubmission[]> {
   try {
-    const apiUrl = 'http://localhost:3001/api/test-submissions'
+    const queryParams = secId ? `?secId=${encodeURIComponent(secId)}` : ''
+    const apiUrl = `${config.apiUrl}/test-submissions${queryParams}`
     console.log('🔍 Fetching test submissions from', apiUrl)
-    const response = await fetch(apiUrl)
+
+    // Timeout after 10s to avoid indefinite loading if API is down
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+
+    const response = await fetch(apiUrl, { signal: controller.signal })
+    clearTimeout(timeout)
+
     console.log('📡 Response status:', response.status, response.statusText)
     const result = await response.json()
     console.log('📦 API result:', result)
     if (result.success && result.data) {
       console.log(`✅ Found ${result.data.length} test submissions`)
-return result.data.map((item: any) => ({
+      return result.data.map((item: any) => ({
         id: item.id,
         secId: item.secId,
         phone: item.phone || (item.secId && /^\d{10}$/.test(item.secId) ? item.secId : undefined),
@@ -185,7 +196,11 @@ return result.data.map((item: any) => ({
     console.warn('⚠️ No data found in API response')
     return []
   } catch (error) {
-    console.error('❌ Error fetching test submissions:', error)
+    if ((error as any)?.name === 'AbortError') {
+      console.error('❌ Fetch test submissions timed out')
+    } else {
+      console.error('❌ Error fetching test submissions:', error)
+    }
     return []
   }
 }
@@ -195,7 +210,7 @@ return result.data.map((item: any) => ({
  */
 export async function saveTestSubmission(submission: TestSubmission): Promise<void> {
   try {
-    const response = await fetch('http://localhost:3001/api/test-submissions', {
+    const response = await fetch(`${config.apiUrl}/test-submissions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -233,7 +248,7 @@ export function calculateScore(responses: TestResponse[], questions: Question[])
  */
 export async function getTestStatistics() {
   try {
-    const response = await fetch('http://localhost:3001/api/test-submissions/statistics')
+    const response = await fetch(`${config.apiUrl}/test-submissions/statistics`)
     const result = await response.json()
     if (result.success && result.data) {
       return result.data
