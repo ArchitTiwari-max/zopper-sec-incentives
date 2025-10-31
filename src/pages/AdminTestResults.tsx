@@ -282,7 +282,7 @@ export function AdminTestResults() {
                     </td>
                     <td className="px-3 py-3">
                       <button
-                        onClick={() => navigate(`/admin/screenshots?phone=${encodeURIComponent(submission.phone || submission.secId)}`)}
+                        onClick={() => navigate(`/admin/screenshots?sessionToken=${encodeURIComponent(submission.sessionToken)}&secId=${encodeURIComponent(submission.secId)}`)}
                         className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors w-full"
                       >
                         📸 View

@@ -2813,12 +2813,15 @@ app.get('/api/proctoring/events', async (req, res) => {
   try {
     const secId = req.query.secId ? String(req.query.secId) : undefined
     const phone = req.query.phone ? String(req.query.phone) : undefined
+    const sessionToken = req.query.sessionToken ? String(req.query.sessionToken) : undefined
     try {
       // @ts-ignore
       if (prisma.proctoringEvent) {
         // @ts-ignore
         let where = {}
-        if (phone) {
+        if (sessionToken) {
+          where = { sessionToken }
+        } else if (phone) {
           where = { phone }
         } else if (secId) {
           where = { secId }
@@ -2833,7 +2836,9 @@ app.get('/api/proctoring/events', async (req, res) => {
     }
 
     let events = inMemoryProctoringEvents
-    if (phone) {
+    if (sessionToken) {
+      events = events.filter(e => e.sessionToken === sessionToken)
+    } else if (phone) {
       events = events.filter(e => e.phone === phone)
     } else if (secId) {
       events = events.filter(e => e.secId === secId)

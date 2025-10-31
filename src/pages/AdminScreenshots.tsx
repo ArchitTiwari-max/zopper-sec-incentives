@@ -15,20 +15,21 @@ interface ScreenshotEvent {
 export function AdminScreenshots() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const phone = searchParams.get('phone') || ''
+  const sessionToken = searchParams.get('sessionToken') || ''
+  const secId = searchParams.get('secId') || ''
   const [screenshots, setScreenshots] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
   useEffect(() => {
     const loadScreenshots = async () => {
-      if (!phone) {
+      if (!sessionToken) {
         setLoading(false)
         return
       }
 
       try {
-        const res = await fetch(`${config.apiUrl}/proctoring/events?phone=${encodeURIComponent(phone)}`)
+        const res = await fetch(`${config.apiUrl}/proctoring/events?sessionToken=${encodeURIComponent(sessionToken)}`)
         const data = await res.json()
         
         if (data.success && data.data) {
@@ -86,7 +87,7 @@ export function AdminScreenshots() {
     }
 
     loadScreenshots()
-  }, [phone])
+  }, [sessionToken])
 
   if (loading) {
     return (
@@ -109,7 +110,7 @@ export function AdminScreenshots() {
           <FaArrowLeft size={16} />
           Back to Test Results
         </button>
-        <h1 className="text-2xl font-bold text-gray-900">Screenshots - Phone: {phone}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Screenshots - SEC ID: {secId}</h1>
       </div>
 
       {screenshots.length === 0 ? (
