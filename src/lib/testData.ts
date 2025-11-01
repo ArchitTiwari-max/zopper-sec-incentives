@@ -23,6 +23,7 @@ export interface TestSubmission {
   submittedAt: string
   completionTime: number // in seconds
   isProctoringFlagged?: boolean
+  screenshotUrls?: string[]
   storeId?: string
   storeName?: string
   storeCity?: string
@@ -188,6 +189,7 @@ export async function getTestSubmissions(secId?: string): Promise<TestSubmission
         submittedAt: item.submittedAt,
         completionTime: item.completionTime,
         isProctoringFlagged: item.isProctoringFlagged,
+        screenshotUrls: item.screenshotUrls || [],
         storeId: item.storeId,
         storeName: item.storeName,
         storeCity: item.storeCity

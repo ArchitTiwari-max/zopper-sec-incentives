@@ -3211,6 +3211,36 @@ app.post('/api/test-submissions', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing required fields' })
     }
 
+    // Fetch screenshot URLs from proctoring events for this session
+    let screenshotUrls: string[] = []
+    try {
+      // @ts-ignore
+      if (prisma.proctoringEvent && sessionToken) {
+        // @ts-ignore
+        const snapshotEvents = await prisma.proctoringEvent.findMany({
+          where: {
+            sessionToken,
+            eventType: 'snapshot'
+          },
+          orderBy: { createdAt: 'asc' }
+        })
+        
+        // Extract URLs from details field
+        screenshotUrls = snapshotEvents
+          .map((event: any) => {
+            if (event.details?.startsWith('http')) {
+              return event.details
+            }
+            return null
+          })
+          .filter((url: string | null): url is string => url !== null)
+        
+        console.log(`📸 Found ${screenshotUrls.length} screenshot URLs for session ${sessionToken}`)
+      }
+    } catch (e) {
+      console.warn('⚠️ Failed to fetch screenshot URLs (non-critical):', e)
+    }
+
     const submission = await prisma.testSubmission.create({
       data: {
         secId,
@@ -3221,6 +3251,7 @@ app.post('/api/test-submissions', async (req, res) => {
         totalQuestions,
         completionTime: completionTime || 0,
         isProctoringFlagged: isProctoringFlagged || false,
+        screenshotUrls,
         storeId: storeId || null,
         storeName: storeName || null,
         storeCity: storeCity || null
