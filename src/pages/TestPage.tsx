@@ -236,7 +236,7 @@ export function TestPage() {
 
       const submission = {
         secId: identifier,
-        phone: testState.phone,
+        phone: testState.phone || undefined,
         sessionToken: 'test-token', // In production, get from session
         responses,
         score,
