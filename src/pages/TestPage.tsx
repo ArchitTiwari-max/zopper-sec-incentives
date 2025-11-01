@@ -65,6 +65,7 @@ export function TestPage() {
   const [secDetails, setSecDetails] = useState<SecDetails | null>(null)
   const [selectedStore, setSelectedStore] = useState<StoreInfo | null>(null)
   const [testQuestions, setTestQuestions] = useState<Question[]>([])
+  const [sessionToken, setSessionToken] = useState<string>('')
 
   // Initialize test on component mount
   useEffect(() => {
@@ -96,6 +97,7 @@ export function TestPage() {
       // Create and save test session
       const session = createTestSession(phone)
       saveTestSession(session)
+      setSessionToken(session.token)
 
       // Fetch SEC details by phone (non-blocking)
       try {
@@ -237,7 +239,7 @@ export function TestPage() {
       const submission = {
         secId: identifier,
         phone: testState.phone || undefined,
-        sessionToken: 'test-token', // In production, get from session
+        sessionToken: sessionToken || 'test-token',
         responses,
         score,
         totalQuestions: testQuestions.length,
@@ -350,7 +352,7 @@ export function TestPage() {
       <ProctoringPanel 
         secId={testState.phone!}
         phone={testState.phone!}
-        sessionToken={'test-token'}
+        sessionToken={sessionToken}
         onFlag={() => setTestState(prev => ({ ...prev, }))}
       />
 
