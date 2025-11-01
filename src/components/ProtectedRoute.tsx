@@ -57,8 +57,14 @@ export function SECRoute({ children }: { children: ReactNode }) {
 // Public route that redirects authenticated users
 export function PublicOnlyRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, isAdmin, isSEC } = useAuth()
+  const location = useLocation()
 
   if (isAuthenticated) {
+    const from = (location.state as any)?.from
+    if (from && typeof from === 'object') {
+      const next = `${from.pathname || ''}${from.search || ''}${from.hash || ''}` || '/'
+      return <Navigate to={next} replace />
+    }
     if (isAdmin) return <Navigate to="/admin/dashboard" replace />
     if (isSEC) return <Navigate to="/dashboard" replace />
   }

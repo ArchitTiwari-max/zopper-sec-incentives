@@ -23,10 +23,16 @@ export function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
+      const from = (location.state as any)?.from
+      if (from && typeof from === 'object') {
+        const next = `${from.pathname || ''}${from.search || ''}${from.hash || ''}` || '/'
+        navigate(next, { replace: true })
+        return
+      }
       if (isAdmin) navigate('/admin/dashboard', { replace: true })
       else if (isSEC) navigate('/plan-sell-info', { replace: true })
     }
-  }, [isAuthenticated, isAdmin, isSEC, navigate])
+  }, [isAuthenticated, isAdmin, isSEC, navigate, location.state])
 
   // Show session expired popup if set by authFetch
   useEffect(() => {
@@ -95,7 +101,12 @@ export function LoginPage() {
         }
         login(authData)
         setToast({ message: 'Login successful!', type: 'success' })
-        setTimeout(() => navigate('/plan-sell-info', { replace: true }), 800)
+        // Prefer redirecting back to the originally intended page (e.g., test link)
+        const from = (location.state as any)?.from
+        const next = from && typeof from === 'object'
+          ? `${from.pathname || ''}${from.search || ''}${from.hash || ''}`
+          : '/plan-sell-info'
+        setTimeout(() => navigate(next, { replace: true }), 800)
       } else {
         setToast({ message: data.message || 'Invalid OTP', type: 'error' })
       }
