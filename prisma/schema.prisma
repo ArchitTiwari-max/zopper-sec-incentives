@@ -251,6 +251,7 @@ model TestSubmission {
   @@index([secId])
   @@index([phone])
   @@index([submittedAt])
+  @@unique([secId, sessionToken], name: "secId_sessionToken")
 }
 
 model Notification {
