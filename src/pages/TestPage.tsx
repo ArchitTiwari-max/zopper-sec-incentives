@@ -66,6 +66,7 @@ export function TestPage() {
   const [selectedStore, setSelectedStore] = useState<StoreInfo | null>(null)
   const [testQuestions, setTestQuestions] = useState<Question[]>([])
   const [sessionToken, setSessionToken] = useState<string>('')
+  const [hasSubmitted, setHasSubmitted] = useState(false)
 
   // Initialize test on component mount
   useEffect(() => {
@@ -213,6 +214,13 @@ export function TestPage() {
 
   // Submit test function
   const submitTest = async (responses: TestResponse[], startTime: string) => {
+    // Guard against duplicate submissions
+    if (hasSubmitted) {
+      console.log('Test already submitted, skipping duplicate submission')
+      return
+    }
+    setHasSubmitted(true)
+    
     const identifier = (secDetails?.secId && secDetails.secId.trim()) || testState.phone
     const score = calculateScore(responses, testQuestions)
     const completionTime = Math.floor((Date.now() - new Date(startTime || new Date().toISOString()).getTime()) / 1000)
