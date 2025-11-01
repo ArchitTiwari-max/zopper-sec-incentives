@@ -281,12 +281,34 @@ export function AdminTestResults() {
                       </div>
                     </td>
                     <td className="px-3 py-3">
-                      <button
-                        onClick={() => navigate(`/admin/screenshots?sessionToken=${encodeURIComponent(submission.sessionToken)}&secId=${encodeURIComponent(submission.secId)}`)}
-                        className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors w-full"
-                      >
-                        📸 View
-                      </button>
+                      {submission.screenshotUrls && submission.screenshotUrls.length > 0 ? (
+                        <div className="flex items-center gap-1">
+                          <div className="flex -space-x-2">
+                            {submission.screenshotUrls.slice(0, 3).map((url, idx) => (
+                              <img
+                                key={idx}
+                                src={url}
+                                alt={`Screenshot ${idx + 1}`}
+                                className="w-8 h-8 rounded-full border-2 border-white object-cover cursor-pointer hover:scale-110 transition-transform"
+                                onClick={() => navigate(`/admin/screenshots?sessionToken=${encodeURIComponent(submission.sessionToken)}&secId=${encodeURIComponent(submission.secId)}`)}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none'
+                                }}
+                              />
+                            ))}
+                          </div>
+                          {submission.screenshotUrls.length > 3 && (
+                            <span className="text-xs text-gray-500">+{submission.screenshotUrls.length - 3}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => navigate(`/admin/screenshots?sessionToken=${encodeURIComponent(submission.sessionToken)}&secId=${encodeURIComponent(submission.secId)}`)}
+                          className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors w-full"
+                        >
+                          📸 View
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
