@@ -105,8 +105,9 @@ export function AdminLoginPage() {
           />
         </div>
         <button type="submit" disabled={loading} className="button-gradient w-full py-3 disabled:opacity-60">{loading ? 'Signing in…' : 'Sign In'}</button>
-        <div className="text-center text-sm text-gray-500">
-          Not an admin? <Link to="/" className="underline">Login with phone</Link>
+        <div className="text-center text-sm text-gray-500 space-y-2">
+          <div>Not an admin? <Link to="/" className="underline">Login with phone</Link></div>
+          <div>Need an account? <Link to="/signup" className="underline">Sign up for different roles</Link></div>
         </div>
       </form>
 

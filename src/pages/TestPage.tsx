@@ -81,12 +81,12 @@ export function TestPage() {
       }
 
       // Check if store was selected
-      const storeFromState = location.state?.store
-      if (!storeFromState) {
+      const storesFromState = location.state?.stores
+      if (!storesFromState || !Array.isArray(storesFromState) || storesFromState.length === 0) {
         navigate(`/test-store-selection?phone=${phone}`, { replace: true })
         return
       }
-      setSelectedStore(storeFromState)
+      setSelectedStore(storesFromState[0])
 
       // Generate questions for this phone number (10 random questions with at least 1 from each section)
       const questions = getQuestionsForPhone(phone)

@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { PublicOnlyRoute, SECRoute, AdminRoute } from './components/ProtectedRoute'
 import { LoginPage } from './pages/Login'
+import { SignupPage } from './pages/Signup'
 import { ReportPage } from './pages/Report'
 import { AdminDashboard } from './pages/AdminDashboard'
 import { SecDashboard } from './pages/SecDashboard'
@@ -59,6 +60,11 @@ export default function App() {
               <Route path="/admin-login" element={
                 <PublicOnlyRoute>
                   <AdminLoginPage />
+                </PublicOnlyRoute>
+              } />
+              <Route path="/signup" element={
+                <PublicOnlyRoute>
+                  <SignupPage />
                 </PublicOnlyRoute>
               } />
               {/* Backward compat redirects */}

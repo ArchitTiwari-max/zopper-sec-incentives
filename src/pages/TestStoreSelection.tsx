@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchStores, Store } from '@/lib/api'
 import { extractPhoneFromUrl, validateTestToken } from '@/lib/testToken'
-import SearchableSelect from '@/components/SearchableSelect'
 import { FaStore } from 'react-icons/fa'
 
 export function TestStoreSelection() {
@@ -55,17 +54,17 @@ export function TestStoreSelection() {
       return
     }
 
-    const store = stores.find(s => s.id === selectedStore)
-    if (!store) return
+    const storeObject = stores.find(s => s.id === selectedStore)
+    if (!storeObject) return
 
     // Navigate to test page with store info
     navigate(`/test?phone=${phone}`, {
       state: { 
-        store: {
-          id: store.id,
-          storeName: store.storeName,
-          city: store.city
-        }
+        stores: [{
+          id: storeObject.id,
+          storeName: storeObject.storeName,
+          city: storeObject.city
+        }]
       }
     })
   }
@@ -85,8 +84,8 @@ export function TestStoreSelection() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Select Your Store</h1>
-          <p className="text-gray-600">Please select your store before starting the test</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Select Your Stores</h1>
+          <p className="text-gray-600">Please select one or more stores before starting the test</p>
         </div>
 
         {error && (
@@ -97,18 +96,28 @@ export function TestStoreSelection() {
 
         <div className="mb-6">
           <label htmlFor="store" className="block text-sm font-medium text-gray-700 mb-2">
-            Store
+            Select Store
           </label>
-          <SearchableSelect
-            value={selectedStore}
-            onChange={(value) => {
-              setSelectedStore(value)
-              setError(null)
-            }}
-            options={stores.map(s => ({ value: s.id, label: `${s.storeName} - ${s.city}` }))}
-            placeholder="Search or select store"
-            leftIcon={<FaStore />}
-          />
+          <div className="relative">
+            <FaStore className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <select
+              id="store"
+              value={selectedStore}
+              onChange={(e) => {
+                setSelectedStore(e.target.value)
+                setError(null)
+              }}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+            >
+              <option value="">Select a store...</option>
+              {stores.map(store => (
+                <option key={store.id} value={store.id}>
+                  {store.storeName} - {store.city}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">▾</div>
+          </div>
         </div>
 
         <button

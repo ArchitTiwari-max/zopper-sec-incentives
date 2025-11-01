@@ -164,8 +164,9 @@ export function LoginPage() {
           </div>
         )}
 
-        <div className="text-center text-sm text-gray-500">
-          Admin? <a className="underline" href="/admin-login">Go to Admin Login</a>
+        <div className="text-center text-sm text-gray-500 space-y-2">
+          <div>Admin? <a className="underline" href="/admin-login">Go to Admin Login</a></div>
+          <div>Need an account? <a className="underline" href="/signup">Sign up for different roles</a></div>
         </div>
         <div className="mt-3 flex items-center justify-center gap-1 text-xs text-gray-500 whitespace-nowrap">
           <span>Powered by</span>

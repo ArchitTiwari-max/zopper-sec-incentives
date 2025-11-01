@@ -448,6 +448,215 @@ app.post('/api/auth/admin-login', async (req, res) => {
 })
 
 /**
+ * POST /api/auth/signup
+ * Create new user account with role-based logic
+ */
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { name, phone, role, username, password, storeId } = req.body
+
+    // Validation
+    if (!name?.trim() || !phone || !role || !username?.trim() || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
+      })
+    }
+
+    if (!/^\d{10}$/.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid 10-digit phone number is required'
+      })
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters'
+      })
+    }
+
+    // Check valid roles
+    const validRoles = ['ASE1', 'ASE2', 'ABM', 'ZSE', 'ZSM']
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role selected'
+      })
+    }
+
+    // Check if roles that need stores have stores selected
+    const rolesWithStores = ['ASE1', 'ASE2', 'ABM']
+    if (rolesWithStores.includes(role) && !storeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Store selection is required for this role'
+      })
+    }
+
+    // Check for existing user with same username or phone
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username },
+          { phone }
+        ]
+      }
+    })
+
+    if (existingUser) {
+      const field = existingUser.username === username ? 'username' : 'phone number'
+      return res.status(400).json({
+        success: false,
+        message: `This ${field} is already registered`
+      })
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12)
+
+    // Create user
+    const userData = {
+      name: name.trim(),
+      phone,
+      role: role as any,
+      username: username.trim(),
+      password: hashedPassword,
+      storeIds: rolesWithStores.includes(role) && storeId ? [storeId] : []
+    }
+
+    const newUser = await prisma.user.create({
+      data: userData,
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        phone: true,
+        role: true,
+        storeIds: true,
+        createdAt: true
+      }
+    })
+
+    console.log(`✅ New user created: ${newUser.username} (${newUser.role})`)
+    
+    res.json({
+      success: true,
+      message: 'Account created successfully',
+      data: {
+        userId: newUser.id,
+        username: newUser.username,
+        name: newUser.name,
+        role: newUser.role
+      }
+    })
+  } catch (error) {
+    console.error('❌ Error creating user account:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create account',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+/**
+ * POST /api/auth/user-login
+ * Login for new role-based users (ASE1, ASE2, ABM, ZSE, ZSM)
+ */
+app.post('/api/auth/user-login', async (req, res) => {
+  try {
+    const { username, password } = req.body
+
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username and password are required'
+      })
+    }
+
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { username }
+    })
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      })
+    }
+
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password)
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      })
+    }
+
+    // Update last login
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() }
+    })
+
+    // Fetch stores separately if user has storeIds
+    let stores = []
+    if (user.storeIds && user.storeIds.length > 0) {
+      stores = await prisma.store.findMany({
+        where: {
+          id: {
+            in: user.storeIds
+          }
+        },
+        select: {
+          id: true,
+          storeName: true,
+          city: true
+        }
+      })
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        role: 'user',
+        userRole: user.role,
+        username: user.username
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    )
+
+    console.log(`✅ User ${user.username} (${user.role}) logged in successfully`)
+    res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        phone: user.phone,
+        role: user.role,
+        stores: stores
+      }
+    })
+  } catch (error) {
+    console.error('❌ Error in user login:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to login',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+/**
  * POST /api/auth/logout
  * Logout user (optional endpoint for cleanup)
  */

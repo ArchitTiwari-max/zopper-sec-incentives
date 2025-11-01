@@ -25,7 +25,7 @@ model Store {
   id          String        @id @map("_id")
   storeName   String
   city        String
-  secUsers    SECUser[]     // One store can have multiple SECs
+  secUsers    SECUser[]     // One store can have multiple SECs (backward compatibility)
   salesReports SalesReport[] // Store sales reports
   helpRequests HelpRequest[] // Help requests from this store
 }
@@ -47,6 +47,29 @@ model Plan {
   salesReports SalesReport[] // Plan sales reports
 }
 
+enum UserRole {
+  ASE1
+  ASE2
+  ABM
+  ZSE
+  ZSM
+}
+
+model User {
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
+  username     String        @unique
+  password     String        // bcrypt hashed
+  phone        String        @unique
+  name         String
+  role         UserRole
+  storeIds     String[]      // Array of store IDs for roles that need multiple stores
+  isActive     Boolean       @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+// Keep SECUser for backward compatibility with existing SEC functionality
 model SECUser {
   id           String        @id @default(auto()) @map("_id") @db.ObjectId
   phone        String        @unique
