@@ -45,6 +45,22 @@ const upload = multer({
   }
 })
 
+// Multer configuration for question Excel uploads
+const uploadQuestions = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    // Accept only Excel files
+    if (file.mimetype.includes('spreadsheet') || file.originalname.endsWith('.xlsx') || file.originalname.endsWith('.xls')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Only Excel files are allowed!'))
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+})
+
 // Middleware
 app.use(cors({ credentials: true, origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'] }))
 app.use(express.json())
@@ -3154,7 +3170,24 @@ app.get('/api/cloudinary-signature', (req, res) => {
 // GET /api/questions - Get all questions from the question bank
 app.get('/api/questions', async (req, res) => {
   try {
-    // All Samsung Care+ questions
+    // Fetch questions from database
+    const questionsFromDB = await prisma.questionBank.findMany({
+      orderBy: { questionId: 'asc' }
+    })
+    
+    // If database has questions, use them
+    if (questionsFromDB.length > 0) {
+      const formattedQuestions = questionsFromDB.map(q => ({
+        id: q.questionId,
+        question: q.question,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        category: q.category
+      }))
+      return res.json({ success: true, data: formattedQuestions })
+    }
+    
+    // Otherwise, fall back to hardcoded questions
     const allQuestions = [
       { id: 1, question: "A customer drops their new Samsung phone in water two weeks after buying it but didn't buy the plan. They now want to buy it. What do you say and why?", options: ["A) Yes, they can still buy it with extra charges.", "B) Yes, but it will cover only water damage.", "C) No, the plan must be bought within 7 days", "D) Yes, if they show proof of damage."], correctAnswer: "C", category: "Section A" },
       { id: 2, question: "A Fold phone customer comes on Day 8 after purchase to buy the plan. How do you respond?", options: ["A) Eligible with late purchase fees.", "B) Accept only if diagnostics are done immediately.", "C) Not eligible — Fold/Flip models must buy within 7 days.", "D) Accept the purchase — Fold phones have 30 days to buy."], correctAnswer: "C", category: "Section A" },
@@ -3629,6 +3662,105 @@ app.put('/api/admin/help-requests/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update help request',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// POST /api/questions/upload - Upload Excel file with questions (Admin only)
+app.post('/api/questions/upload', uploadQuestions.single('excel'), async (req, res) => {
+  try {
+    // Verify admin authentication
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' })
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin access required' })
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' })
+    }
+
+    // Parse Excel file
+    const workbook = read(req.file.buffer, { type: 'buffer' })
+    const sheetName = workbook.SheetNames[0]
+    const worksheet = workbook.Sheets[sheetName]
+    const data = utils.sheet_to_json(worksheet)
+
+    if (data.length === 0) {
+      return res.status(400).json({ success: false, message: 'Excel file is empty' })
+    }
+
+    // Validate and format questions
+    const questions: any[] = []
+    for (let i = 0; i < data.length; i++) {
+      const row: any = data[i]
+      
+      // Expected columns: questionId, question, option1, option2, option3, option4, correctAnswer, category
+      if (!row.questionId || !row.question || !row.option1 || !row.option2 || !row.correctAnswer) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Invalid data at row ${i + 2}. Required columns: questionId, question, option1, option2, option3, option4, correctAnswer, category` 
+        })
+      }
+
+      const options = []
+      if (row.option1) options.push(row.option1)
+      if (row.option2) options.push(row.option2)
+      if (row.option3) options.push(row.option3)
+      if (row.option4) options.push(row.option4)
+
+      if (options.length < 2) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Row ${i + 2} must have at least 2 options` 
+        })
+      }
+
+      questions.push({
+        questionId: parseInt(row.questionId),
+        question: row.question.toString().trim(),
+        options: options,
+        correctAnswer: row.correctAnswer.toString().trim(),
+        category: row.category ? row.category.toString().trim() : null
+      })
+    }
+
+    // Delete all existing questions
+    const deletedCount = await prisma.questionBank.deleteMany({})
+    console.log(`🗑️ Deleted ${deletedCount.count} existing questions`)
+
+    // Insert new questions
+    const insertedQuestions = await prisma.questionBank.createMany({
+      data: questions
+    })
+
+    console.log(`✅ Inserted ${insertedQuestions.count} new questions by admin ${decoded.username}`)
+
+    res.json({
+      success: true,
+      message: 'Questions uploaded successfully',
+      data: {
+        questionsDeleted: deletedCount.count,
+        questionsAdded: insertedQuestions.count
+      }
+    })
+  } catch (error) {
+    console.error('❌ Error uploading questions:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload questions',
       error: error instanceof Error ? error.message : 'Unknown error'
     })
   }

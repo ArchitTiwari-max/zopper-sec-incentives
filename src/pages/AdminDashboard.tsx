@@ -518,6 +518,12 @@ const response = await authFetch(`${config.apiUrl}/reports/${reportId}`, {
               >
                 💆 Help Requests
               </button>
+              <button 
+                onClick={() => { setActionsOpen(false); navigate('/admin/questions/upload') }} 
+                className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
+              >
+                📝 Insert Questions
+              </button>
             </div>
           )}
         </div>

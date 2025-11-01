@@ -267,3 +267,16 @@ model Notification {
   @@index([createdAt])
 }
 
+model QuestionBank {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  questionId    Int      @unique // Sequential question ID
+  question      String   // Question text
+  options       String[] // Array of options (e.g., ["A) Option1", "B) Option2", ...])
+  correctAnswer String   // Correct answer letter (e.g., "A", "B", "C", "D")
+  category      String?  // Optional category (e.g., "Section A", "Section B")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([category])
+}
+

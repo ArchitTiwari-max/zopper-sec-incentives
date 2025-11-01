@@ -26,6 +26,7 @@ import { HelpPage } from './pages/Help'
 import { AdminHelpRequests } from './pages/AdminHelpRequests'
 import { AllResults } from './pages/AllResults'
 import { TestDetails } from './pages/TestDetails'
+import { AdminQuestionUpload } from './pages/AdminQuestionUpload'
 
 export default function App() {
   const location = useLocation()
@@ -159,6 +160,11 @@ export default function App() {
               <Route path="/admin/help-requests" element={
                 <AdminRoute>
                   <AdminHelpRequests />
+                </AdminRoute>
+              } />
+              <Route path="/admin/questions/upload" element={
+                <AdminRoute>
+                  <AdminQuestionUpload />
                 </AdminRoute>
               } />
               
