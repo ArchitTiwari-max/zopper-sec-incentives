@@ -251,7 +251,8 @@ model TestSubmission {
   @@index([secId])
   @@index([phone])
   @@index([submittedAt])
-  @@unique([secId, sessionToken], name: "secId_sessionToken")
+//  @@unique([secId, sessionToken], name: "secId_sessionToken") // Temporarily commented out due to duplicate data
+  @@index([secId, sessionToken]) // Added non-unique index instead
 }
 
 model Notification {

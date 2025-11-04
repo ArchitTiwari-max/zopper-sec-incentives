@@ -501,6 +501,12 @@ const response = await authFetch(`${config.apiUrl}/reports/${reportId}`, {
                 📝 View Test Results
               </button>
               <button 
+                onClick={() => { setActionsOpen(false); navigate('/admin/question-analysis') }} 
+                className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
+              >
+                📊 Question Analysis
+              </button>
+              <button 
                 onClick={() => { setActionsOpen(false); navigate('/admin/test-invites') }} 
                 className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
               >

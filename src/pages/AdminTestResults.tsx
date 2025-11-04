@@ -152,7 +152,7 @@ export function AdminTestResults() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-2xl font-bold text-blue-600">{stats.totalSubmissions}</div>
           <div className="text-sm text-gray-600">Total Submissions</div>
@@ -168,6 +168,13 @@ export function AdminTestResults() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-2xl font-bold text-purple-600">{formatTime(stats.averageTime)}</div>
           <div className="text-sm text-gray-600">Avg. Time</div>
+        </div>
+        <div 
+          className="bg-white rounded-lg shadow p-6 cursor-pointer hover:bg-gray-50 transition-colors border-2 border-transparent hover:border-orange-400"
+          onClick={() => navigate('/admin/question-analysis')}
+        >
+          <div className="text-2xl font-bold text-orange-600">📊</div>
+          <div className="text-sm text-gray-600 font-medium">Question Analysis</div>
         </div>
       </div>
 
@@ -332,163 +339,7 @@ export function AdminTestResults() {
                     <td className="px-3 py-3">
                       <button
                         onClick={() => {
-                          // Check if responses have enriched data
-                          const hasEnrichedData = submission.responses.some(r => r.isCorrect !== undefined && r.correctAnswer !== undefined)
-                          
-                          if (!hasEnrichedData) {
-                            // Show basic response data without correct/incorrect info
-                            const answersHTML = submission.responses.map((r, idx) => {
-                              return `<div style="margin-bottom: 16px; padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-                                <div style="font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 0.9375rem;">
-                                  Question ${idx + 1} (ID: ${r.questionId})
-                                </div>
-                                <div style="margin-bottom: 8px; padding: 8px; background: white; border-radius: 6px;">
-                                  <div style="font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; margin-bottom: 4px;">SEC's Answer:</div>
-                                  <div style="font-size: 0.9375rem; color: #1f2937; font-weight: 500;">${r.selectedAnswer}</div>
-                                </div>
-                                <div style="font-size: 0.75rem; color: #f59e0b; margin-top: 8px; display: flex; align-items: center; gap: 4px;">
-                                  <span>⚠️</span>
-                                  <span>Question details not available - may have been deleted from bank</span>
-                                </div>
-                              </div>`
-                            }).join('')
-                            
-                            const modal = document.createElement('div')
-                            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;'
-                            modal.innerHTML = `
-                              <div style="background: white; padding: 24px; border-radius: 12px; max-width: 600px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                                  <h2 style="font-size: 1.25rem; font-weight: 700; color: #111827;">Answer Details - ${submission.secId}</h2>
-                                  <button onclick="this.closest('div[style*=fixed]').remove()" style="padding: 4px 8px; background: #f3f4f6; border-radius: 6px; cursor: pointer; border: none; font-size: 1.25rem;">✕</button>
-                                </div>
-                                <div style="margin-bottom: 16px; padding: 12px; background: #fef3c7; border-radius: 6px;">
-                                  <div style="color: #92400e; font-size: 0.875rem;">
-                                    ⚠️ Question details not available in database. Questions may have been updated or deleted from the question bank.
-                                  </div>
-                                </div>
-                                <div style="margin-bottom: 16px; padding: 12px; background: #f9fafb; border-radius: 6px; display: flex; gap: 24px;">
-                                  <div>
-                                    <span style="color: #6b7280; font-size: 0.875rem;">Questions Answered:</span>
-                                    <strong style="color: #3b82f6; margin-left: 8px;">${submission.responses.length}</strong>
-                                  </div>
-                                  <div>
-                                    <span style="color: #6b7280; font-size: 0.875rem;">Score:</span>
-                                    <strong style="color: #3b82f6; margin-left: 8px;">${submission.score}%</strong>
-                                  </div>
-                                </div>
-                                ${answersHTML}
-                              </div>
-                            `
-                            modal.onclick = (e) => { if (e.target === modal) modal.remove() }
-                            document.body.appendChild(modal)
-                            return
-                          }
-                          
-                          const correctCount = submission.responses.filter(r => r.isCorrect).length
-                          const wrongCount = submission.responses.filter(r => !r.isCorrect).length
-                          const answersHTML = submission.responses.map((r, idx) => {
-                            const icon = r.isCorrect ? '✓' : '✗'
-                            const statusColor = r.isCorrect ? '#22c55e' : '#ef4444'
-                            const statusText = r.isCorrect ? 'Correct' : 'Incorrect'
-                            
-                            // Generate options HTML if available
-                            let optionsHTML = ''
-                            if (r.options && Array.isArray(r.options)) {
-                              optionsHTML = r.options.map(option => {
-                                const isCorrectAnswer = option === r.correctAnswer
-                                const isSelectedAnswer = option === r.selectedAnswer
-                                
-                                let optionStyle = 'margin-bottom: 8px; padding: 12px; border-radius: 6px; border: 2px solid #e5e7eb; background: white;'
-                                let optionContent = option
-                                
-                                if (isCorrectAnswer && isSelectedAnswer) {
-                                  // SEC selected the correct answer
-                                  optionStyle = 'margin-bottom: 8px; padding: 12px; border-radius: 6px; border: 2px solid #10b981; background: #ecfdf5;'
-                                  optionContent = `<div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="font-weight: 500;">${option}</span>
-                                    <span style="color: #059669; font-size: 0.75rem; font-weight: 600;">✓ Correct Answer</span>
-                                  </div>`
-                                } else if (isCorrectAnswer) {
-                                  // This is the correct answer but SEC didn't select it
-                                  optionStyle = 'margin-bottom: 8px; padding: 12px; border-radius: 6px; border: 2px solid #10b981; background: #ecfdf5;'
-                                  optionContent = `<div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="font-weight: 500;">${option}</span>
-                                    <span style="color: #059669; font-size: 0.75rem; font-weight: 600;">✓ Correct Answer</span>
-                                  </div>`
-                                } else if (isSelectedAnswer) {
-                                  // SEC selected this wrong answer
-                                  optionStyle = 'margin-bottom: 8px; padding: 12px; border-radius: 6px; border: 2px solid #ef4444; background: #fef2f2;'
-                                  optionContent = `<div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="font-weight: 500;">${option}</span>
-                                    <span style="color: #dc2626; font-size: 0.75rem; font-weight: 600;">✗ Selected</span>
-                                  </div>`
-                                }
-                                
-                                return `<div style="${optionStyle}">${optionContent}</div>`
-                              }).join('')
-                            }
-                            
-                            return `<div style="margin-bottom: 24px; padding: 0; background: white; border-radius: 8px; border-left: 4px solid ${statusColor};">
-                              <!-- Question Header -->
-                              <div style="padding: 16px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">
-                                <div style="display: flex; align-items: center; justify-content: space-between;">
-                                  <div style="font-weight: 600; color: #374151; font-size: 0.875rem;">
-                                    Question ${idx + 1}
-                                  </div>
-                                  <div style="display: flex; align-items: center; gap: 4px;">
-                                    <span style="font-size: 0.875rem; font-weight: 600; color: ${statusColor};">${icon} ${statusText}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <!-- Question Text -->
-                              <div style="padding: 16px; background: #fafafa;">
-                                <div style="font-size: 0.9375rem; color: #111827; line-height: 1.6; font-weight: 500;">${r.questionText || 'Question text not available'}</div>
-                              </div>
-                              
-                              <!-- Options -->
-                              <div style="padding: 16px;">
-                                ${optionsHTML || `
-                                  <div style="padding: 12px; background: #fef2f2; border-radius: 6px; border: 2px solid #ef4444; margin-bottom: 8px;">
-                                    <div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">SEC's Answer:</div>
-                                    <div style="font-weight: 600; color: #dc2626;">${r.selectedAnswer}</div>
-                                  </div>
-                                  ${!r.isCorrect ? `<div style="padding: 12px; background: #ecfdf5; border-radius: 6px; border: 2px solid #10b981;">
-                                    <div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">Correct Answer:</div>
-                                    <div style="font-weight: 600; color: #059669;">${r.correctAnswer}</div>
-                                  </div>` : ''}
-                                `}
-                              </div>
-                            </div>`
-                          }).join('')
-                          
-                          const modal = document.createElement('div')
-                          modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;'
-                          modal.innerHTML = `
-                            <div style="background: white; padding: 24px; border-radius: 12px; max-width: 600px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
-                              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                                <h2 style="font-size: 1.25rem; font-weight: 700; color: #111827;">Answer Details - ${submission.secId}</h2>
-                                <button onclick="this.closest('div[style*=fixed]').remove()" style="padding: 4px 8px; background: #f3f4f6; border-radius: 6px; cursor: pointer; border: none; font-size: 1.25rem;">✕</button>
-                              </div>
-                              <div style="margin-bottom: 16px; padding: 12px; background: #f9fafb; border-radius: 6px; display: flex; gap: 24px; flex-wrap: wrap;">
-                                <div>
-                                  <span style="color: #6b7280; font-size: 0.875rem;">Correct:</span>
-                                  <strong style="color: #22c55e; margin-left: 8px; font-size: 1.125rem;">${correctCount}</strong>
-                                </div>
-                                <div>
-                                  <span style="color: #6b7280; font-size: 0.875rem;">Wrong:</span>
-                                  <strong style="color: #ef4444; margin-left: 8px; font-size: 1.125rem;">${wrongCount}</strong>
-                                </div>
-                                <div>
-                                  <span style="color: #6b7280; font-size: 0.875rem;">Score:</span>
-                                  <strong style="color: #3b82f6; margin-left: 8px; font-size: 1.125rem;">${submission.score}%</strong>
-                                </div>
-                              </div>
-                              ${answersHTML}
-                            </div>
-                          `
-                          modal.onclick = (e) => { if (e.target === modal) modal.remove() }
-                          document.body.appendChild(modal)
+                          navigate('/admin/answer-details', { state: { submission } })
                         }}
                         className="text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors w-full flex items-center justify-center gap-1"
                       >

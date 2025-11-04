@@ -3388,6 +3388,158 @@ app.get('/api/test-submissions/statistics', async (req, res) => {
   }
 })
 
+// GET /api/admin/question-analysis - Get question-wise analytics
+app.get('/api/admin/question-analysis', async (req, res) => {
+  try {
+    // Fetch all test submissions
+    const submissions = await prisma.testSubmission.findMany()
+    
+    if (submissions.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          totalQuestions: 0,
+          averageAccuracy: 0,
+          questionStats: [],
+          topWrong: [],
+          easiestQuestion: null,
+          hardestQuestion: null
+        }
+      })
+    }
+
+    // Fetch all questions from database
+    const allQuestions = await prisma.questionBank.findMany()
+    const questionMap = new Map(allQuestions.map(q => [q.questionId, q]))
+
+    // Aggregate question-wise stats
+    const questionStatsMap = new Map<number, {
+      questionId: number
+      questionText: string
+      totalAttempts: number
+      correctCount: number
+      wrongCount: number
+      wrongAnswers: Map<string, number> // Track which wrong answers were selected
+    }>()
+
+    // Process all submissions
+    submissions.forEach(submission => {
+      const responses = Array.isArray(submission.responses) ? submission.responses : []
+      
+      responses.forEach((response: any) => {
+        const questionId = response.questionId
+        const question = questionMap.get(questionId)
+        
+        if (!question) return // Skip if question not found in database
+        
+        if (!questionStatsMap.has(questionId)) {
+          questionStatsMap.set(questionId, {
+            questionId,
+            questionText: question.question,
+            totalAttempts: 0,
+            correctCount: 0,
+            wrongCount: 0,
+            wrongAnswers: new Map()
+          })
+        }
+        
+        const stats = questionStatsMap.get(questionId)!
+        stats.totalAttempts++
+        
+        const isCorrect = response.selectedAnswer === question.correctAnswer
+        if (isCorrect) {
+          stats.correctCount++
+        } else {
+          stats.wrongCount++
+          // Track the wrong answer selected
+          const wrongAnswer = response.selectedAnswer
+          stats.wrongAnswers.set(wrongAnswer, (stats.wrongAnswers.get(wrongAnswer) || 0) + 1)
+        }
+      })
+    })
+
+    // Convert to array and calculate percentages
+    const questionStats = Array.from(questionStatsMap.values()).map(stats => {
+      const correctPercent = stats.totalAttempts > 0 
+        ? Math.round((stats.correctCount / stats.totalAttempts) * 100)
+        : 0
+      const wrongPercent = 100 - correctPercent
+      
+      // Find most common wrong answer
+      let mostWrongOption = 'N/A'
+      let maxWrongCount = 0
+      stats.wrongAnswers.forEach((count, answer) => {
+        if (count > maxWrongCount) {
+          maxWrongCount = count
+          mostWrongOption = answer
+        }
+      })
+      
+      return {
+        questionId: stats.questionId,
+        questionText: stats.questionText.length > 100 
+          ? stats.questionText.substring(0, 100) + '...' 
+          : stats.questionText,
+        correctPercent,
+        wrongPercent,
+        mostWrongOption,
+        totalAttempts: stats.totalAttempts
+      }
+    })
+
+    // Sort by questionId for consistent ordering
+    questionStats.sort((a, b) => a.questionId - b.questionId)
+
+    // Calculate global insights
+    const totalQuestions = questionStats.length
+    const averageAccuracy = totalQuestions > 0
+      ? Math.round(questionStats.reduce((sum, q) => sum + q.correctPercent, 0) / totalQuestions)
+      : 0
+
+    // Find top 5 most incorrectly answered questions (lowest accuracy)
+    const topWrong = [...questionStats]
+      .sort((a, b) => a.correctPercent - b.correctPercent)
+      .slice(0, 5)
+      .map(q => ({
+        questionId: q.questionId,
+        questionText: q.questionText,
+        correctPercent: q.correctPercent
+      }))
+
+    // Find easiest and hardest questions
+    const easiestQuestion = questionStats.length > 0
+      ? questionStats.reduce((max, q) => q.correctPercent > max.correctPercent ? q : max)
+      : null
+    
+    const hardestQuestion = questionStats.length > 0
+      ? questionStats.reduce((min, q) => q.correctPercent < min.correctPercent ? q : min)
+      : null
+
+    return res.json({
+      success: true,
+      data: {
+        totalQuestions,
+        averageAccuracy,
+        questionStats,
+        topWrong,
+        easiestQuestion: easiestQuestion ? {
+          questionId: easiestQuestion.questionId,
+          questionText: easiestQuestion.questionText,
+          correctPercent: easiestQuestion.correctPercent
+        } : null,
+        hardestQuestion: hardestQuestion ? {
+          questionId: hardestQuestion.questionId,
+          questionText: hardestQuestion.questionText,
+          correctPercent: hardestQuestion.correctPercent
+        } : null
+      }
+    })
+  } catch (e: any) {
+    console.error('❌ Error fetching question analysis:', e)
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
 // GET /api/test-submissions - Get all test submissions
 app.get('/api/test-submissions', async (req, res) => {
   try {
