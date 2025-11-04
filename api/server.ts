@@ -3399,7 +3399,34 @@ app.get('/api/test-submissions', async (req, res) => {
       orderBy: { submittedAt: 'desc' }
     })
 
-    return res.json({ success: true, data: submissions })
+    // Fetch all questions from the database to enrich response data
+    const allQuestions = await prisma.questionBank.findMany()
+    const questionMap = new Map(allQuestions.map(q => [q.questionId, q]))
+
+    // Enrich submissions with question details
+    const enrichedSubmissions = submissions.map(submission => {
+      const responses = Array.isArray(submission.responses) ? submission.responses : []
+      const enrichedResponses = responses.map((response: any) => {
+        const question = questionMap.get(response.questionId)
+        if (question) {
+          return {
+            ...response,
+            questionText: question.question,
+            options: question.options,
+            correctAnswer: question.correctAnswer,
+            isCorrect: response.selectedAnswer === question.correctAnswer
+          }
+        }
+        return response
+      })
+
+      return {
+        ...submission,
+        responses: enrichedResponses
+      }
+    })
+
+    return res.json({ success: true, data: enrichedSubmissions })
   } catch (e: any) {
     console.error('❌ Error fetching test submissions:', e)
     return res.status(500).json({ success: false, message: e?.message || 'internal_error' })

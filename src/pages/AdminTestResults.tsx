@@ -76,17 +76,33 @@ export function AdminTestResults() {
       return
     }
 
-    const exportData = filteredSubmissions.map(submission => ({
-      'SEC ID': submission.secId,
-      'Store': submission.storeName ? `${submission.storeName}, ${submission.storeCity || ''}` : 'N/A',
-      'Score': submission.score + '%',
-      'Questions Answered': submission.responses.length,
-      'Total Questions': submission.totalQuestions,
-      'Completion Time (min)': Math.round(submission.completionTime / 60),
-      'Submitted At': new Date(submission.submittedAt).toLocaleString(),
-      'Status': submission.score >= 60 ? 'PASS' : 'FAIL',
-      'Proctoring Flagged': submission.isProctoringFlagged ? 'YES' : 'NO'
-    }))
+    const exportData = filteredSubmissions.map(submission => {
+      // Check if responses have enriched data
+      const hasEnrichedData = submission.responses.some(r => r.isCorrect !== undefined)
+      
+      const correctCount = hasEnrichedData ? submission.responses.filter(r => r.isCorrect).length : 'N/A'
+      const wrongCount = hasEnrichedData ? submission.responses.filter(r => !r.isCorrect).length : 'N/A'
+      const answerDetails = hasEnrichedData 
+        ? submission.responses.map((r, idx) => 
+            `Q${idx + 1}: ${r.isCorrect ? 'CORRECT' : 'WRONG'} (Selected: ${r.selectedAnswer}, Correct: ${r.correctAnswer})`
+          ).join(' | ')
+        : 'Answer details not available'
+      
+      return {
+        'SEC ID': submission.secId,
+        'Store': submission.storeName ? `${submission.storeName}, ${submission.storeCity || ''}` : 'N/A',
+        'Score': submission.score + '%',
+        'Correct Answers': correctCount,
+        'Wrong Answers': wrongCount,
+        'Questions Answered': submission.responses.length,
+        'Total Questions': submission.totalQuestions,
+        'Completion Time (min)': Math.round(submission.completionTime / 60),
+        'Submitted At': new Date(submission.submittedAt).toLocaleString(),
+        'Status': submission.score >= 60 ? 'PASS' : 'FAIL',
+        'Proctoring Flagged': submission.isProctoringFlagged ? 'YES' : 'NO',
+        'Answer Details': answerDetails
+      }
+    })
 
     const ws = XLSX.utils.json_to_sheet(exportData)
     const wb = XLSX.utils.book_new()
@@ -223,6 +239,9 @@ export function AdminTestResults() {
                   <th className="w-[9%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     SS
                   </th>
+                  <th className="w-[12%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Answers
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -309,6 +328,115 @@ export function AdminTestResults() {
                           📸 View
                         </button>
                       )}
+                    </td>
+                    <td className="px-3 py-3">
+                      <button
+                        onClick={() => {
+                          // Check if responses have enriched data
+                          const hasEnrichedData = submission.responses.some(r => r.isCorrect !== undefined && r.correctAnswer !== undefined)
+                          
+                          if (!hasEnrichedData) {
+                            // Show basic response data without correct/incorrect info
+                            const answersHTML = submission.responses.map((r, idx) => {
+                              return `<div style="margin-bottom: 12px; padding: 8px; background: #f9fafb; border-radius: 6px;">
+                                <div style="font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                  Q${idx + 1}: Question ID ${r.questionId}
+                                </div>
+                                <div style="font-size: 0.875rem; color: #6b7280;">
+                                  Selected Answer: <strong>${r.selectedAnswer}</strong>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 4px;">
+                                  ⚠️ Question details not available - question may have been deleted from bank
+                                </div>
+                              </div>`
+                            }).join('')
+                            
+                            const modal = document.createElement('div')
+                            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;'
+                            modal.innerHTML = `
+                              <div style="background: white; padding: 24px; border-radius: 12px; max-width: 600px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                  <h2 style="font-size: 1.25rem; font-weight: 700; color: #111827;">Answer Details - ${submission.secId}</h2>
+                                  <button onclick="this.closest('div[style*=fixed]').remove()" style="padding: 4px 8px; background: #f3f4f6; border-radius: 6px; cursor: pointer; border: none; font-size: 1.25rem;">✕</button>
+                                </div>
+                                <div style="margin-bottom: 16px; padding: 12px; background: #fef3c7; border-radius: 6px;">
+                                  <div style="color: #92400e; font-size: 0.875rem;">
+                                    ⚠️ Question details not available in database. Questions may have been updated or deleted from the question bank.
+                                  </div>
+                                </div>
+                                <div style="margin-bottom: 16px; padding: 12px; background: #f9fafb; border-radius: 6px; display: flex; gap: 24px;">
+                                  <div>
+                                    <span style="color: #6b7280; font-size: 0.875rem;">Questions Answered:</span>
+                                    <strong style="color: #3b82f6; margin-left: 8px;">${submission.responses.length}</strong>
+                                  </div>
+                                  <div>
+                                    <span style="color: #6b7280; font-size: 0.875rem;">Score:</span>
+                                    <strong style="color: #3b82f6; margin-left: 8px;">${submission.score}%</strong>
+                                  </div>
+                                </div>
+                                ${answersHTML}
+                              </div>
+                            `
+                            modal.onclick = (e) => { if (e.target === modal) modal.remove() }
+                            document.body.appendChild(modal)
+                            return
+                          }
+                          
+                          const correctCount = submission.responses.filter(r => r.isCorrect).length
+                          const wrongCount = submission.responses.filter(r => !r.isCorrect).length
+                          const answersHTML = submission.responses.map((r, idx) => {
+                            const icon = r.isCorrect ? '✓' : '✗'
+                            const color = r.isCorrect ? '#22c55e' : '#ef4444'
+                            const bgColor = r.isCorrect ? '#f0fdf4' : '#fef2f2'
+                            return `<div style="margin-bottom: 12px; padding: 8px; background: ${bgColor}; border-radius: 6px; border-left: 3px solid ${color};">
+                              <div style="font-weight: 600; color: ${color}; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.25rem;">${icon}</span>
+                                <span>Q${idx + 1}: ${r.questionText || 'Question ' + r.questionId}</span>
+                              </div>
+                              <div style="font-size: 0.875rem; color: #374151; margin-top: 8px;">
+                                <div style="margin-bottom: 4px;">
+                                  <span style="color: #6b7280;">Selected:</span> <strong style="color: ${r.isCorrect ? '#059669' : '#dc2626'};">${r.selectedAnswer}</strong>
+                                </div>
+                                ${!r.isCorrect ? `<div>
+                                  <span style="color: #6b7280;">Correct Answer:</span> <strong style="color: #059669;">${r.correctAnswer}</strong>
+                                </div>` : ''}
+                              </div>
+                            </div>`
+                          }).join('')
+                          
+                          const modal = document.createElement('div')
+                          modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;'
+                          modal.innerHTML = `
+                            <div style="background: white; padding: 24px; border-radius: 12px; max-width: 600px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+                              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h2 style="font-size: 1.25rem; font-weight: 700; color: #111827;">Answer Details - ${submission.secId}</h2>
+                                <button onclick="this.closest('div[style*=fixed]').remove()" style="padding: 4px 8px; background: #f3f4f6; border-radius: 6px; cursor: pointer; border: none; font-size: 1.25rem;">✕</button>
+                              </div>
+                              <div style="margin-bottom: 16px; padding: 12px; background: #f9fafb; border-radius: 6px; display: flex; gap: 24px; flex-wrap: wrap;">
+                                <div>
+                                  <span style="color: #6b7280; font-size: 0.875rem;">Correct:</span>
+                                  <strong style="color: #22c55e; margin-left: 8px; font-size: 1.125rem;">${correctCount}</strong>
+                                </div>
+                                <div>
+                                  <span style="color: #6b7280; font-size: 0.875rem;">Wrong:</span>
+                                  <strong style="color: #ef4444; margin-left: 8px; font-size: 1.125rem;">${wrongCount}</strong>
+                                </div>
+                                <div>
+                                  <span style="color: #6b7280; font-size: 0.875rem;">Score:</span>
+                                  <strong style="color: #3b82f6; margin-left: 8px; font-size: 1.125rem;">${submission.score}%</strong>
+                                </div>
+                              </div>
+                              ${answersHTML}
+                            </div>
+                          `
+                          modal.onclick = (e) => { if (e.target === modal) modal.remove() }
+                          document.body.appendChild(modal)
+                        }}
+                        className="text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors w-full flex items-center justify-center gap-1"
+                      >
+                        <span>📋</span>
+                        <span>View</span>
+                      </button>
                     </td>
                   </tr>
                 ))}
