@@ -338,15 +338,17 @@ export function AdminTestResults() {
                           if (!hasEnrichedData) {
                             // Show basic response data without correct/incorrect info
                             const answersHTML = submission.responses.map((r, idx) => {
-                              return `<div style="margin-bottom: 12px; padding: 8px; background: #f9fafb; border-radius: 6px;">
-                                <div style="font-weight: 600; color: #374151; margin-bottom: 4px;">
-                                  Q${idx + 1}: Question ID ${r.questionId}
+                              return `<div style="margin-bottom: 16px; padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                <div style="font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 0.9375rem;">
+                                  Question ${idx + 1} (ID: ${r.questionId})
                                 </div>
-                                <div style="font-size: 0.875rem; color: #6b7280;">
-                                  Selected Answer: <strong>${r.selectedAnswer}</strong>
+                                <div style="margin-bottom: 8px; padding: 8px; background: white; border-radius: 6px;">
+                                  <div style="font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; margin-bottom: 4px;">SEC's Answer:</div>
+                                  <div style="font-size: 0.9375rem; color: #1f2937; font-weight: 500;">${r.selectedAnswer}</div>
                                 </div>
-                                <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 4px;">
-                                  ⚠️ Question details not available - question may have been deleted from bank
+                                <div style="font-size: 0.75rem; color: #f59e0b; margin-top: 8px; display: flex; align-items: center; gap: 4px;">
+                                  <span>⚠️</span>
+                                  <span>Question details not available - may have been deleted from bank</span>
                                 </div>
                               </div>`
                             }).join('')
@@ -386,20 +388,76 @@ export function AdminTestResults() {
                           const wrongCount = submission.responses.filter(r => !r.isCorrect).length
                           const answersHTML = submission.responses.map((r, idx) => {
                             const icon = r.isCorrect ? '✓' : '✗'
-                            const color = r.isCorrect ? '#22c55e' : '#ef4444'
-                            const bgColor = r.isCorrect ? '#f0fdf4' : '#fef2f2'
-                            return `<div style="margin-bottom: 12px; padding: 8px; background: ${bgColor}; border-radius: 6px; border-left: 3px solid ${color};">
-                              <div style="font-weight: 600; color: ${color}; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
-                                <span style="font-size: 1.25rem;">${icon}</span>
-                                <span>Q${idx + 1}: ${r.questionText || 'Question ' + r.questionId}</span>
-                              </div>
-                              <div style="font-size: 0.875rem; color: #374151; margin-top: 8px;">
-                                <div style="margin-bottom: 4px;">
-                                  <span style="color: #6b7280;">Selected:</span> <strong style="color: ${r.isCorrect ? '#059669' : '#dc2626'};">${r.selectedAnswer}</strong>
+                            const statusColor = r.isCorrect ? '#22c55e' : '#ef4444'
+                            const statusText = r.isCorrect ? 'Correct' : 'Incorrect'
+                            
+                            // Generate options HTML if available
+                            let optionsHTML = ''
+                            if (r.options && Array.isArray(r.options)) {
+                              optionsHTML = r.options.map(option => {
+                                const isCorrectAnswer = option === r.correctAnswer
+                                const isSelectedAnswer = option === r.selectedAnswer
+                                
+                                let optionStyle = 'margin-bottom: 8px; padding: 12px; border-radius: 6px; border: 2px solid #e5e7eb; background: white;'
+                                let optionContent = option
+                                
+                                if (isCorrectAnswer && isSelectedAnswer) {
+                                  // SEC selected the correct answer
+                                  optionStyle = 'margin-bottom: 8px; padding: 12px; border-radius: 6px; border: 2px solid #10b981; background: #ecfdf5;'
+                                  optionContent = `<div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-weight: 500;">${option}</span>
+                                    <span style="color: #059669; font-size: 0.75rem; font-weight: 600;">✓ Correct Answer</span>
+                                  </div>`
+                                } else if (isCorrectAnswer) {
+                                  // This is the correct answer but SEC didn't select it
+                                  optionStyle = 'margin-bottom: 8px; padding: 12px; border-radius: 6px; border: 2px solid #10b981; background: #ecfdf5;'
+                                  optionContent = `<div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-weight: 500;">${option}</span>
+                                    <span style="color: #059669; font-size: 0.75rem; font-weight: 600;">✓ Correct Answer</span>
+                                  </div>`
+                                } else if (isSelectedAnswer) {
+                                  // SEC selected this wrong answer
+                                  optionStyle = 'margin-bottom: 8px; padding: 12px; border-radius: 6px; border: 2px solid #ef4444; background: #fef2f2;'
+                                  optionContent = `<div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-weight: 500;">${option}</span>
+                                    <span style="color: #dc2626; font-size: 0.75rem; font-weight: 600;">✗ Selected</span>
+                                  </div>`
+                                }
+                                
+                                return `<div style="${optionStyle}">${optionContent}</div>`
+                              }).join('')
+                            }
+                            
+                            return `<div style="margin-bottom: 24px; padding: 0; background: white; border-radius: 8px; border-left: 4px solid ${statusColor};">
+                              <!-- Question Header -->
+                              <div style="padding: 16px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">
+                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                  <div style="font-weight: 600; color: #374151; font-size: 0.875rem;">
+                                    Question ${idx + 1}
+                                  </div>
+                                  <div style="display: flex; align-items: center; gap: 4px;">
+                                    <span style="font-size: 0.875rem; font-weight: 600; color: ${statusColor};">${icon} ${statusText}</span>
+                                  </div>
                                 </div>
-                                ${!r.isCorrect ? `<div>
-                                  <span style="color: #6b7280;">Correct Answer:</span> <strong style="color: #059669;">${r.correctAnswer}</strong>
-                                </div>` : ''}
+                              </div>
+                              
+                              <!-- Question Text -->
+                              <div style="padding: 16px; background: #fafafa;">
+                                <div style="font-size: 0.9375rem; color: #111827; line-height: 1.6; font-weight: 500;">${r.questionText || 'Question text not available'}</div>
+                              </div>
+                              
+                              <!-- Options -->
+                              <div style="padding: 16px;">
+                                ${optionsHTML || `
+                                  <div style="padding: 12px; background: #fef2f2; border-radius: 6px; border: 2px solid #ef4444; margin-bottom: 8px;">
+                                    <div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">SEC's Answer:</div>
+                                    <div style="font-weight: 600; color: #dc2626;">${r.selectedAnswer}</div>
+                                  </div>
+                                  ${!r.isCorrect ? `<div style="padding: 12px; background: #ecfdf5; border-radius: 6px; border: 2px solid #10b981;">
+                                    <div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">Correct Answer:</div>
+                                    <div style="font-weight: 600; color: #059669;">${r.correctAnswer}</div>
+                                  </div>` : ''}
+                                `}
                               </div>
                             </div>`
                           }).join('')
