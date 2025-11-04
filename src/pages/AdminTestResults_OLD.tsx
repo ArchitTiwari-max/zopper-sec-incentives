@@ -87,9 +87,16 @@ export function AdminTestResults() {
     }
 
     const exportData = filteredSubmissions.map(submission => {
+      // Check if responses have enriched data
       const hasEnrichedData = submission.responses.some(r => r.isCorrect !== undefined)
+      
       const correctCount = hasEnrichedData ? submission.responses.filter(r => r.isCorrect).length : 'N/A'
       const wrongCount = hasEnrichedData ? submission.responses.filter(r => !r.isCorrect).length : 'N/A'
+      const answerDetails = hasEnrichedData 
+        ? submission.responses.map((r, idx) => 
+            `Q${idx + 1}: ${r.isCorrect ? 'CORRECT' : 'WRONG'} (Selected: ${r.selectedAnswer}, Correct: ${r.correctAnswer})`
+          ).join(' | ')
+        : 'Answer details not available'
       
       return {
         'SEC ID': submission.secId,
@@ -102,7 +109,8 @@ export function AdminTestResults() {
         'Completion Time (min)': Math.round(submission.completionTime / 60),
         'Submitted At': new Date(submission.submittedAt).toLocaleString(),
         'Status': submission.score >= 60 ? 'PASS' : 'FAIL',
-        'Proctoring Flagged': submission.isProctoringFlagged ? 'YES' : 'NO'
+        'Proctoring Flagged': submission.isProctoringFlagged ? 'YES' : 'NO',
+        'Answer Details': answerDetails
       }
     })
 
@@ -230,12 +238,12 @@ export function AdminTestResults() {
                     Time
                   </th>
                   <th 
-                    className="w-[16%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="w-[18%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('submittedAt')}
                   >
                     Submitted {sortBy === 'submittedAt' && (sortOrder === 'desc' ? '↓' : '↑')}
                   </th>
-                  <th className="w-[14%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="w-[18%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="w-[9%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -333,7 +341,107 @@ export function AdminTestResults() {
                     </td>
                     <td className="px-3 py-3">
                       <button
-                        onClick={() => setShowAnswersFor(submission)}
+                        onClick={() => {
+                          // Check if responses have enriched data
+                          const hasEnrichedData = submission.responses.some(r => r.isCorrect !== undefined && r.correctAnswer !== undefined)
+                          
+                          if (!hasEnrichedData) {
+                            // Show basic response data without correct/incorrect info
+                            const answersHTML = submission.responses.map((r, idx) => {
+                              return `<div style="margin-bottom: 12px; padding: 8px; background: #f9fafb; border-radius: 6px;">
+                                <div style="font-weight: 600; color: #374151; margin-bottom: 4px;">
+                                  Q${idx + 1}: Question ID ${r.questionId}
+                                </div>
+                                <div style="font-size: 0.875rem; color: #6b7280;">
+                                  Selected Answer: <strong>${r.selectedAnswer}</strong>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 4px;">
+                                  ⚠️ Question details not available - question may have been deleted from bank
+                                </div>
+                              </div>`
+                            }).join('')
+                            
+                            const modal = document.createElement('div')
+                            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;'
+                            modal.innerHTML = `
+                              <div style="background: white; padding: 24px; border-radius: 12px; max-width: 600px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                  <h2 style="font-size: 1.25rem; font-weight: 700; color: #111827;">Answer Details - ${submission.secId}</h2>
+                                  <button onclick="this.closest('div[style*=fixed]').remove()" style="padding: 4px 8px; background: #f3f4f6; border-radius: 6px; cursor: pointer; border: none; font-size: 1.25rem;">✕</button>
+                                </div>
+                                <div style="margin-bottom: 16px; padding: 12px; background: #fef3c7; border-radius: 6px;">
+                                  <div style="color: #92400e; font-size: 0.875rem;">
+                                    ⚠️ Question details not available in database. Questions may have been updated or deleted from the question bank.
+                                  </div>
+                                </div>
+                                <div style="margin-bottom: 16px; padding: 12px; background: #f9fafb; border-radius: 6px; display: flex; gap: 24px;">
+                                  <div>
+                                    <span style="color: #6b7280; font-size: 0.875rem;">Questions Answered:</span>
+                                    <strong style="color: #3b82f6; margin-left: 8px;">${submission.responses.length}</strong>
+                                  </div>
+                                  <div>
+                                    <span style="color: #6b7280; font-size: 0.875rem;">Score:</span>
+                                    <strong style="color: #3b82f6; margin-left: 8px;">${submission.score}%</strong>
+                                  </div>
+                                </div>
+                                ${answersHTML}
+                              </div>
+                            `
+                            modal.onclick = (e) => { if (e.target === modal) modal.remove() }
+                            document.body.appendChild(modal)
+                            return
+                          }
+                          
+                          const correctCount = submission.responses.filter(r => r.isCorrect).length
+                          const wrongCount = submission.responses.filter(r => !r.isCorrect).length
+                          const answersHTML = submission.responses.map((r, idx) => {
+                            const icon = r.isCorrect ? '✓' : '✗'
+                            const color = r.isCorrect ? '#22c55e' : '#ef4444'
+                            const bgColor = r.isCorrect ? '#f0fdf4' : '#fef2f2'
+                            return `<div style="margin-bottom: 12px; padding: 8px; background: ${bgColor}; border-radius: 6px; border-left: 3px solid ${color};">
+                              <div style="font-weight: 600; color: ${color}; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.25rem;">${icon}</span>
+                                <span>Q${idx + 1}: ${r.questionText || 'Question ' + r.questionId}</span>
+                              </div>
+                              <div style="font-size: 0.875rem; color: #374151; margin-top: 8px;">
+                                <div style="margin-bottom: 4px;">
+                                  <span style="color: #6b7280;">Selected:</span> <strong style="color: ${r.isCorrect ? '#059669' : '#dc2626'};">${r.selectedAnswer}</strong>
+                                </div>
+                                ${!r.isCorrect ? `<div>
+                                  <span style="color: #6b7280;">Correct Answer:</span> <strong style="color: #059669;">${r.correctAnswer}</strong>
+                                </div>` : ''}
+                              </div>
+                            </div>`
+                          }).join('')
+                          
+                          const modal = document.createElement('div')
+                          modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;'
+                          modal.innerHTML = `
+                            <div style="background: white; padding: 24px; border-radius: 12px; max-width: 600px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+                              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h2 style="font-size: 1.25rem; font-weight: 700; color: #111827;">Answer Details - ${submission.secId}</h2>
+                                <button onclick="this.closest('div[style*=fixed]').remove()" style="padding: 4px 8px; background: #f3f4f6; border-radius: 6px; cursor: pointer; border: none; font-size: 1.25rem;">✕</button>
+                              </div>
+                              <div style="margin-bottom: 16px; padding: 12px; background: #f9fafb; border-radius: 6px; display: flex; gap: 24px; flex-wrap: wrap;">
+                                <div>
+                                  <span style="color: #6b7280; font-size: 0.875rem;">Correct:</span>
+                                  <strong style="color: #22c55e; margin-left: 8px; font-size: 1.125rem;">${correctCount}</strong>
+                                </div>
+                                <div>
+                                  <span style="color: #6b7280; font-size: 0.875rem;">Wrong:</span>
+                                  <strong style="color: #ef4444; margin-left: 8px; font-size: 1.125rem;">${wrongCount}</strong>
+                                </div>
+                                <div>
+                                  <span style="color: #6b7280; font-size: 0.875rem;">Score:</span>
+                                  <strong style="color: #3b82f6; margin-left: 8px; font-size: 1.125rem;">${submission.score}%</strong>
+                                </div>
+                              </div>
+                              ${answersHTML}
+                            </div>
+                          `
+                          modal.onclick = (e) => { if (e.target === modal) modal.remove() }
+                          document.body.appendChild(modal)
+                        }}
                         className="text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors w-full flex items-center justify-center gap-1"
                       >
                         <span>📋</span>
@@ -347,81 +455,6 @@ export function AdminTestResults() {
           </div>
         )}
       </div>
-
-      {/* Answers Modal */}
-      {showAnswersFor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowAnswersFor(null)}></div>
-          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
-              <h3 className="text-lg font-semibold">Answer Details - {showAnswersFor.secId}</h3>
-              <button onClick={() => setShowAnswersFor(null)} className="text-gray-500 hover:text-gray-700 text-xl">✕</button>
-            </div>
-
-            {/* Summary */}
-            <div className="mx-4 mb-4 p-3 bg-gray-50 rounded-md flex gap-6 text-sm">
-              <div>
-                <span className="text-gray-600">Questions Answered:</span>
-                <span className="ml-2 font-semibold text-blue-600">{showAnswersFor.responses.length}</span>
-              </div>
-              <div>
-                <span className="text-gray-600">Score:</span>
-                <span className="ml-2 font-semibold text-blue-600">{showAnswersFor.score}%</span>
-              </div>
-            </div>
-
-            {/* Answers List */}
-            <div className="px-4 pb-6 space-y-4">
-              {showAnswersFor.responses.map((resp, idx) => {
-                const q = resp.questionText
-                  ? ({ id: resp.questionId, question: resp.questionText, options: resp.options, correctAnswer: resp.correctAnswer } as Question)
-                  : questionBank.find(qb => qb.id === resp.questionId)
-                const isCorrect = q && resp.correctAnswer ? resp.selectedAnswer === resp.correctAnswer : undefined
-
-                return (
-                  <div key={idx} className="bg-white rounded-lg shadow border border-gray-100 overflow-hidden">
-                    {q ? (
-                      <div className="p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-sm font-semibold text-gray-500">Q{idx + 1}</span>
-                          {typeof isCorrect === 'boolean' && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                              {isCorrect ? '✓ Correct' : '✗ Incorrect'}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-gray-900 font-medium mb-3">{q.question}</p>
-                        <div className="space-y-2">
-                          {(q.options || []).map((opt, oi) => {
-                            const letter = String.fromCharCode(65 + oi)
-                            const sel = resp.selectedAnswer === letter
-                            const cor = q.correctAnswer === letter
-                            return (
-                              <div key={oi} className={`p-3 rounded-lg border-2 ${cor ? 'bg-green-50 border-green-500' : sel ? 'bg-red-50 border-red-500' : 'bg-gray-50 border-gray-200'}`}>
-                                <div className="flex items-center justify-between gap-2 flex-wrap">
-                                  <span className={`text-sm ${cor ? 'text-green-900 font-semibold' : sel ? 'text-red-900 font-semibold' : 'text-gray-700'}`}>{opt}</span>
-                                  {cor && <span className="text-green-700 text-xs font-semibold whitespace-nowrap">✓ Correct Answer</span>}
-                                  {sel && !cor && <span className="text-red-700 text-xs font-semibold whitespace-nowrap">Your Answer</span>}
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-4 bg-gray-50">
-                        <div className="text-sm font-semibold text-gray-700 mb-1">Q{idx + 1}: Question ID {resp.questionId}</div>
-                        <div className="text-sm text-gray-700">Selected Answer: <span className="font-medium">{resp.selectedAnswer}</span></div>
-                        <div className="text-xs text-gray-500 mt-2">⚠️ Question details not available</div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
