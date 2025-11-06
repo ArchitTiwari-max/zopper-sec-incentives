@@ -74,8 +74,8 @@ async function sendBulkTestLinks(secs) {
 const isMainModule = process.argv[1] && process.argv[1].endsWith('send-test-link.js');
 
 if (isMainModule) {
-  const phone = process.argv[2] || '917408108617';
-  const testLink = process.argv[3] || 'test?phone=7408108617';
+  const phone = process.argv[2] || '918368017420';
+  const testLink = process.argv[3] || `test?phone=${phone}`;
   const secName = process.argv[4] || 'Vishal';
   const deadline = process.argv[5] || '25/10/2025';
   
