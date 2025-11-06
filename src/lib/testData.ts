@@ -10,6 +10,11 @@ export interface TestResponse {
   questionId: number
   selectedAnswer: string
   answeredAt: string
+  // Enriched fields from backend
+  questionText?: string
+  options?: string[]
+  correctAnswer?: string
+  isCorrect?: boolean
 }
 
 export interface TestSubmission {
