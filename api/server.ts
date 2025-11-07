@@ -98,9 +98,9 @@ async function ensureEssentialSKUs() {
 // Comify WhatsApp API integration
 async function sendOTPViaWhatsApp(phone: string, otp: string) {
   try {
-    const comifyApiKey = process.env.COMIFY_API_KEY || '4hp75ThOEyWdJAWQ4cNmD4GpSBHrBh'
-    const baseUrl = process.env.COMIFY_BASE_URL || 'https://commify.transify.tech/v1'
-    const templateName = process.env.COMIFY_TEMPLATE_NAME || 'zopper_oem_sec_verify'
+    const comifyApiKey = process.env.COMIFY_API_KEY
+    const baseUrl = process.env.COMIFY_BASE_URL
+    const templateName = process.env.COMIFY_TEMPLATE_NAME
     
     // Format phone number - ensure it starts with 91
     const formattedPhone = phone.startsWith('91') ? phone : `91${phone}`
