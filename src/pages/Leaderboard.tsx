@@ -37,7 +37,14 @@ export function Leaderboard() {
   const [userPosition, setUserPosition] = useState<UserPosition | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedMonth, setSelectedMonth] = useState<string>('')
+  // Default to current month (YYYY-MM format)
+  const getCurrentMonth = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    return `${year}-${month}`
+  }
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth())
 
   useEffect(() => {
     fetchLeaderboardData()
