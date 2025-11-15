@@ -85,14 +85,69 @@ async function ensureEssentialSKUs() {
       })
 
       if (!existing) {
-        const created = await prisma.samsungSKU.create({ data: sku })
-        // Removed startup console log
-      } else {
-        // Removed startup console log
+        await prisma.samsungSKU.create({ data: sku })
       }
     } catch (e) {
       console.error('❌ Failed ensuring Samsung SKU', sku, e)
     }
+  }
+}
+
+// Ensure Mass A07 plan prices match Mass A06
+async function syncMassA07PlanPricesWithA06() {
+  try {
+    const massA06 = await prisma.samsungSKU.findFirst({
+      where: { Category: 'Mass', ModelName: 'A06' },
+      include: { plans: true },
+    })
+    const massA07 = await prisma.samsungSKU.findFirst({
+      where: { Category: 'Mass', ModelName: 'A07' },
+      include: { plans: true },
+    })
+
+    if (!massA06 || !massA07) {
+      return
+    }
+
+    const sourcePrices = new Map<string, number>()
+    for (const p of massA06.plans) {
+      sourcePrices.set(p.planType, p.price)
+    }
+
+    const TARGET_PLAN_TYPES: string[] = [
+      'Screen_Protect_1_Yr',
+      'ADLD_1_Yr',
+      'Combo_2Yrs',
+      'Extended_Warranty_1_Yr',
+    ]
+
+    for (const planType of TARGET_PLAN_TYPES) {
+      const price = sourcePrices.get(planType)
+      if (price == null) continue
+
+      const existing = await prisma.plan.findFirst({
+        where: { samsungSKUId: massA07.id, planType: planType as any },
+      })
+
+      if (existing) {
+        if (existing.price !== price) {
+          await prisma.plan.update({
+            where: { id: existing.id },
+            data: { price },
+          })
+        }
+      } else {
+        await prisma.plan.create({
+          data: {
+            planType: planType as any,
+            price,
+            samsungSKUId: massA07.id,
+          },
+        })
+      }
+    }
+  } catch (error) {
+    console.error('❌ Failed to sync Mass A07 plan prices with Mass A06:', error)
   }
 }
 
@@ -4071,6 +4126,7 @@ if (!process.env.VERCEL) {
   app.listen(PORT, async () => {
     // Run essential data checks on startup (silently)
     await ensureEssentialSKUs()
+    await syncMassA07PlanPricesWithA06()
     
     console.log(`🚀 API Server running on http://localhost:${PORT}`)
     console.log(`📍 Available endpoints:`)
@@ -4107,6 +4163,7 @@ if (process.env.VERCEL) {
   (async () => {
     try {
       await ensureEssentialSKUs()
+      await syncMassA07PlanPricesWithA06()
     } catch (error) {
       console.error('❌ Failed to run essential data checks on serverless startup:', error)
     }
