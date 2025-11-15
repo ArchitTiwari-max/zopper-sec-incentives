@@ -26,10 +26,18 @@ export function AdminLeaderboard() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Default to current month (YYYY-MM format)
+  const getCurrentMonth = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    return `${year}-${month}`
+  }
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth())
 
   useEffect(() => {
     fetchLeaderboardData()
-  }, [])
+  }, [selectedMonth])
 
   const fetchLeaderboardData = async () => {
     if (!auth?.token) {
@@ -40,7 +48,10 @@ export function AdminLeaderboard() {
 
     try {
       setLoading(true)
-const response = await authFetch(`${config.apiUrl}/admin/leaderboard`, {
+      const url = selectedMonth 
+        ? `${config.apiUrl}/admin/leaderboard?month=${selectedMonth}`
+        : `${config.apiUrl}/admin/leaderboard`
+const response = await authFetch(url, {
         headers: {
           'Authorization': `Bearer ${auth.token}`
         }
@@ -161,6 +172,30 @@ const response = await authFetch(`${config.apiUrl}/admin/leaderboard`, {
           </motion.div>
           <h1 className="text-xl sm:text-3xl font-bold mb-2 leading-tight">Sales Champion Leaderboard</h1>
           <p className="text-white/80 text-sm sm:text-base">Top stores by total incentives</p>
+          
+          {/* Month Filter */}
+          <div className="mt-4 flex justify-center">
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="bg-white/20 backdrop-blur-md text-white border border-white/30 rounded-xl px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer"
+            >
+              <option value="" className="bg-purple-600 text-white">All Time</option>
+              <option value="2025-01" className="bg-purple-600 text-white">January 2025</option>
+              <option value="2025-02" className="bg-purple-600 text-white">February 2025</option>
+              <option value="2025-03" className="bg-purple-600 text-white">March 2025</option>
+              <option value="2025-04" className="bg-purple-600 text-white">April 2025</option>
+              <option value="2025-05" className="bg-purple-600 text-white">May 2025</option>
+              <option value="2025-06" className="bg-purple-600 text-white">June 2025</option>
+              <option value="2025-07" className="bg-purple-600 text-white">July 2025</option>
+              <option value="2025-08" className="bg-purple-600 text-white">August 2025</option>
+              <option value="2025-09" className="bg-purple-600 text-white">September 2025</option>
+              <option value="2025-10" className="bg-purple-600 text-white">October 2025</option>
+              <option value="2025-11" className="bg-purple-600 text-white">November 2025</option>
+              <option value="2025-12" className="bg-purple-600 text-white">December 2025</option>
+            </select>
+          </div>
+          
           <div className="text-white/80 text-xs mt-2 flex items-center justify-center gap-3">
             <span>
               Rank movement is calculated against yesterday 23:59:59 IST.
