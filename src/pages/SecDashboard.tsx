@@ -71,17 +71,9 @@ export function SecDashboard() {
   }, [dateTick])
   // Build date options for 'Date of Sale' dropdown
   const dateOptions = useMemo(() => {
-    // Fixed date range: 17-10-2025 to 26-10-2025
-    const opts: string[] = []
-    const year = 2025
-    const month = 9 // October (0-indexed)
-    
-    for (let d = 17; d <= 26; d++) {
-      const istMs = Date.UTC(year, month, d, 0, 0, 0, 0) + IST_OFFSET_MS
-      opts.push(formatDMYFromISTMs(istMs))
-    }
-    return opts
-  }, [IST_OFFSET_MS])
+    // Show only today's date
+    return [todayLabel]
+  }, [todayLabel])
   
   // Ensure current selection is valid; if not, default to latest option (today)
   useEffect(() => {
