@@ -2884,7 +2884,7 @@ app.get('/api/admin/leaderboard', async (req, res) => {
       _sum: { incentiveEarned: true }
     })
 
-    // Build previous ranking list (only stores with any historical sales up to yesterday)
+    // Build previous ranking list (only stores with any historical sales up to 30 seconds ago)
     const prevStoreIds = prevRaw.map(s => s.storeId)
     const prevTotals = new Map(prevRaw.map(s => [s.storeId, s._sum.incentiveEarned || 0]))
 
@@ -2910,7 +2910,7 @@ app.get('/api/admin/leaderboard', async (req, res) => {
       rankChange: (prevRankMap.get(s.storeId) ?? s.rank) - s.rank
     }))
 
-    console.log(`✅ Admin leaderboard fetched with ${withChange.length} stores (yesterday snapshot @ ${endOfYesterday.toISOString()})`)
+    console.log(`✅ Admin leaderboard fetched with ${withChange.length} stores (instant comparison @ ${thirtySecondsAgo.toISOString()})`)
     return res.json({ success: true, data: { leaderboard: withChange } })
   } catch (error) {
     console.error('❌ Error fetching admin leaderboard:', error)
