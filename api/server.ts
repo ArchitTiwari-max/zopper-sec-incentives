@@ -2668,16 +2668,16 @@ app.get('/api/leaderboard', async (req, res) => {
         rank: index + 1
       }))
 
-    // Compute previous snapshot - compare against 1 hour ago for real-time changes
-    const oneHourAgo = new Date(nowIST.getTime() - 60 * 60 * 1000)
+    // Compute previous snapshot - compare against 30 seconds ago for instant real-time changes
+    const thirtySecondsAgo = new Date(nowIST.getTime() - 30 * 1000)
 
     const prevWhere: any = {
       plan: { planType: { not: 'Test_Plan' } }
     }
 
     if (startOfMonth && endOfMonth) {
-      // Restrict previous snapshot to the same month as current filter, up to 1 hour ago
-      let prevEnd = oneHourAgo
+      // Restrict previous snapshot to the same month as current filter, up to 30 seconds ago
+      let prevEnd = thirtySecondsAgo
       if (prevEnd > endOfMonth) prevEnd = endOfMonth
       if (prevEnd < startOfMonth) prevEnd = startOfMonth // Don't go before month start
       prevWhere.submittedAt = {
@@ -2685,8 +2685,8 @@ app.get('/api/leaderboard', async (req, res) => {
         lte: prevEnd,
       }
     } else {
-      // All-time mode: compare against entire history up to 1 hour ago
-      prevWhere.submittedAt = { lte: oneHourAgo }
+      // All-time mode: compare against entire history up to 30 seconds ago
+      prevWhere.submittedAt = { lte: thirtySecondsAgo }
     }
 
     const prevRaw = await prisma.salesReport.groupBy({
@@ -2858,16 +2858,16 @@ app.get('/api/admin/leaderboard', async (req, res) => {
       })
       .map((stat, index) => ({ ...stat, rank: index + 1 }))
 
-    // Previous snapshot: compare against 1 hour ago for real-time changes
+    // Previous snapshot: compare against 30 seconds ago for instant real-time changes
     const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
-    const oneHourAgo = new Date(nowIST.getTime() - 60 * 60 * 1000)
+    const thirtySecondsAgo = new Date(nowIST.getTime() - 30 * 1000)
 
     const prevWhereAdmin: any = {
       plan: { planType: { not: 'Test_Plan' } }
     }
 
     if (startOfMonthAdmin && endOfMonthAdmin) {
-      let prevEnd = oneHourAgo
+      let prevEnd = thirtySecondsAgo
       if (prevEnd > endOfMonthAdmin) prevEnd = endOfMonthAdmin
       if (prevEnd < startOfMonthAdmin) prevEnd = startOfMonthAdmin // Don't go before month start
       prevWhereAdmin.submittedAt = {
@@ -2875,7 +2875,7 @@ app.get('/api/admin/leaderboard', async (req, res) => {
         lte: prevEnd,
       }
     } else {
-      prevWhereAdmin.submittedAt = { lte: oneHourAgo }
+      prevWhereAdmin.submittedAt = { lte: thirtySecondsAgo }
     }
 
     const prevRaw = await prisma.salesReport.groupBy({
