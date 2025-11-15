@@ -2522,11 +2522,13 @@ app.get('/api/leaderboard', async (req, res) => {
     // Get month filter from query params (format: YYYY-MM)
     const monthFilter = req.query.month as string | undefined
     let dateFilter: any = {}
+    let startOfMonth: Date | null = null
+    let endOfMonth: Date | null = null
     
     if (monthFilter && /^\d{4}-\d{2}$/.test(monthFilter)) {
       const [year, month] = monthFilter.split('-').map(Number)
-      const startOfMonth = new Date(year, month - 1, 1)
-      const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
+      startOfMonth = new Date(year, month - 1, 1)
+      endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
       dateFilter = {
         submittedAt: {
           gte: startOfMonth,
@@ -2679,12 +2681,26 @@ app.get('/api/leaderboard', async (req, res) => {
     // Compute previous snapshot up to yesterday 23:59:59 to derive rank movement
     const endOfYesterday = new Date(startOfToday.getTime() - 1)
 
+    const prevWhere: any = {
+      plan: { planType: { not: 'Test_Plan' } }
+    }
+
+    if (startOfMonth && endOfMonth) {
+      // Restrict previous snapshot to the same month as current filter
+      let prevEnd = endOfYesterday
+      if (prevEnd > endOfMonth) prevEnd = endOfMonth
+      prevWhere.submittedAt = {
+        gte: startOfMonth,
+        lte: prevEnd,
+      }
+    } else {
+      // All-time mode: compare against entire history up to yesterday
+      prevWhere.submittedAt = { lte: endOfYesterday }
+    }
+
     const prevRaw = await prisma.salesReport.groupBy({
       by: ['storeId'],
-      where: {
-        submittedAt: { lte: endOfYesterday },
-        plan: { planType: { not: 'Test_Plan' } }
-      },
+      where: prevWhere,
       _sum: { incentiveEarned: true }
     })
 
@@ -2768,15 +2784,17 @@ app.get('/api/admin/leaderboard', async (req, res) => {
     // Get month filter from query params (format: YYYY-MM)
     const monthFilter = req.query.month as string | undefined
     let dateFilter: any = {}
+    let startOfMonthAdmin: Date | null = null
+    let endOfMonthAdmin: Date | null = null
     
     if (monthFilter && /^\d{4}-\d{2}$/.test(monthFilter)) {
       const [year, month] = monthFilter.split('-').map(Number)
-      const startOfMonth = new Date(year, month - 1, 1)
-      const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
+      startOfMonthAdmin = new Date(year, month - 1, 1)
+      endOfMonthAdmin = new Date(year, month, 0, 23, 59, 59, 999)
       dateFilter = {
         submittedAt: {
-          gte: startOfMonth,
-          lte: endOfMonth
+          gte: startOfMonthAdmin,
+          lte: endOfMonthAdmin
         }
       }
     }
@@ -2867,12 +2885,24 @@ app.get('/api/admin/leaderboard', async (req, res) => {
     const startOfToday = new Date(nowIST.getFullYear(), nowIST.getMonth(), nowIST.getDate())
     const endOfYesterday = new Date(startOfToday.getTime() - 1)
 
+    const prevWhereAdmin: any = {
+      plan: { planType: { not: 'Test_Plan' } }
+    }
+
+    if (startOfMonthAdmin && endOfMonthAdmin) {
+      let prevEnd = endOfYesterday
+      if (prevEnd > endOfMonthAdmin) prevEnd = endOfMonthAdmin
+      prevWhereAdmin.submittedAt = {
+        gte: startOfMonthAdmin,
+        lte: prevEnd,
+      }
+    } else {
+      prevWhereAdmin.submittedAt = { lte: endOfYesterday }
+    }
+
     const prevRaw = await prisma.salesReport.groupBy({
       by: ['storeId'],
-      where: {
-        submittedAt: { lte: endOfYesterday },
-        plan: { planType: { not: 'Test_Plan' } }
-      },
+      where: prevWhereAdmin,
       _sum: { incentiveEarned: true }
     })
 
