@@ -155,7 +155,7 @@ function processReportsToDaily(reports: SalesReport[]): DayRow[] {
 }
 
 const ADLD_RATE = 100
-const COMBO_RATE = 300
+const COMBO_RATE = 200
 const calcIncentive = (r: DayRow) => r.adld * ADLD_RATE + r.combo * COMBO_RATE
 
 export function ReportPage() {
