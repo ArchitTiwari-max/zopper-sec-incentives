@@ -433,7 +433,7 @@ const response = await authFetch(`${config.apiUrl}/sec/report`, {
         <button 
           type="submit" 
           className="button-gradient w-full py-3 disabled:opacity-60 flex items-center justify-center gap-2"
-          disabled={true}
+          disabled={loading.submit}
         >
           {loading.submit ? (
             <>
