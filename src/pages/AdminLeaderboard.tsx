@@ -355,13 +355,8 @@ const response = await authFetch(url, {
                     </td>
                     <td className="p-1 sm:p-3 min-w-[120px] sm:min-w-[180px]">
                       <div>
-                        <div className="font-semibold text-gray-800 text-xs sm:text-sm break-words leading-tight flex items-center gap-2" style={{wordBreak: 'break-word'}}>
+                        <div className="font-semibold text-gray-800 text-xs sm:text-sm break-words leading-tight" style={{wordBreak: 'break-word'}}>
                           {entry.storeName}
-                          {entry.isNewToday === true && (
-                            <>
-                            <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full whitespace-nowrap inline-block" title="First submission today">New</span>
-                            </>
-                          )}
                         </div>
                         <div className="text-xs text-gray-500 break-words" style={{wordBreak: 'break-word'}}>{entry.city}</div>
                       </div>

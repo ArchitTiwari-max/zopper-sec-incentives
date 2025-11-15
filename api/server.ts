@@ -2604,16 +2604,11 @@ app.get('/api/leaderboard', async (req, res) => {
       }
     })
 
-    // Latest and first submission per store (for tie-breakers and "New" badge)
+    // Latest submission per store (for tie-breakers)
     const lastSubmissions = await prisma.salesReport.groupBy({
       by: ['storeId'],
       where: { ...dateFilter, storeId: { in: storeIds }, plan: { planType: { not: 'Test_Plan' } } },
       _max: { submittedAt: true }
-    })
-    const firstSubmissions = await prisma.salesReport.groupBy({
-      by: ['storeId'],
-      where: { ...dateFilter, storeId: { in: storeIds }, plan: { planType: { not: 'Test_Plan' } } },
-      _min: { submittedAt: true }
     })
 
     // Calculate IST (UTC+5:30) timezone dates
@@ -2625,14 +2620,11 @@ app.get('/api/leaderboard', async (req, res) => {
     const adldMap = new Map(adldIncentives.map(item => [item.storeId, item._sum.incentiveEarned || 0]))
     const comboMap = new Map(comboIncentives.map(item => [item.storeId, item._sum.incentiveEarned || 0]))
     const lastMap = new Map(lastSubmissions.map(item => [item.storeId, item._max.submittedAt || null]))
-    const firstMap = new Map(firstSubmissions.map(item => [item.storeId, item._min.submittedAt || null]))
 
     // Combine all data efficiently
     const detailedStats = leaderboardRawData
       .map(storeStat => {
         const store = storeMap.get(storeStat.storeId)
-        const first = firstMap.get(storeStat.storeId) as Date | null
-        const isNewToday = first ? first >= startOfToday : false
         return {
           storeId: storeStat.storeId,
           storeName: store?.storeName || 'Unknown Store',
@@ -2641,8 +2633,6 @@ app.get('/api/leaderboard', async (req, res) => {
           adldIncentive: adldMap.get(storeStat.storeId) || 0,
           comboIncentive: comboMap.get(storeStat.storeId) || 0,
           lastSubmittedAt: lastMap.get(storeStat.storeId) || null,
-          firstSubmittedAt: first,
-          isNewToday,
           totalSales: storeStat._count.id
         }
       })
@@ -2833,26 +2823,15 @@ app.get('/api/admin/leaderboard', async (req, res) => {
       where: { ...dateFilter, storeId: { in: storeIds }, plan: { planType: { not: 'Test_Plan' } } },
       _max: { submittedAt: true }
     })
-    const firstSubmissionsAdmin = await prisma.salesReport.groupBy({
-      by: ['storeId'],
-      where: { ...dateFilter, storeId: { in: storeIds }, plan: { planType: { not: 'Test_Plan' } } },
-      _min: { submittedAt: true }
-    })
-
-    const nowAdmin = new Date()
-    const startOfTodayAdmin = new Date(nowAdmin.getFullYear(), nowAdmin.getMonth(), nowAdmin.getDate())
 
     const storeMap = new Map(stores.map(store => [store.id, store]))
     const adldMap = new Map(adldIncentives.map(item => [item.storeId, item._sum.incentiveEarned || 0]))
     const comboMap = new Map(comboIncentives.map(item => [item.storeId, item._sum.incentiveEarned || 0]))
     const lastMapAdmin = new Map(lastSubmissionsAdmin.map(item => [item.storeId, item._max.submittedAt || null]))
-    const firstMapAdmin = new Map(firstSubmissionsAdmin.map(item => [item.storeId, item._min.submittedAt || null]))
 
     const detailedStats = leaderboardRawData
       .map(storeStat => {
         const store = storeMap.get(storeStat.storeId)
-        const first = firstMapAdmin.get(storeStat.storeId) as Date | null
-        const isNewToday = first ? first >= startOfTodayAdmin : false
         return {
           storeId: storeStat.storeId,
           storeName: store?.storeName || 'Unknown Store',
@@ -2861,8 +2840,6 @@ app.get('/api/admin/leaderboard', async (req, res) => {
           adldIncentive: adldMap.get(storeStat.storeId) || 0,
           comboIncentive: comboMap.get(storeStat.storeId) || 0,
           lastSubmittedAt: lastMapAdmin.get(storeStat.storeId) || null,
-          firstSubmittedAt: first,
-          isNewToday,
           totalSales: storeStat._count.id
         }
       })
