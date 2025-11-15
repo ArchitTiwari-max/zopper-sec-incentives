@@ -67,8 +67,14 @@ export function AdminDashboard() {
   const [storeFilter, setStoreFilter] = useState('')
   const [planFilter, setPlanFilter] = useState('')
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'unpaid'>('all')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  // Month filter (YYYY-MM format), default to current month
+  const getCurrentMonth = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    return `${year}-${month}`
+  }
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth())
   const [page, setPage] = useState(1)
   const pageSize = 50
   const [showMultiSelect, setShowMultiSelect] = useState(false)
@@ -156,20 +162,25 @@ const response = await authFetch(`${config.apiUrl}/reports/admin`, {
       const matchesPlan = !planFilter || r.plan.planType === planFilter
       const matchesPayment = paymentFilter === 'all' || (paymentFilter === 'paid' ? r.isPaid : !r.isPaid)
       
-      // Date filter
-      const submittedDate = new Date(r.submittedAt.includes(' ') ? r.submittedAt.replace(' ', 'T') : r.submittedAt)
-      const matchesStartDate = !startDate || submittedDate >= new Date(startDate)
-      const matchesEndDate = !endDate || submittedDate <= new Date(endDate + 'T23:59:59')
+      // Month filter
+      let matchesMonth = true
+      if (selectedMonth && /^\d{4}-\d{2}$/.test(selectedMonth)) {
+        const [year, month] = selectedMonth.split('-').map(Number)
+        const submittedDate = new Date(r.submittedAt.includes(' ') ? r.submittedAt.replace(' ', 'T') : r.submittedAt)
+        const reportYear = submittedDate.getFullYear()
+        const reportMonth = submittedDate.getMonth() + 1
+        matchesMonth = reportYear === year && reportMonth === month
+      }
       
-      return matchesQuery && matchesStore && matchesPlan && matchesPayment && matchesStartDate && matchesEndDate
+      return matchesQuery && matchesStore && matchesPlan && matchesPayment && matchesMonth
     })
-  }, [data, query, storeFilter, planFilter, paymentFilter, startDate, endDate])
+  }, [data, query, storeFilter, planFilter, paymentFilter, selectedMonth])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const pageData = filtered.slice((page - 1) * pageSize, page * pageSize)
   useEffect(() => {
     setPage(1)
-  }, [query, storeFilter, planFilter, paymentFilter, startDate, endDate])
+  }, [query, storeFilter, planFilter, paymentFilter, selectedMonth])
 
   const totals = useMemo(() => {
     const totalIncentive = filtered.reduce((s, r) => s + r.incentiveEarned, 0)
@@ -421,34 +432,26 @@ const response = await authFetch(`${config.apiUrl}/reports/${reportId}`, {
           <option value="paid">Paid</option>
           <option value="unpaid">Unpaid</option>
         </select>
-        <div className="flex items-center gap-2 shrink-0">
-          <label className="text-sm text-gray-600">From:</label>
-          <input
-            type="date"
-            className="px-3 py-2 border rounded-2xl w-40"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            title="Filter from date"
-          />
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <label className="text-sm text-gray-600">To:</label>
-          <input
-            type="date"
-            className="px-3 py-2 border rounded-2xl w-40"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            title="Filter to date"
-          />
-        </div>
-        {(startDate || endDate) && (
-          <button
-            onClick={() => { setStartDate(''); setEndDate('') }}
-            className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 underline"
-          >
-            Clear Dates
-          </button>
-        )}
+        <select
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          className="px-3 py-2 border rounded-2xl w-44 shrink-0"
+          title="Filter by month"
+        >
+          <option value="">All Time</option>
+          <option value="2025-01">January 2025</option>
+          <option value="2025-02">February 2025</option>
+          <option value="2025-03">March 2025</option>
+          <option value="2025-04">April 2025</option>
+          <option value="2025-05">May 2025</option>
+          <option value="2025-06">June 2025</option>
+          <option value="2025-07">July 2025</option>
+          <option value="2025-08">August 2025</option>
+          <option value="2025-09">September 2025</option>
+          <option value="2025-10">October 2025</option>
+          <option value="2025-11">November 2025</option>
+          <option value="2025-12">December 2025</option>
+        </select>
         <div className="relative shrink-0">
           <button 
             onClick={() => setActionsOpen(o => !o)} 
