@@ -167,6 +167,7 @@ export function SecDashboard() {
     ['Mid', 'A17'],
     ['Mass', 'F15'],
     ['Mass', 'A06'],
+    ['Mass', 'A07'],
   ]
   const CATEGORY_ORDER = ['Luxury Fold', 'Luxury Flip', 'Super Premium', 'Premium', 'High', 'Mid', 'Mass']
   const priorityKey = (sku: SamsungSKU) => `${sku.Category}|||${sku.ModelName}`
@@ -181,14 +182,14 @@ export function SecDashboard() {
   }
   const sortedSKUs = useMemo(() => {
     const byLabel = (s: SamsungSKU) => `${s.Category} - ${s.ModelName}`
-    // Filter to only show A series devices and Mass - A07
+    // Filter to only show A series devices and Mass - A06/A07
     const filtered = samsungSKUs.filter(sku => {
       const modelName = sku.ModelName
       // Include if model name starts with 'A' followed by digits (A series)
-      // Or if it's specifically A07 in Mass category
+      // Or if it's Mass category with A06 or A07
       const isASeries = /^A\d/.test(modelName)
-      const isMassA07 = sku.Category === 'Mass' && modelName === 'A07'
-      return isASeries || isMassA07
+      const isMassAxx = sku.Category === 'Mass' && (modelName === 'A06' || modelName === 'A07')
+      return isASeries || isMassAxx
     })
     return [...filtered].sort((a, b) => {
       const ra = priorityIndex.get(priorityKey(a))

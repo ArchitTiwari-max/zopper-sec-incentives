@@ -74,7 +74,8 @@ function generateOTP() {
 // Ensure required Samsung SKUs exist (runs at startup)
 async function ensureEssentialSKUs() {
   const requiredSKUs = [
-    { Category: 'Luxury Flip', ModelName: 'Z Flip FE' }
+    { Category: 'Luxury Flip', ModelName: 'Z Flip FE' },
+    { Category: 'Mass', ModelName: 'A07' }
   ]
 
   for (const sku of requiredSKUs) {
