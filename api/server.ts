@@ -2464,10 +2464,27 @@ app.get('/api/leaderboard', async (req, res) => {
       })
     }
 
+    // Get month filter from query params (format: YYYY-MM)
+    const monthFilter = req.query.month as string | undefined
+    let dateFilter: any = {}
+    
+    if (monthFilter && /^\d{4}-\d{2}$/.test(monthFilter)) {
+      const [year, month] = monthFilter.split('-').map(Number)
+      const startOfMonth = new Date(year, month - 1, 1)
+      const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
+      dateFilter = {
+        submittedAt: {
+          gte: startOfMonth,
+          lte: endOfMonth
+        }
+      }
+    }
+
     // Optimized single query to get all leaderboard data - excluding Test_Plan
     const leaderboardRawData = await prisma.salesReport.groupBy({
       by: ['storeId'],
       where: {
+        ...dateFilter,
         plan: {
           planType: {
             not: 'Test_Plan'
@@ -2501,6 +2518,7 @@ app.get('/api/leaderboard', async (req, res) => {
     const adldIncentives = await prisma.salesReport.groupBy({
       by: ['storeId'],
       where: {
+        ...dateFilter,
         storeId: {
           in: storeIds
         },
@@ -2516,6 +2534,7 @@ app.get('/api/leaderboard', async (req, res) => {
     const comboIncentives = await prisma.salesReport.groupBy({
       by: ['storeId'],
       where: {
+        ...dateFilter,
         storeId: {
           in: storeIds
         },
@@ -2531,12 +2550,12 @@ app.get('/api/leaderboard', async (req, res) => {
     // Latest and first submission per store (for tie-breakers and "New" badge)
     const lastSubmissions = await prisma.salesReport.groupBy({
       by: ['storeId'],
-      where: { storeId: { in: storeIds }, plan: { planType: { not: 'Test_Plan' } } },
+      where: { ...dateFilter, storeId: { in: storeIds }, plan: { planType: { not: 'Test_Plan' } } },
       _max: { submittedAt: true }
     })
     const firstSubmissions = await prisma.salesReport.groupBy({
       by: ['storeId'],
-      where: { storeId: { in: storeIds }, plan: { planType: { not: 'Test_Plan' } } },
+      where: { ...dateFilter, storeId: { in: storeIds }, plan: { planType: { not: 'Test_Plan' } } },
       _min: { submittedAt: true }
     })
 
