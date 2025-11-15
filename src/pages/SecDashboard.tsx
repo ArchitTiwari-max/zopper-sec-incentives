@@ -181,7 +181,16 @@ export function SecDashboard() {
   }
   const sortedSKUs = useMemo(() => {
     const byLabel = (s: SamsungSKU) => `${s.Category} - ${s.ModelName}`
-    return [...samsungSKUs].sort((a, b) => {
+    // Filter to only show A series devices and Mass - A07
+    const filtered = samsungSKUs.filter(sku => {
+      const modelName = sku.ModelName
+      // Include if model name starts with 'A' followed by digits (A series)
+      // Or if it's specifically A07 in Mass category
+      const isASeries = /^A\d/.test(modelName)
+      const isMassA07 = sku.Category === 'Mass' && modelName === 'A07'
+      return isASeries || isMassA07
+    })
+    return [...filtered].sort((a, b) => {
       const ra = priorityIndex.get(priorityKey(a))
       const rb = priorityIndex.get(priorityKey(b))
       const aHas = ra !== undefined
