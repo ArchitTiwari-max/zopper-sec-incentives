@@ -2668,7 +2668,9 @@ app.get('/api/leaderboard', async (req, res) => {
         rank: index + 1
       }))
 
-    // Compute previous snapshot - compare against 30 seconds ago for instant real-time changes
+    // Previous snapshot logic:
+    // - For current month: compare against 30 seconds ago (real-time)
+    // - For previous months: compare end-of-month (23:59:59) vs 30 seconds before that
     const thirtySecondsAgo = new Date(nowIST.getTime() - 30 * 1000)
 
     const prevWhere: any = {
@@ -2676,10 +2678,22 @@ app.get('/api/leaderboard', async (req, res) => {
     }
 
     if (startOfMonth && endOfMonth) {
-      // Restrict previous snapshot to the same month as current filter, up to 30 seconds ago
-      let prevEnd = thirtySecondsAgo
-      if (prevEnd > endOfMonth) prevEnd = endOfMonth
-      if (prevEnd < startOfMonth) prevEnd = startOfMonth // Don't go before month start
+      // Determine if this is a previous month (not current month)
+      const currentMonth = `${nowIST.getFullYear()}-${String(nowIST.getMonth() + 1).padStart(2, '0')}`
+      const isPreviousMonth = monthFilter !== currentMonth
+
+      let prevEnd: Date
+      if (isPreviousMonth) {
+        // For previous months: use end-of-month as reference point
+        prevEnd = new Date(endOfMonth.getTime() - 30 * 1000)
+        if (prevEnd < startOfMonth) prevEnd = startOfMonth
+      } else {
+        // For current month: use 30 seconds ago from now
+        prevEnd = thirtySecondsAgo
+        if (prevEnd > endOfMonth) prevEnd = endOfMonth
+        if (prevEnd < startOfMonth) prevEnd = startOfMonth
+      }
+
       prevWhere.submittedAt = {
         gte: startOfMonth,
         lte: prevEnd,
@@ -2858,7 +2872,9 @@ app.get('/api/admin/leaderboard', async (req, res) => {
       })
       .map((stat, index) => ({ ...stat, rank: index + 1 }))
 
-    // Previous snapshot: compare against 30 seconds ago for instant real-time changes
+    // Previous snapshot logic:
+    // - For current month: compare against 30 seconds ago (real-time)
+    // - For previous months: compare end-of-month (23:59:59) vs 30 seconds before that
     const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
     const thirtySecondsAgo = new Date(nowIST.getTime() - 30 * 1000)
 
@@ -2867,9 +2883,22 @@ app.get('/api/admin/leaderboard', async (req, res) => {
     }
 
     if (startOfMonthAdmin && endOfMonthAdmin) {
-      let prevEnd = thirtySecondsAgo
-      if (prevEnd > endOfMonthAdmin) prevEnd = endOfMonthAdmin
-      if (prevEnd < startOfMonthAdmin) prevEnd = startOfMonthAdmin // Don't go before month start
+      // Determine if this is a previous month (not current month)
+      const currentMonth = `${nowIST.getFullYear()}-${String(nowIST.getMonth() + 1).padStart(2, '0')}`
+      const isPreviousMonth = monthFilter !== currentMonth
+
+      let prevEnd: Date
+      if (isPreviousMonth) {
+        // For previous months: use end-of-month as reference point
+        prevEnd = new Date(endOfMonthAdmin.getTime() - 30 * 1000)
+        if (prevEnd < startOfMonthAdmin) prevEnd = startOfMonthAdmin
+      } else {
+        // For current month: use 30 seconds ago from now
+        prevEnd = thirtySecondsAgo
+        if (prevEnd > endOfMonthAdmin) prevEnd = endOfMonthAdmin
+        if (prevEnd < startOfMonthAdmin) prevEnd = startOfMonthAdmin
+      }
+
       prevWhereAdmin.submittedAt = {
         gte: startOfMonthAdmin,
         lte: prevEnd,

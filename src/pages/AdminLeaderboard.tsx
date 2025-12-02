@@ -198,15 +198,18 @@ const response = await authFetch(url, {
           
           <div className="text-white/80 text-xs mt-2 flex items-center justify-center gap-3">
             <span>
-              Rank movement is calculated against yesterday 23:59:59 IST.
+              {selectedMonth === getCurrentMonth() 
+                ? 'Rank movement shows real-time changes (vs 30 seconds ago)'
+                : `Rank movement shows final changes at end of ${selectedMonth} (23:59:59 IST)`
+              }
             </span>
             <span className="hidden sm:inline">•</span>
-            <span className="flex items-center gap-1" title="Improved vs yesterday 23:59:59 IST">
-              <FaArrowUp className="text-green-500" /> Up = improved rank
+            <span className="flex items-center gap-1" title="Improved rank">
+              <FaArrowUp className="text-green-500" /> Up = improved
             </span>
             <span className="hidden sm:inline">•</span>
-            <span className="flex items-center gap-1" title="Dropped vs yesterday 23:59:59 IST">
-              <FaArrowDown className="text-red-500" /> Down = dropped rank
+            <span className="flex items-center gap-1" title="Dropped rank">
+              <FaArrowDown className="text-red-500" /> Down = dropped
             </span>
           </div>
         </div>

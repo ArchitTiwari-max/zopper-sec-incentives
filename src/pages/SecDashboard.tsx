@@ -70,12 +70,21 @@ export function SecDashboard() {
     return () => clearTimeout(t)
   }, [dateTick])
   // Build date options for 'Date of Sale' dropdown
+  // Requirement: allow selecting any date from 15 Nov to 30 Nov (IST)
   const dateOptions = useMemo(() => {
-    // Show only today's date
-    return [todayLabel]
-  }, [todayLabel])
+    const options: string[] = []
+    // Note: JS Date months are 0-indexed; 10 => November
+    const startIstMs = Date.UTC(2025, 10, 15) + IST_OFFSET_MS
+    const endIstMs = Date.UTC(2025, 10, 30) + IST_OFFSET_MS
+
+    for (let t = startIstMs; t <= endIstMs; t += DAY_MS) {
+      options.push(formatDMYFromISTMs(t))
+    }
+
+    return options
+  }, [])
   
-  // Ensure current selection is valid; if not, default to latest option (today)
+  // Ensure current selection is valid; if not, default to latest option (30 Nov)
   useEffect(() => {
     if (!dateOptions.includes(dateOfSale)) {
       const fallback = dateOptions[dateOptions.length - 1] || todayLabel
@@ -450,13 +459,26 @@ const response = await authFetch(`${config.apiUrl}/sec/report`, {
       
       <div className="mt-3">
         <button
-          onClick={() => setShowMore((v) => !v)}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            setShowMore((v) => {
+              const newValue = !v
+              if (newValue) {
+                // Scroll to show the expanded panel after a short delay
+                setTimeout(() => {
+                  document.getElementById('more-actions-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                }, 100)
+              }
+              return newValue
+            })
+          }}
           className="w-full py-3 bg-gradient-to-r from-gray-600 to-gray-800 text-white rounded-2xl font-semibold hover:from-gray-700 hover:to-black transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
           aria-expanded={showMore}
           aria-controls="more-actions-panel"
         >
           <FaEllipsisH />
-          More Actions
+          {showMore ? 'Hide More Actions' : 'More Actions'}
         </button>
         {showMore && (
           <div id="more-actions-panel" className="mt-2 rounded-2xl border bg-white shadow p-2 space-y-2">
