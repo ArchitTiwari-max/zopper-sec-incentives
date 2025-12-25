@@ -190,7 +190,12 @@ export function SecDashboard() {
       // Or if it's Mass category with A06 or A07
       const isASeries = /^A\d/.test(modelName)
       const isMassAxx = sku.Category === 'Mass' && (modelName === 'A06' || modelName === 'A07')
-      return isASeries || isMassAxx
+
+      // Also include S25 series and Z Fold 7 / Z Flip 7
+      const isS25Series = modelName.startsWith('S25')
+      const isZ7Series = modelName === 'Z Fold 7' || modelName === 'Z Flip 7'
+
+      return isASeries || isMassAxx || isS25Series || isZ7Series
     })
     return [...filtered].sort((a, b) => {
       const ra = priorityIndex.get(priorityKey(a))
