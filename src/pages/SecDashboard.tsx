@@ -6,15 +6,15 @@ import { FaBarcode, FaStore, FaMobileAlt, FaListAlt, FaIdBadge, FaSpinner, FaSig
 import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { isSECUser, SECAuthData } from '@/lib/auth'
-import { 
-  fetchStores, 
-  fetchSamsungSKUs, 
-  fetchPlansForSKU, 
+import {
+  fetchStores,
+  fetchSamsungSKUs,
+  fetchPlansForSKU,
   formatPlanType,
   formatPrice,
-  type Store, 
-  type SamsungSKU, 
-  type Plan 
+  type Store,
+  type SamsungSKU,
+  type Plan
 } from '@/lib/api'
 import SearchableSelect from '@/components/SearchableSelect'
 import { config } from '@/lib/config'
@@ -24,7 +24,7 @@ import CombinedNotificationsBell from '@/components/CombinedNotificationsBell'
 export function SecDashboard() {
   const { auth, logout, user, updateUser } = useAuth()
   const navigate = useNavigate()
-  
+
   const secUser = user && isSECUser(user) ? user : null
   const secId = secUser?.secId || null
   const [store, setStore] = useState('')
@@ -73,17 +73,23 @@ export function SecDashboard() {
   // Requirement: allow selecting any date from 15 Nov to 30 Nov (IST)
   const dateOptions = useMemo(() => {
     const options: string[] = []
-    // Note: JS Date months are 0-indexed; 10 => November
-    const startIstMs = Date.UTC(2025, 10, 15) + IST_OFFSET_MS
-    const endIstMs = Date.UTC(2025, 10, 30) + IST_OFFSET_MS
+    // Start from Dec 25, 2025
+    // Note: JS Date months are 0-indexed; 11 => December
+    const startIstMs = Date.UTC(2025, 11, 25) + IST_OFFSET_MS
 
-    for (let t = startIstMs; t <= endIstMs; t += DAY_MS) {
-      options.push(formatDMYFromISTMs(t))
+    let t = startIstMs
+    let safety = 0
+    while (safety < 366) {
+      const label = formatDMYFromISTMs(t)
+      options.push(label)
+      if (label === todayLabel) break
+      t += DAY_MS
+      safety++
     }
 
     return options
-  }, [])
-  
+  }, [todayLabel])
+
   // Ensure current selection is valid; if not, default to latest option (30 Nov)
   useEffect(() => {
     if (!dateOptions.includes(dateOfSale)) {
@@ -91,16 +97,16 @@ export function SecDashboard() {
       setDateOfSale(fallback)
     }
   }, [dateOptions, dateOfSale, todayLabel])
-  
+
   const handleLogout = () => {
     logout()
     navigate('/', { replace: true })
   }
-  
+
   const handleProfileUpdated = (updatedUser: SECAuthData) => {
     updateUser(updatedUser)
   }
-  
+
   // State for API data
   const [stores, setStores] = useState<Store[]>([])
   const [samsungSKUs, setSamsungSKUs] = useState<SamsungSKU[]>([])
@@ -126,7 +132,7 @@ export function SecDashboard() {
     }
     loadStores()
   }, [])
-  
+
   // Load Samsung SKUs on component mount
   useEffect(() => {
     const loadSKUs = async () => {
@@ -211,7 +217,7 @@ export function SecDashboard() {
       return byLabel(a).localeCompare(byLabel(b), 'en', { numeric: true, sensitivity: 'base' })
     })
   }, [samsungSKUs, priorityIndex])
-  
+
   // Load plans when device changes
   useEffect(() => {
     if (device) {
@@ -233,7 +239,7 @@ export function SecDashboard() {
     // Reset plan selection when device changes
     setPlanType('')
   }, [device])
-  
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -264,7 +270,7 @@ export function SecDashboard() {
     if (!auth?.token) return
     setLoading(prev => ({ ...prev, submit: true }))
     try {
-const response = await authFetch(`${config.apiUrl}/sec/report`, {
+      const response = await authFetch(`${config.apiUrl}/sec/report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -353,13 +359,12 @@ const response = await authFetch(`${config.apiUrl}/sec/report`, {
           <label className="block text-sm font-medium mb-1">SEC ID</label>
           <div className="relative">
             <FaIdBadge className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input 
-              readOnly 
-              value={secId || ''} 
+            <input
+              readOnly
+              value={secId || ''}
               placeholder={secId ? '' : 'SEC ID not set - complete profile'}
-              className={`w-full pl-10 pr-3 py-3 border rounded-2xl ${
-                secId ? 'bg-gray-100' : 'bg-yellow-50 border-yellow-300'
-              }`} 
+              className={`w-full pl-10 pr-3 py-3 border rounded-2xl ${secId ? 'bg-gray-100' : 'bg-yellow-50 border-yellow-300'
+                }`}
             />
           </div>
         </div>
@@ -444,8 +449,8 @@ const response = await authFetch(`${config.apiUrl}/sec/report`, {
 
         <p className="text-xs italic text-gray-500">Any incorrect sales reported will impact your future incentives.</p>
 
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           className="button-gradient w-full py-3 disabled:opacity-60 flex items-center justify-center gap-2"
           disabled={loading.submit}
         >
@@ -461,7 +466,7 @@ const response = await authFetch(`${config.apiUrl}/sec/report`, {
       </form>
 
       <button onClick={() => navigate('/reporting')} className="button-gradient w-full py-3 mt-3">View Incentive Passbook</button>
-      
+
       <div className="mt-3">
         <button
           type="button"
@@ -487,29 +492,29 @@ const response = await authFetch(`${config.apiUrl}/sec/report`, {
         </button>
         {showMore && (
           <div id="more-actions-panel" className="mt-2 rounded-2xl border bg-white shadow p-2 space-y-2">
-            <button 
-              onClick={() => { setShowMore(false); navigate('/results') }} 
+            <button
+              onClick={() => { setShowMore(false); navigate('/results') }}
               className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center gap-2"
             >
               <FaClipboardList size={18} />
               All Results
             </button>
-            <button 
-              onClick={() => { setShowMore(false); navigate('/referral') }} 
+            <button
+              onClick={() => { setShowMore(false); navigate('/referral') }}
               className="w-full py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center gap-2"
             >
               <span className="text-xl">🤝</span>
               Referral Program
             </button>
-            <button 
-              onClick={() => { setShowMore(false); navigate('/help') }} 
+            <button
+              onClick={() => { setShowMore(false); navigate('/help') }}
               className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-200 flex items-center justify-center gap-2"
             >
               <FaQuestionCircle size={18} />
               Help & Support
             </button>
-            <button 
-              onClick={() => { setShowMore(false); navigate('/leaderboard') }} 
+            <button
+              onClick={() => { setShowMore(false); navigate('/leaderboard') }}
               className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 flex items-center justify-center gap-2"
             >
               <span className="text-xl">🏆</span>
@@ -526,7 +531,7 @@ const response = await authFetch(`${config.apiUrl}/sec/report`, {
           </div>
         </div>
       )}
-      
+
       <ProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
