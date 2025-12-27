@@ -2,29 +2,26 @@ import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { utils, writeFileXLSX } from 'xlsx'
 
-// Incentive rates inferred from examples: 2*200 + 3*250 = 1150; 1*200 + 2*250 = 700
-const ADLD_RATE = 100
-const COMBO_RATE = 300
+// NOTE: This is a demo/mock page with hardcoded sample data
+// Real incentive data is shown in the Report page (/reporting)
+// Incentive amounts come from backend based on device model and plan type
 
 type DayRow = {
   date: string // ISO (YYYY-MM-DD)
   adld: number
   combo: number
+  totalIncentive: number // Actual incentive from backend
 }
 
 const dailyData: DayRow[] = [
-  { date: '2025-10-15', adld: 2, combo: 3 }, // 5 units, ₹1150
-  { date: '2025-10-16', adld: 1, combo: 2 }, // 3 units, ₹700
+  { date: '2025-10-15', adld: 2, combo: 3, totalIncentive: 800 }, // Sample data
+  { date: '2025-10-16', adld: 1, combo: 2, totalIncentive: 700 }, // Sample data
 ]
-
-function calcIncentive(adld: number, combo: number) {
-  return adld * ADLD_RATE + combo * COMBO_RATE
-}
 
 export function SummaryPage() {
   const totals = useMemo(() => {
     const totalUnits = dailyData.reduce((s, r) => s + r.adld + r.combo, 0)
-    const totalIncentive = dailyData.reduce((s, r) => s + calcIncentive(r.adld, r.combo), 0)
+    const totalIncentive = dailyData.reduce((s, r) => s + r.totalIncentive, 0)
     const paid = Math.round(totalIncentive * 0.6)
     return { totalUnits, totalIncentive, paid, net: totalIncentive - paid }
   }, [])
@@ -35,7 +32,7 @@ export function SummaryPage() {
       'Plan Type (ADLD)': r.adld,
       'Plan Type (Combo)': r.combo,
       'Total Units Sold': r.adld + r.combo,
-      'Incentive Earned': calcIncentive(r.adld, r.combo),
+      'Incentive Earned': r.totalIncentive,
     }))
     const ws = utils.json_to_sheet(rows)
     const wb = utils.book_new()
@@ -61,14 +58,13 @@ export function SummaryPage() {
           <tbody>
             {dailyData.map((r, i) => {
               const total = r.adld + r.combo
-              const incentive = calcIncentive(r.adld, r.combo)
               return (
                 <tr key={i} className="border-t">
                   <td className="p-3 whitespace-nowrap">{formatDayMon(r.date)}</td>
                   <td className="p-3">{r.adld}</td>
                   <td className="p-3">{r.combo}</td>
                   <td className="p-3">{total}</td>
-                  <td className="p-3">₹{incentive.toLocaleString('en-IN')}</td>
+                  <td className="p-3">₹{r.totalIncentive.toLocaleString('en-IN')}</td>
                 </tr>
               )
             })}

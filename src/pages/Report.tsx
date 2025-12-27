@@ -91,6 +91,7 @@ interface DayRow {
   screenProtect: number
   extendedWarranty: number
   totalReports: number
+  totalIncentive: number // Actual incentive earned from backend
 }
 
 // IST offset helper (UTC+5:30)
@@ -126,12 +127,14 @@ function processReportsToDaily(reports: SalesReport[]): DayRow[] {
         combo: 0,
         screenProtect: 0,
         extendedWarranty: 0,
-        totalReports: 0
+        totalReports: 0,
+        totalIncentive: 0
       })
     }
     
     const dayRow = dayMap.get(date)!
     dayRow.totalReports++
+    dayRow.totalIncentive += report.incentiveEarned // Add actual incentive from backend
     
     switch (report.plan.planType) {
       case 'ADLD_1_Yr':
@@ -153,10 +156,6 @@ function processReportsToDaily(reports: SalesReport[]): DayRow[] {
     new Date(b.date).getTime() - new Date(a.date).getTime()
   )
 }
-
-const ADLD_RATE = 100
-const COMBO_RATE = 200
-const calcIncentive = (r: DayRow) => r.adld * ADLD_RATE + r.combo * COMBO_RATE
 
 export function ReportPage() {
   const { auth } = useAuth()
@@ -450,14 +449,13 @@ const response = await authFetch(`${config.apiUrl}/sec/deductions`, {
             ) : (
               filtered.map((row) => {
                 const totalUnits = row.adld + row.combo
-                const incentive = calcIncentive(row)
                 return (
                   <tr key={row.date} className="border-t hover:bg-gray-50">
                     <td className="p-2 sm:p-3 whitespace-nowrap">{formatDDMMYYYY(row.date)}</td>
                     <td className="p-2 sm:p-3">{row.adld}</td>
                     <td className="p-2 sm:p-3">{row.combo}</td>
                     <td className="p-2 sm:p-3">{totalUnits}</td>
-                    <td className="p-2 sm:p-3 font-semibold">₹{incentive}</td>
+                    <td className="p-2 sm:p-3 font-semibold">₹{row.totalIncentive}</td>
                   </tr>
                 )
               })

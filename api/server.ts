@@ -829,17 +829,31 @@ app.put('/api/auth/update-profile', async (req, res) => {
   }
 })
 
-// Helper function to calculate incentive with fixed rates
-function calculateIncentive(planType: string): number {
-  const incentiveRates = {
-    'ADLD_1_Yr': 100,                // Fixed ₹100
-    'Combo_2Yrs': 200,               // Fixed ₹200 (updated from ₹300)
-    'Extended_Warranty_1_Yr': 0,     // No incentive
-    'Screen_Protect_1_Yr': 0,        // No incentive
-    'Test_Plan': 1                   // Test plan ₹1 incentive
+// Helper function to calculate incentive based on plan type and model name
+function calculateIncentive(planType: string, modelName?: string): number {
+  // For plans without incentive
+  if (planType === 'Extended_Warranty_1_Yr' || planType === 'Screen_Protect_1_Yr') {
+    return 0
   }
   
-  return incentiveRates[planType as keyof typeof incentiveRates] || 0
+  // Test plan
+  if (planType === 'Test_Plan') {
+    return 1
+  }
+  
+  // Check if model name starts with 'A' (case-insensitive)
+  const isASeriesModel = modelName && modelName.trim().toUpperCase().startsWith('A')
+  
+  // Calculate incentive based on model series
+  if (planType === 'ADLD_1_Yr') {
+    return isASeriesModel ? 100 : 200  // A-series: ₹100, Others: ₹200
+  }
+  
+  if (planType === 'Combo_2Yrs') {
+    return isASeriesModel ? 200 : 300  // A-series: ₹200, Others: ₹300
+  }
+  
+  return 0
 }
 
 // API Routes
@@ -1322,8 +1336,9 @@ app.post('/api/reports/submit', async (req, res) => {
       })
     }
 
-    // Calculate incentive based on plan type
-    const incentiveEarned = calculateIncentive(plan.planType)
+    // Calculate incentive based on plan type and model name
+    const modelName = plan.samsungSKU?.ModelName
+    const incentiveEarned = calculateIncentive(plan.planType, modelName)
 
     // Create sales report in database
     const salesReport = await prisma.salesReport.create({
@@ -1422,10 +1437,17 @@ app.post('/api/sec/report', async (req, res) => {
     // First-sale check for this SEC (before insert)
     const existingSalesCountAlias = await prisma.salesReport.count({ where: { secUserId: decoded.userId } })
 
-    const plan = await prisma.plan.findUnique({ where: { id: planId } })
+    const plan = await prisma.plan.findUnique({ 
+      where: { id: planId },
+      include: {
+        samsungSKU: true
+      }
+    })
     if (!plan) return res.status(404).json({ success: false, message: 'Plan not found' })
 
-    const incentiveEarned = calculateIncentive(plan.planType)
+    // Calculate incentive based on plan type and model name
+    const modelName = plan.samsungSKU?.ModelName
+    const incentiveEarned = calculateIncentive(plan.planType, modelName)
 
     // Parse dateOfSale (format: DD-MM-YYYY) to Date object
     let submittedAtDate = new Date()

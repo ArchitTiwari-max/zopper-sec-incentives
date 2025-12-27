@@ -70,25 +70,20 @@ export function SecDashboard() {
     return () => clearTimeout(t)
   }, [dateTick])
   // Build date options for 'Date of Sale' dropdown
-  // Requirement: allow selecting any date from 15 Nov to 30 Nov (IST)
+  // Show only today's date if it falls within the allowed range (up to 29-12-2025)
   const dateOptions = useMemo(() => {
     const options: string[] = []
-    // Start from Dec 25, 2025
-    // Note: JS Date months are 0-indexed; 11 => December
-    const startIstMs = Date.UTC(2025, 11, 25) + IST_OFFSET_MS
-
-    let t = startIstMs
-    let safety = 0
-    while (safety < 366) {
-      const label = formatDMYFromISTMs(t)
-      options.push(label)
-      if (label === todayLabel) break
-      t += DAY_MS
-      safety++
+    
+    // End at 29-12-2025 23:59:59 IST
+    const endIstMs = Date.UTC(2025, 11, 29, 23, 59, 59) + IST_OFFSET_MS
+    
+    // Only show today if it's within the allowed range
+    if (nowIstMs <= endIstMs) {
+      options.push(todayLabel)
     }
 
     return options
-  }, [todayLabel])
+  }, [nowIstMs, todayLabel])
 
   // Ensure current selection is valid; if not, default to latest option (30 Nov)
   useEffect(() => {
@@ -412,7 +407,7 @@ export function SecDashboard() {
             value={planType}
             onChange={setPlanType}
             options={availablePlans
-              .filter(p => p.planType !== 'Extended_Warranty_1_Yr' && p.planType !== 'Screen_Protect_1_Yr')
+              .filter(p => p.planType !== 'Extended_Warranty_1_Yr' && p.planType !== 'Screen_Protect_1_Yr' && p.planType !== 'Test_Plan')
               .map(p => ({ value: p.planType, label: `${formatPlanType(p.planType)}` }))}
             placeholder={!device ? 'Select device first' : loading.plans ? 'Loading plans...' : 'Search or select plan'}
             disabled={loading.plans || !device}
