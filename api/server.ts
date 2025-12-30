@@ -154,6 +154,22 @@ async function syncMassA07PlanPricesWithA06() {
 // Comify WhatsApp API integration
 async function sendOTPViaWhatsApp(phone: string, otp: string) {
   try {
+    // Skip WhatsApp sending on localhost (development environment)
+    // Check multiple indicators for localhost
+    const isLocalhost = process.env.SKIP_WHATSAPP === 'true' ||
+                       process.env.NODE_ENV === 'development' ||
+                       process.env.IS_LOCALHOST === 'true' ||
+                       !process.env.VERCEL // Not on Vercel = likely localhost
+    
+    if (isLocalhost) {
+      console.log(`🔧 [LOCALHOST] Skipping WhatsApp OTP send. OTP: ${otp} for phone: ${phone}`)
+      return { 
+        success: true, 
+        message: 'OTP skipped (localhost mode)', 
+        data: { otp, phone, mode: 'localhost' } 
+      }
+    }
+    
     const comifyApiKey = process.env.COMIFY_API_KEY
     const baseUrl = process.env.COMIFY_BASE_URL
     const templateName = process.env.COMIFY_TEMPLATE_NAME
@@ -3011,6 +3027,20 @@ function verifySignature(dataValue: string, ts: number, sig: string) {
 }
 
 async function sendWhatsAppInviteMinimal(phone: string, message: string) {
+  // Skip WhatsApp sending on localhost (development environment)
+  const isLocalhost = process.env.NODE_ENV === 'development' || 
+                     (!COMIFY_API_KEY && !WHATSAPP_ACCESS_TOKEN) ||
+                     process.env.SKIP_WHATSAPP === 'true'
+  
+  if (isLocalhost) {
+    console.log(`🔧 [LOCALHOST] Skipping WhatsApp invite send. Phone: ${phone}, Message: ${message}`)
+    return { 
+      success: true, 
+      message: 'Invite skipped (localhost mode)', 
+      data: { phone, message, mode: 'localhost' } 
+    }
+  }
+  
   // Prefer Comify template if configured
   if (COMIFY_API_KEY && COMIFY_TEMPLATE_NAME_LINK) {
     // Expect template to have variables: {link}
