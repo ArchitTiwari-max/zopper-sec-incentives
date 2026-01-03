@@ -70,15 +70,15 @@ export function SecDashboard() {
     return () => clearTimeout(t)
   }, [dateTick])
   // Build date options for 'Date of Sale' dropdown
-  // Show dates within the defined range: 27-12-2025 to 31-12-2025
+  // Show dates within the defined range: 27-12-2025 to 04-01-2026
   const dateOptions = useMemo(() => {
     const options: string[] = []
     
     // Start date: 27-12-2025 00:00:00 IST
     const startIstMs = Date.UTC(2025, 11, 27, 0, 0, 0) + IST_OFFSET_MS
     
-    // End date: 31-12-2025 23:59:59 IST
-    const endIstMs = Date.UTC(2025, 11, 31, 23, 59, 59) + IST_OFFSET_MS
+    // End date: 04-01-2026 23:59:59 IST
+    const endIstMs = Date.UTC(2026, 0, 4, 23, 59, 59) + IST_OFFSET_MS
     
     // Only show dates if today is within or after the range
     if (nowIstMs >= startIstMs) {

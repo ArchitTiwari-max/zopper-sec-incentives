@@ -193,6 +193,18 @@ const response = await authFetch(url, {
               <option value="2025-10" className="bg-purple-600 text-white">October 2025</option>
               <option value="2025-11" className="bg-purple-600 text-white">November 2025</option>
               <option value="2025-12" className="bg-purple-600 text-white">December 2025</option>
+              <option value="2026-01" className="bg-purple-600 text-white">January 2026</option>
+              <option value="2026-02" className="bg-purple-600 text-white">February 2026</option>
+              <option value="2026-03" className="bg-purple-600 text-white">March 2026</option>
+              <option value="2026-04" className="bg-purple-600 text-white">April 2026</option>
+              <option value="2026-05" className="bg-purple-600 text-white">May 2026</option>
+              <option value="2026-06" className="bg-purple-600 text-white">June 2026</option>
+              <option value="2026-07" className="bg-purple-600 text-white">July 2026</option>
+              <option value="2026-08" className="bg-purple-600 text-white">August 2026</option>
+              <option value="2026-09" className="bg-purple-600 text-white">September 2026</option>
+              <option value="2026-10" className="bg-purple-600 text-white">October 2026</option>
+              <option value="2026-11" className="bg-purple-600 text-white">November 2026</option>
+              <option value="2026-12" className="bg-purple-600 text-white">December 2026</option>
             </select>
           </div>
           
