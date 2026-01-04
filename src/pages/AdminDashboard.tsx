@@ -67,16 +67,21 @@ export function AdminDashboard() {
   const [storeFilter, setStoreFilter] = useState('')
   const [planFilter, setPlanFilter] = useState('')
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'unpaid'>('all')
-  // Month filter (YYYY-MM format), default to current month
-  const getCurrentMonth = () => {
+  
+  // Helper functions to get current year and month
+  const getCurrentYear = () => {
     const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    return `${year}-${month}`
+    return now.getFullYear().toString()
   }
-  // New: choose Year first, then Month. Default: show all
-  const [selectedYear, setSelectedYear] = useState<string>('') // '' === All Years
-  const [selectedMonth, setSelectedMonth] = useState<string>('') // '' === All Months
+  
+  const getCurrentMonthNumber = () => {
+    const now = new Date()
+    return String(now.getMonth() + 1) // Return "1" for January, not "01"
+  }
+  
+  // Default: show current year and current month
+  const [selectedYear, setSelectedYear] = useState<string>(getCurrentYear())
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthNumber())
   const [page, setPage] = useState(1)
   const pageSize = 50
   const [showMultiSelect, setShowMultiSelect] = useState(false)
