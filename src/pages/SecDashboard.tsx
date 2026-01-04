@@ -36,6 +36,10 @@ export function SecDashboard() {
   const DAY_MS = 24 * 60 * 60 * 1000
   const nowUtcMs = Date.now()
   const nowIstMs = nowUtcMs + IST_OFFSET_MS
+  // Defined reporting window (IST)
+  const START_DATE_IST_MS = Date.UTC(2025, 11, 27, 0, 0, 0) + IST_OFFSET_MS
+  const END_DATE_IST_MS = Date.UTC(2026, 0, 4, 23, 59, 59) + IST_OFFSET_MS
+  const isAfterDefinedRange = nowIstMs > END_DATE_IST_MS
   const formatDMYFromISTMs = (istMs: number) => {
     const d = new Date(istMs)
     const dd = String(d.getUTCDate()).padStart(2, '0')
@@ -70,15 +74,11 @@ export function SecDashboard() {
     return () => clearTimeout(t)
   }, [dateTick])
   // Build date options for 'Date of Sale' dropdown
-  // Show dates within the defined range: 27-12-2025 to 04-01-2026
   const dateOptions = useMemo(() => {
     const options: string[] = []
-    
-    // Start date: 27-12-2025 00:00:00 IST
-    const startIstMs = Date.UTC(2025, 11, 27, 0, 0, 0) + IST_OFFSET_MS
-    
-    // End date: 04-01-2026 23:59:59 IST
-    const endIstMs = Date.UTC(2026, 0, 4, 23, 59, 59) + IST_OFFSET_MS
+    // Use the defined reporting window
+    const startIstMs = START_DATE_IST_MS
+    const endIstMs = END_DATE_IST_MS
     
     // Only show dates if today is within or after the range
     if (nowIstMs >= startIstMs) {
@@ -461,7 +461,8 @@ export function SecDashboard() {
         <button
           type="submit"
           className="button-gradient w-full py-3 disabled:opacity-60 flex items-center justify-center gap-2"
-          disabled={loading.submit}
+          disabled={loading.submit || isAfterDefinedRange}
+          title={isAfterDefinedRange ? 'Reporting period has ended' : undefined}
         >
           {loading.submit ? (
             <>
