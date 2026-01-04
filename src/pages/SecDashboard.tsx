@@ -461,8 +461,8 @@ export function SecDashboard() {
         <button
           type="submit"
           className="button-gradient w-full py-3 disabled:opacity-60 flex items-center justify-center gap-2"
-          disabled={loading.submit || isAfterDefinedRange}
-          title={isAfterDefinedRange ? 'Reporting period has ended' : undefined}
+          disabled={true}
+          title="Reporting period has ended"
         >
           {loading.submit ? (
             <>
