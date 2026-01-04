@@ -74,7 +74,9 @@ export function AdminDashboard() {
     const month = String(now.getMonth() + 1).padStart(2, '0')
     return `${year}-${month}`
   }
-  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth())
+  // New: choose Year first, then Month. Default: show all
+  const [selectedYear, setSelectedYear] = useState<string>('') // '' === All Years
+  const [selectedMonth, setSelectedMonth] = useState<string>('') // '' === All Months
   const [page, setPage] = useState(1)
   const pageSize = 50
   const [showMultiSelect, setShowMultiSelect] = useState(false)
@@ -146,6 +148,14 @@ const response = await authFetch(`${config.apiUrl}/reports/admin`, {
 
   const stores = useMemo(() => Array.from(new Set(data.map(d => d.store.storeName))), [data])
   const plans = useMemo(() => Array.from(new Set(data.map(d => d.plan.planType))), [data])
+  const availableYears = useMemo(() => {
+    const ys = new Set<number>()
+    data.forEach(d => {
+      const dt = new Date(d.submittedAt.includes(' ') ? d.submittedAt.replace(' ', 'T') : d.submittedAt)
+      if (!isNaN(dt.getTime())) ys.add(dt.getFullYear())
+    })
+    return Array.from(ys).sort((a, b) => b - a).map(String)
+  }, [data])
 
   const filtered = useMemo(() => {
     return data.filter(r => {
@@ -162,25 +172,30 @@ const response = await authFetch(`${config.apiUrl}/reports/admin`, {
       const matchesPlan = !planFilter || r.plan.planType === planFilter
       const matchesPayment = paymentFilter === 'all' || (paymentFilter === 'paid' ? r.isPaid : !r.isPaid)
       
-      // Month filter
+      // Year/Month filter: '' means 'All'
       let matchesMonth = true
-      if (selectedMonth && /^\d{4}-\d{2}$/.test(selectedMonth)) {
-        const [year, month] = selectedMonth.split('-').map(Number)
-        const submittedDate = new Date(r.submittedAt.includes(' ') ? r.submittedAt.replace(' ', 'T') : r.submittedAt)
+      const submittedDate = new Date(r.submittedAt.includes(' ') ? r.submittedAt.replace(' ', 'T') : r.submittedAt)
+      if (!isNaN(submittedDate.getTime())) {
         const reportYear = submittedDate.getFullYear()
         const reportMonth = submittedDate.getMonth() + 1
-        matchesMonth = reportYear === year && reportMonth === month
+        if (selectedYear) {
+          if (Number(selectedYear) !== reportYear) matchesMonth = false
+          else if (selectedMonth) {
+            const selMonthNum = Number(selectedMonth)
+            if (selMonthNum !== reportMonth) matchesMonth = false
+          }
+        }
       }
       
       return matchesQuery && matchesStore && matchesPlan && matchesPayment && matchesMonth
     })
-  }, [data, query, storeFilter, planFilter, paymentFilter, selectedMonth])
+  }, [data, query, storeFilter, planFilter, paymentFilter, selectedYear, selectedMonth])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const pageData = filtered.slice((page - 1) * pageSize, page * pageSize)
   useEffect(() => {
     setPage(1)
-  }, [query, storeFilter, planFilter, paymentFilter, selectedMonth])
+  }, [query, storeFilter, planFilter, paymentFilter, selectedYear, selectedMonth])
 
   const totals = useMemo(() => {
     const totalIncentive = filtered.reduce((s, r) => s + r.incentiveEarned, 0)
@@ -433,24 +448,34 @@ const response = await authFetch(`${config.apiUrl}/reports/${reportId}`, {
           <option value="unpaid">Unpaid</option>
         </select>
         <select
+          value={selectedYear}
+          onChange={(e) => { setSelectedYear(e.target.value); setSelectedMonth('') }}
+          className="px-3 py-2 border rounded-2xl w-36 shrink-0"
+          title="Filter by year"
+        >
+          <option value="">All Years</option>
+          {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <select
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
-          className="px-3 py-2 border rounded-2xl w-44 shrink-0"
+          className="px-3 py-2 border rounded-2xl w-36 shrink-0"
           title="Filter by month"
+          disabled={!selectedYear}
         >
-          <option value="">All Time</option>
-          <option value="2025-01">January 2025</option>
-          <option value="2025-02">February 2025</option>
-          <option value="2025-03">March 2025</option>
-          <option value="2025-04">April 2025</option>
-          <option value="2025-05">May 2025</option>
-          <option value="2025-06">June 2025</option>
-          <option value="2025-07">July 2025</option>
-          <option value="2025-08">August 2025</option>
-          <option value="2025-09">September 2025</option>
-          <option value="2025-10">October 2025</option>
-          <option value="2025-11">November 2025</option>
-          <option value="2025-12">December 2025</option>
+          <option value="">All Months</option>
+          <option value="1">January</option>
+          <option value="2">February</option>
+          <option value="3">March</option>
+          <option value="4">April</option>
+          <option value="5">May</option>
+          <option value="6">June</option>
+          <option value="7">July</option>
+          <option value="8">August</option>
+          <option value="9">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
         </select>
         <div className="relative shrink-0">
           <button 
