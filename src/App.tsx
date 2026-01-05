@@ -34,7 +34,7 @@ export default function App() {
   const location = useLocation()
   const showFooter = location.pathname !== '/' && location.pathname !== '/leaderboard' && location.pathname !== '/admin/leaderboard'
   const isFullScreenPage = location.pathname === '/leaderboard' || location.pathname === '/admin/leaderboard'
-  
+
   return (
     <AuthProvider>
       {isFullScreenPage ? (
@@ -72,7 +72,7 @@ export default function App() {
               } />
               {/* Backward compat redirects */}
               <Route path="/admin" element={<Navigate to="/admin-login" replace />} />
-              
+
               {/* Test routes - require SEC authentication */}
               <Route path="/test-store-selection" element={
                 <SECRoute>
@@ -87,7 +87,8 @@ export default function App() {
               <Route path="/test-result" element={<TestResult />} />
               <Route path="/results" element={<AllResults />} />
               <Route path="/test-details" element={<TestDetails />} />
-              
+              <Route path="/test-details/:id" element={<TestDetails />} />
+
               {/* SEC protected routes */}
               <Route path="/plan-sell-info" element={
                 <SECRoute>
@@ -112,7 +113,7 @@ export default function App() {
               {/* Backward compat redirects */}
               <Route path="/dashboard" element={<Navigate to="/plan-sell-info" replace />} />
               <Route path="/report" element={<Navigate to="/reporting" replace />} />
-              
+
               {/* Admin protected routes */}
               <Route path="/admin/dashboard" element={
                 <AdminRoute>
@@ -179,7 +180,7 @@ export default function App() {
                   <AdminAnswerDetails />
                 </AdminRoute>
               } />
-              
+
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>

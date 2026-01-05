@@ -235,6 +235,7 @@ model TestSubmission {
   id                   String   @id @default(auto()) @map("_id") @db.ObjectId
   secId                String
   phone                String?
+  name                 String?  // User's actual name
   sessionToken         String
   responses            Json     // Array of {questionId, selectedAnswer, answeredAt}
   score                Int

@@ -90,10 +90,21 @@ export function TestPage() {
       }
       setSelectedStore(storesFromState[0])
 
-      // Generate questions for this phone number (10 random questions with at least 1 from each section)
-      const questions = getQuestionsForPhone(phone)
-      setTestQuestions(questions)
-      console.log(`✅ Generated ${questions.length} questions for phone ${phone}`)
+      // Generate questions for this phone number using API
+      try {
+        const questions = await getQuestionsForPhone(phone)
+        if (questions.length === 0) {
+          console.error('No questions received from API')
+          setTestState(prev => ({ ...prev, isValidToken: false, isVerifying: false }))
+          return
+        }
+        setTestQuestions(questions)
+        console.log(`✅ Generated ${questions.length} questions for phone ${phone}`)
+      } catch (error) {
+        console.error('Error fetching questions:', error)
+        setTestState(prev => ({ ...prev, isValidToken: false, isVerifying: false }))
+        return
+      }
 
       // Create and save test session
       const session = createTestSession(phone)
@@ -247,6 +258,7 @@ export function TestPage() {
       const submission = {
         secId: identifier,
         phone: testState.phone || undefined,
+        name: secDetails?.name || undefined,
         sessionToken: sessionToken || 'test-token',
         responses,
         score,
@@ -342,6 +354,18 @@ export function TestPage() {
 
   // Main test interface
   const currentQuestion = testQuestions[testState.currentQuestionIndex]
+  
+  // Don't render if we don't have a valid question
+  if (!currentQuestion) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading questions...</p>
+        </div>
+      </div>
+    )
+  }
   
   // Get existing answer for current question if it exists
   const existingResponse = testState.responses.find(r => r.questionId === currentQuestion.id)

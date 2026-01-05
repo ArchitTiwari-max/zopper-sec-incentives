@@ -38,7 +38,7 @@ export function QuestionCard({
       <div className="mb-6">
         <div className="flex justify-between text-sm text-gray-600 mb-2">
           <span>Question {questionNumber} of {totalQuestions}</span>
-          <span className="text-blue-600 font-medium">{question.category}</span>
+          <span className="text-blue-600 font-medium">{question?.category || 'Loading...'}</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div 

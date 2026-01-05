@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { TestSubmission, Question } from '@/lib/testData'
+import { config } from '@/lib/config'
 import { FaArrowLeft } from 'react-icons/fa'
 
 export function AdminAnswerDetails() {
@@ -15,10 +16,10 @@ export function AdminAnswerDetails() {
       if (location.state?.submission) {
         const sub = location.state.submission
         setSubmission(sub)
-        
+
         // Fetch all questions from the question bank
         try {
-          const response = await fetch('http://localhost:3001/api/questions')
+          const response = await fetch(`${config.apiUrl}/questions`)
           const result = await response.json()
           if (result.success && result.data) {
             setAllQuestions(result.data)
@@ -47,8 +48,8 @@ export function AdminAnswerDetails() {
 
   // Check if responses have enriched data
   const hasEnrichedData = submission.responses.some(r => r.isCorrect !== undefined && r.correctAnswer !== undefined)
-  const correctCount = hasEnrichedData 
-    ? submission.responses.filter(r => r.isCorrect).length 
+  const correctCount = hasEnrichedData
+    ? submission.responses.filter(r => r.isCorrect).length
     : Math.round((submission.score / 100) * submission.totalQuestions)
   const wrongCount = hasEnrichedData
     ? submission.responses.filter(r => !r.isCorrect).length
@@ -67,19 +68,18 @@ export function AdminAnswerDetails() {
               <FaArrowLeft size={16} />
               Back to Test Results
             </button>
-            <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
-              submission.score >= 80 
-                ? 'bg-green-50 text-green-700' 
-                : submission.score >= 60 
-                ? 'bg-yellow-50 text-yellow-700' 
+            <span className={`px-4 py-2 rounded-full text-sm font-semibold ${submission.score >= 80
+              ? 'bg-green-50 text-green-700'
+              : submission.score >= 60
+                ? 'bg-yellow-50 text-yellow-700'
                 : 'bg-red-50 text-red-700'
-            }`}>
+              }`}>
               {submission.score >= 60 ? 'PASS' : 'FAIL'} - {submission.score}%
             </span>
           </div>
 
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Answer Details - {submission.secId}</h1>
-          
+
           {/* Warning if questions not available */}
           {!hasEnrichedData && (
             <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -121,7 +121,7 @@ export function AdminAnswerDetails() {
             <div className="p-3 bg-gray-50 rounded-lg">
               <span className="text-gray-500 block mb-1">Time</span>
               <span className="font-semibold text-gray-900">
-                {Math.floor(submission.completionTime/60)}m {submission.completionTime%60}s
+                {Math.floor(submission.completionTime / 60)}m {submission.completionTime % 60}s
               </span>
             </div>
             <div className="p-3 bg-gray-50 rounded-lg col-span-2">
@@ -134,17 +134,17 @@ export function AdminAnswerDetails() {
         {/* Questions Review */}
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-gray-900">Answer Review</h2>
-          
+
           {submission.responses.map((response, index) => {
             // Try to find question in bank
             const question = allQuestions.find(q => q.id === response.questionId)
-            
+
             // Use enriched data if available
             const isCorrect = hasEnrichedData ? response.isCorrect : (question && response.selectedAnswer === question.correctAnswer)
             const questionText = response.questionText || question?.question || 'Question text not available'
             const correctAnswer = response.correctAnswer || question?.correctAnswer || 'Unknown'
             const options = response.options || question?.options || []
-            
+
             // If no question data available at all
             if (!hasEnrichedData && !question) {
               return (
@@ -175,13 +175,12 @@ export function AdminAnswerDetails() {
                 </div>
               )
             }
-            
+
             return (
               <div
                 key={response.questionId || index}
-                className={`bg-white rounded-lg shadow p-6 border-l-4 ${
-                  isCorrect ? 'border-green-500' : 'border-red-500'
-                }`}
+                className={`bg-white rounded-lg shadow p-6 border-l-4 ${isCorrect ? 'border-green-500' : 'border-red-500'
+                  }`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -207,24 +206,22 @@ export function AdminAnswerDetails() {
                       const optionLetter = String.fromCharCode(65 + optIndex) // A, B, C, D
                       const isSelected = response.selectedAnswer === optionLetter
                       const isCorrectAnswer = correctAnswer === optionLetter
-                      
+
                       return (
                         <div
                           key={optIndex}
-                          className={`p-3 rounded-lg border-2 ${
-                            isCorrectAnswer
-                              ? 'bg-green-50 border-green-500'
-                              : isSelected
+                          className={`p-3 rounded-lg border-2 ${isCorrectAnswer
+                            ? 'bg-green-50 border-green-500'
+                            : isSelected
                               ? 'bg-red-50 border-red-500'
                               : 'bg-gray-50 border-gray-200'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className={`${
-                              isCorrectAnswer ? 'text-green-900 font-semibold' : 
-                              isSelected ? 'text-red-900 font-semibold' : 
-                              'text-gray-700'
-                            }`}>
+                            <span className={`${isCorrectAnswer ? 'text-green-900 font-semibold' :
+                              isSelected ? 'text-red-900 font-semibold' :
+                                'text-gray-700'
+                              }`}>
                               {optionLetter}) {option}
                             </span>
                             {isCorrectAnswer && (
@@ -240,9 +237,8 @@ export function AdminAnswerDetails() {
                   ) : (
                     // Fallback if no options available
                     <>
-                      <div className={`p-3 rounded-lg border-2 ${
-                        isCorrect ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'
-                      }`}>
+                      <div className={`p-3 rounded-lg border-2 ${isCorrect ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'
+                        }`}>
                         <div className="text-xs text-gray-500 mb-1">SEC's Answer:</div>
                         <div className="font-semibold text-gray-900">{response.selectedAnswer}</div>
                       </div>

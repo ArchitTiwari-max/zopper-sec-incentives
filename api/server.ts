@@ -157,28 +157,28 @@ async function sendOTPViaWhatsApp(phone: string, otp: string) {
     // Skip WhatsApp sending on localhost (development environment)
     // Check multiple indicators for localhost
     const isLocalhost = process.env.SKIP_WHATSAPP === 'true' ||
-                       process.env.NODE_ENV === 'development' ||
-                       process.env.IS_LOCALHOST === 'true' ||
-                       !process.env.VERCEL // Not on Vercel = likely localhost
-    
+      process.env.NODE_ENV === 'development' ||
+      process.env.IS_LOCALHOST === 'true' ||
+      !process.env.VERCEL // Not on Vercel = likely localhost
+
     if (isLocalhost) {
       console.log(`🔧 [LOCALHOST] Skipping WhatsApp OTP send. OTP: ${otp} for phone: ${phone}`)
-      return { 
-        success: true, 
-        message: 'OTP skipped (localhost mode)', 
-        data: { otp, phone, mode: 'localhost' } 
+      return {
+        success: true,
+        message: 'OTP skipped (localhost mode)',
+        data: { otp, phone, mode: 'localhost' }
       }
     }
-    
+
     const comifyApiKey = process.env.COMIFY_API_KEY
     const baseUrl = process.env.COMIFY_BASE_URL
     const templateName = process.env.COMIFY_TEMPLATE_NAME
-    
+
     // Format phone number - ensure it starts with 91
     const formattedPhone = phone.startsWith('91') ? phone : `91${phone}`
-    
+
     console.log(`📱 Sending OTP ${otp} to WhatsApp number: ${formattedPhone}`)
-    
+
     const response = await fetch(`${baseUrl}/comm`, {
       method: 'POST',
       headers: {
@@ -196,7 +196,7 @@ async function sendOTPViaWhatsApp(phone: string, otp: string) {
     })
 
     const result = await response.json()
-    
+
     if (!response.ok) {
       console.error('❌ Comify API error:', result)
       throw new Error(`Comify API error: ${result.message || result.error || 'Unknown error'}`)
@@ -204,7 +204,7 @@ async function sendOTPViaWhatsApp(phone: string, otp: string) {
 
     console.log(`✅ WhatsApp OTP sent successfully via Comify to ${formattedPhone}`)
     return { success: true, message: 'OTP sent successfully', data: result }
-    
+
   } catch (error) {
     console.error('❌ Error sending WhatsApp OTP via Comify:', error)
     throw error
@@ -322,7 +322,7 @@ app.post('/api/auth/verify-otp', async (req, res) => {
         where: { phone, otp },
         orderBy: { createdAt: 'desc' }
       })
-      
+
       if (anyOTP) {
         if (anyOTP.isUsed) {
           console.log(`❌ OTP already used for ${phone}: ${otp}`)
@@ -338,7 +338,7 @@ app.post('/api/auth/verify-otp', async (req, res) => {
           })
         }
       }
-      
+
       console.log(`❌ Invalid OTP for ${phone}: ${otp}`)
       return res.status(400).json({
         success: false,
@@ -364,7 +364,7 @@ app.post('/api/auth/verify-otp', async (req, res) => {
         where: { phone },
         include: { store: true }
       })
-      
+
       if (secUser) {
         // Update existing user
         secUser = await prisma.sECUser.update({
@@ -628,7 +628,7 @@ app.post('/api/auth/signup', async (req, res) => {
     })
 
     console.log(`✅ New user created: ${newUser.username} (${newUser.role})`)
-    
+
     res.json({
       success: true,
       message: 'Account created successfully',
@@ -763,7 +763,7 @@ app.put('/api/auth/update-profile', async (req, res) => {
   try {
     const { secId, name } = req.body
     const authHeader = req.headers.authorization
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -851,24 +851,24 @@ function calculateIncentive(planType: string, modelName?: string): number {
   if (planType === 'Extended_Warranty_1_Yr' || planType === 'Screen_Protect_1_Yr') {
     return 0
   }
-  
+
   // Test plan
   if (planType === 'Test_Plan') {
     return 1
   }
-  
+
   // Check if model name starts with 'A' (case-insensitive)
   const isASeriesModel = modelName && modelName.trim().toUpperCase().startsWith('A')
-  
+
   // Calculate incentive based on model series
   if (planType === 'ADLD_1_Yr') {
     return isASeriesModel ? 100 : 200  // A-series: ₹100, Others: ₹200
   }
-  
+
   if (planType === 'Combo_2Yrs') {
     return isASeriesModel ? 200 : 300  // A-series: ₹200, Others: ₹300
   }
-  
+
   return 0
 }
 
@@ -943,8 +943,8 @@ app.post('/api/referrals/join', async (req, res) => {
     })
     if (existing) return res.json({ success: true, data: existing })
 
-            console.log('🔎 Creating referral record')
-            const created = await prisma.referral.create({
+    console.log('🔎 Creating referral record')
+    const created = await prisma.referral.create({
       data: { referrerPhone: cleanRef, refereePhone, status: 'joined' as any }
     })
 
@@ -1025,7 +1025,7 @@ app.get('/api/stores', async (req, res) => {
         storeName: 'asc'
       }
     })
-    
+
     console.log(`✅ Found ${stores.length} stores`)
     res.json({
       success: true,
@@ -1060,7 +1060,7 @@ app.get('/api/samsung-skus', async (req, res) => {
         { ModelName: 'asc' }
       ]
     })
-    
+
     console.log(`✅ Found ${samsungSKUs.length} Samsung SKUs`)
     res.json({
       success: true,
@@ -1179,7 +1179,7 @@ app.get('/api/plans', async (req, res) => {
         { planType: 'asc' }
       ]
     })
-    
+
     console.log(`✅ Found ${plans.length} total plans`)
     res.json({
       success: true,
@@ -1233,16 +1233,16 @@ app.get('/api/referrals/admin', async (req, res) => {
 app.get('/api/plan-price', async (req, res) => {
   try {
     const { skuId, planType } = req.query
-    
+
     if (!skuId || !planType) {
       return res.status(400).json({
         success: false,
         message: 'SKU ID and plan type are required'
       })
     }
-    
+
     console.log(`💰 Fetching price for SKU: ${skuId}, Plan: ${planType}`)
-    
+
     const plan = await prisma.plan.findFirst({
       where: {
         samsungSKUId: skuId as string,
@@ -1260,14 +1260,14 @@ app.get('/api/plan-price', async (req, res) => {
         }
       }
     })
-    
+
     if (!plan) {
       return res.status(404).json({
         success: false,
         message: 'Plan not found for the specified SKU and plan type'
       })
     }
-    
+
     console.log(`✅ Found plan price: ₹${plan.price}`)
     res.json({
       success: true,
@@ -1289,7 +1289,7 @@ app.post('/api/reports/submit', async (req, res) => {
   try {
     const { storeId, samsungSKUId, planId, imei } = req.body
     const authHeader = req.headers.authorization
-    
+
     // Check auth
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
@@ -1375,9 +1375,9 @@ app.post('/api/reports/submit', async (req, res) => {
         plan: true
       }
     })
-    
+
     console.log(`✅ Sales report saved to database! Report ID: ${salesReport.id}, SEC: ${decoded.userId}, IMEI: ${trimmedImei}, Incentive: ₹${incentiveEarned}`)
-    
+
     // If this was the first sale for this SEC, update referral status to report_submitted
     try {
       if (existingSalesCount === 0 && decoded?.phone) {
@@ -1453,7 +1453,7 @@ app.post('/api/sec/report', async (req, res) => {
     // First-sale check for this SEC (before insert)
     const existingSalesCountAlias = await prisma.salesReport.count({ where: { secUserId: decoded.userId } })
 
-    const plan = await prisma.plan.findUnique({ 
+    const plan = await prisma.plan.findUnique({
       where: { id: planId },
       include: {
         samsungSKU: true
@@ -1526,7 +1526,7 @@ app.post('/api/sec/report', async (req, res) => {
 app.get('/api/reports/sec', async (req, res) => {
   try {
     const authHeader = req.headers.authorization
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -1621,7 +1621,7 @@ app.get('/api/sec/reports', async (req, res) => {
 app.get('/api/reports/admin', async (req, res) => {
   try {
     const authHeader = req.headers.authorization
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -1683,7 +1683,7 @@ app.put('/api/reports/:id/payment', async (req, res) => {
     const { id } = req.params
     const { isPaid } = req.body
     const authHeader = req.headers.authorization
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -1743,7 +1743,7 @@ app.delete('/api/reports/:id', async (req, res) => {
   try {
     const { id } = req.params
     const authHeader = req.headers.authorization
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -1787,7 +1787,7 @@ app.delete('/api/reports/:id', async (req, res) => {
         message: 'Report not found'
       })
     }
-    
+
     console.error('❌ Error deleting report:', error)
     res.status(500).json({
       success: false,
@@ -1801,7 +1801,7 @@ app.delete('/api/reports/:id', async (req, res) => {
 app.get('/api/vouchers/sec', async (req, res) => {
   try {
     const authHeader = req.headers.authorization
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -1866,7 +1866,7 @@ app.get('/api/vouchers/sec', async (req, res) => {
 app.post('/api/admin/process-invalid-imeis', upload.single('excel'), async (req, res) => {
   try {
     const authHeader = req.headers.authorization
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -1928,7 +1928,7 @@ app.post('/api/admin/process-invalid-imeis', upload.single('excel'), async (req,
     for (let i = 0; i < data.length; i++) {
       const row: any = data[i]
       processResults.processed++
-      
+
       try {
         // Get IMEI from Excel row (try different possible column names)
         const imei = (row['IMEI'] || row['imei'] || row['Imei'] || row['IMEI Number'])?.toString()?.trim()
@@ -2010,16 +2010,16 @@ app.post('/api/admin/process-invalid-imeis', upload.single('excel'), async (req,
         // Send WhatsApp notification
         try {
           await sendOTPViaWhatsApp(
-            salesReport.secUser.phone, 
+            salesReport.secUser.phone,
             `⚠️ The IMEI ${imei} you submitted for the ${salesReport.plan.planType.replace(/_/g, ' ')} plan is invalid for a gift voucher. The plan amount of ₹${deductionAmount} has been deducted from your total incentive.`
           )
-          
+
           // Update notification sent status
           await prisma.incentiveDeduction.update({
             where: { id: deduction.id },
             data: { notificationSent: true }
           })
-          
+
           processResults.notificationsSent++
         } catch (notificationError) {
           console.error(`❌ Failed to send notification to ${salesReport.secUser.phone}:`, notificationError)
@@ -2087,7 +2087,7 @@ app.post('/api/admin/process-invalid-imeis', upload.single('excel'), async (req,
 app.post('/api/admin/process-voucher-excel', upload.single('excel'), async (req, res) => {
   try {
     const authHeader = req.headers.authorization
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -2148,7 +2148,7 @@ app.post('/api/admin/process-voucher-excel', upload.single('excel'), async (req,
     for (let i = 0; i < data.length; i++) {
       const row: any = data[i]
       processResults.processed++
-      
+
       try {
         // Get required fields from Excel row
         const reportId = row['Report ID']?.toString()?.trim()
@@ -2384,7 +2384,7 @@ app.post('/api/admin/process-referral-excel', upload.single('excel'), async (req
 app.get('/api/sec/incentive-summary', async (req, res) => {
   try {
     const authHeader = req.headers.authorization
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -2449,7 +2449,7 @@ app.get('/api/sec/incentive-summary', async (req, res) => {
 app.get('/api/sec/deductions', async (req, res) => {
   try {
     const authHeader = req.headers.authorization
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -2511,7 +2511,7 @@ app.get('/api/sec/deductions', async (req, res) => {
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const authHeader = req.headers.authorization
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -2562,7 +2562,7 @@ app.get('/api/leaderboard', async (req, res) => {
     let dateFilter: any = {}
     let startOfMonth: Date | null = null
     let endOfMonth: Date | null = null
-    
+
     if (monthFilter && /^\d{4}-\d{2}$/.test(monthFilter)) {
       const [year, month] = monthFilter.split('-').map(Number)
       startOfMonth = new Date(year, month - 1, 1)
@@ -2684,21 +2684,21 @@ app.get('/api/leaderboard', async (req, res) => {
         if (b.totalIncentive !== a.totalIncentive) {
           return b.totalIncentive - a.totalIncentive
         }
-        
+
         // Secondary sort: ADLD incentive (descending - higher is better)
         if (b.adldIncentive !== a.adldIncentive) {
           return b.adldIncentive - a.adldIncentive
         }
-        
+
         // Tertiary sort: Most recent submission (descending - newer is better)
         const bt = b.lastSubmittedAt ? new Date(b.lastSubmittedAt).getTime() : 0
         const at = a.lastSubmittedAt ? new Date(a.lastSubmittedAt).getTime() : 0
         if (bt !== at) return bt - at
 
         // Final fallback: Store name alphabetical
-        return a.storeName.localeCompare(b.storeName, 'en', { 
-          numeric: true, 
-          sensitivity: 'base' 
+        return a.storeName.localeCompare(b.storeName, 'en', {
+          numeric: true,
+          sensitivity: 'base'
         })
       })
       .map((stat, index) => ({
@@ -2772,13 +2772,13 @@ app.get('/api/leaderboard', async (req, res) => {
     let userPosition = null
     if (userSalesReports.length > 0) {
       // Find the best performing store where this user has made sales
-      const userStorePositions = userSalesReports.map(userStore => 
+      const userStorePositions = userSalesReports.map(userStore =>
         withChange.find(stat => stat.storeId === userStore.storeId)
       ).filter(Boolean)
-      
+
       if (userStorePositions.length > 0) {
         // Get the store with the best rank (lowest rank number)
-        userPosition = userStorePositions.reduce((best, current) => 
+        userPosition = userStorePositions.reduce((best, current) =>
           (current && (!best || (current as any).rank < (best as any).rank)) ? current : best
         )
       }
@@ -2807,7 +2807,7 @@ app.get('/api/leaderboard', async (req, res) => {
 app.get('/api/admin/leaderboard', async (req, res) => {
   try {
     const authHeader = req.headers.authorization
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ success: false, message: 'Authorization token required' })
     }
@@ -2829,7 +2829,7 @@ app.get('/api/admin/leaderboard', async (req, res) => {
     let dateFilter: any = {}
     let startOfMonthAdmin: Date | null = null
     let endOfMonthAdmin: Date | null = null
-    
+
     if (monthFilter && /^\d{4}-\d{2}$/.test(monthFilter)) {
       const [year, month] = monthFilter.split('-').map(Number)
       startOfMonthAdmin = new Date(year, month - 1, 1)
@@ -3028,19 +3028,19 @@ function verifySignature(dataValue: string, ts: number, sig: string) {
 
 async function sendWhatsAppInviteMinimal(phone: string, message: string) {
   // Skip WhatsApp sending on localhost (development environment)
-  const isLocalhost = process.env.NODE_ENV === 'development' || 
-                     (!COMIFY_API_KEY && !WHATSAPP_ACCESS_TOKEN) ||
-                     process.env.SKIP_WHATSAPP === 'true'
-  
+  const isLocalhost = process.env.NODE_ENV === 'development' ||
+    (!COMIFY_API_KEY && !WHATSAPP_ACCESS_TOKEN) ||
+    process.env.SKIP_WHATSAPP === 'true'
+
   if (isLocalhost) {
     console.log(`🔧 [LOCALHOST] Skipping WhatsApp invite send. Phone: ${phone}, Message: ${message}`)
-    return { 
-      success: true, 
-      message: 'Invite skipped (localhost mode)', 
-      data: { phone, message, mode: 'localhost' } 
+    return {
+      success: true,
+      message: 'Invite skipped (localhost mode)',
+      data: { phone, message, mode: 'localhost' }
     }
   }
-  
+
   // Prefer Comify template if configured
   if (COMIFY_API_KEY && COMIFY_TEMPLATE_NAME_LINK) {
     // Expect template to have variables: {link}
@@ -3282,7 +3282,7 @@ app.get('/api/proctoring/score', async (req, res) => {
         events = await prisma.proctoringEvent.findMany({ where })
       }
     } catch {
-      events = phone 
+      events = phone
         ? inMemoryProctoringEvents.filter(e => e.phone === phone)
         : inMemoryProctoringEvents.filter(e => e.secId === secId)
     }
@@ -3311,7 +3311,7 @@ app.get('/api/cloudinary-signature', (req, res) => {
         if (!cloudName) cloudName = u.hostname
         if (!apiKey) apiKey = decodeURIComponent(u.username)
         if (!apiSecret) apiSecret = decodeURIComponent(u.password)
-      } catch {}
+      } catch { }
     }
 
     if (!cloudName || !apiKey || !apiSecret) {
@@ -3355,7 +3355,7 @@ app.get('/api/questions', async (req, res) => {
     const questionsFromDB = await prisma.questionBank.findMany({
       orderBy: { questionId: 'asc' }
     })
-    
+
     // If database has questions, use them
     if (questionsFromDB.length > 0) {
       const formattedQuestions = questionsFromDB.map(q => ({
@@ -3367,49 +3367,13 @@ app.get('/api/questions', async (req, res) => {
       }))
       return res.json({ success: true, data: formattedQuestions })
     }
-    
-    // Otherwise, fall back to hardcoded questions
-    const allQuestions = [
-      { id: 1, question: "A customer drops their new Samsung phone in water two weeks after buying it but didn't buy the plan. They now want to buy it. What do you say and why?", options: ["A) Yes, they can still buy it with extra charges.", "B) Yes, but it will cover only water damage.", "C) No, the plan must be bought within 7 days", "D) Yes, if they show proof of damage."], correctAnswer: "C", category: "Section A" },
-      { id: 2, question: "A Fold phone customer comes on Day 8 after purchase to buy the plan. How do you respond?", options: ["A) Eligible with late purchase fees.", "B) Accept only if diagnostics are done immediately.", "C) Not eligible — Fold/Flip models must buy within 7 days.", "D) Accept the purchase — Fold phones have 30 days to buy."], correctAnswer: "C", category: "Section A" },
-      { id: 3, question: "A customer's name is on the invoice, but their father uses the phone. Will the plan still cover the father?", options: ["A) Yes, coverage extends to spouse, children, and parents.", "B) Yes, but only if father's name is added later.", "C) No, unless a transfer fee is paid.", "D) No, coverage is only for the buyer."], correctAnswer: "A", category: "Section A" },
-      { id: 4, question: "A company buys 50 phones and 50 plans for staff. Who will be treated as the 'Customer' for claim purposes?", options: ["A) The plan provider, Zopper.", "B) Only the store where it was purchased.", "C) The company or its authorised representative/employee.", "D) Any employee who uses the phone."], correctAnswer: "C", category: "Section A" },
-      { id: 5, question: "A buyer lost the phone invoice but has the plan confirmation email. What will you advise before they raise a claim?", options: ["A) Submit only a screenshot of the My Galaxy app.", "B) They must provide both the device and plan invoice or get a copy.", "C) No issue — the email alone is enough.", "D) Ask them to file a police report first."], correctAnswer: "C", category: "Section A" },
-      { id: 6, question: "A customer's phone was damaged on the same day as buying it and the plan. Can they raise a claim immediately?", options: ["A) Yes, damage after plan activation is covered.", "B) No, because the plan starts 7 days later.", "C) Yes, but only for manufacturing defects.", "D) No, because claims before diagnostics are invalid."], correctAnswer: "A", category: "Section A" },
-      { id: 7, question: "If a customer upgrades their phone after six months, can the plan be transferred?", options: ["A) Only if the new device is Samsung.", "B) Yes, the plan moves to the new device automatically.", "C) No, the plan stays linked to the registered device.", "D) Yes, only once per customer."], correctAnswer: "C", category: "Section A" },
-      { id: 11, question: "You're trying to convince a hesitant customer. What's the strongest difference between this plan and a normal warranty?", options: ["A) Warranty covers accidental damage; plan covers only manufacturing faults.", "B) Warranty covers manufacturing faults; plan covers accidental and liquid damage.", "C) Warranty and plan both cover the same issues.", "D) Plan covers theft; warranty covers water damage."], correctAnswer: "B", category: "Section B" },
-      { id: 12, question: "If a customer made three damage claims in one year, can they still make a fourth? What's the condition?", options: ["A) Yes, unlimited claims allowed within invoice value limit.", "B) No, only three claims allowed.", "C) Yes, but only after paying an extra fee.", "D) No, unless the plan is renewed."], correctAnswer: "A", category: "Section B" },
-      { id: 13, question: "How would you explain the 'processing fee' to a customer to avoid confusion later?", options: ["A) Small fee charged per repair; varies by phone category.", "B) Fee only applies for the first claim.", "C) Fee is optional if the customer requests.", "D) Fee covers warranty extensions."], correctAnswer: "A", category: "Section B" },
-      { id: 14, question: "A customer says, 'I'll buy the plan next week.' What persuasive yet honest point can you make?", options: ["A) Encourage immediate purchase — must be bought within 7 days", "B) Accept later purchase with penalty.", "C) Advise buying next month for better coverage.", "D) Suggest buying another phone instead."], correctAnswer: "A", category: "Section B" },
-      { id: 16, question: "A customer wants to know if screen cracks are covered. How would you clarify using plan terminology?", options: ["A) Only scratches are covered.", "B) No physical damage is covered.", "C) Yes — accidental physical damage like screen cracks is included.", "D) Only water damage is covered."], correctAnswer: "C", category: "Section B" },
-      { id: 17, question: "If a device fails due to manufacturing fault, should the plan or the warranty be used first?", options: ["A) Warranty should be used first; plan covers accidental/liquid damage.", "B) Plan should be used first; warranty is optional.", "C) Either can be used interchangeably.", "D) Warranty only if phone is older than 6 months."], correctAnswer: "A", category: "Section B" },
-      { id: 18, question: "A customer says, 'I dropped my phone; only the camera glass broke.' Does the plan cover this?", options: ["A) No, camera glass is excluded.", "B) Yes, it counts as accidental physical damage.", "C) Only if entire camera module is broken.", "D) No, only screen damage is covered."], correctAnswer: "B", category: "Section B" },
-      { id: 19, question: "A buyer got the phone through a gift from a friend. Can they still buy the plan in their own name?", options: ["A) Yes, if friend transfers invoice.", "B) No — plan only valid for original purchaser from official channel.", "C) Yes, after 3-day waiting period.", "D) Only if it's a Fold/Flip phone."], correctAnswer: "B", category: "Section B" },
-      { id: 20, question: "How would you handle a customer accusing the store of hiding plan limitations?", options: ["A) Apologize and refund immediately.", "B) Stay calm, show brochure or official terms, clarify politely.", "C) Escalate to higher management only.", "D) Deny any limitations exist."], correctAnswer: "B", category: "Section B" },
-      { id: 22, question: "How long does the plan last from activation?", options: ["A) 6 months", "B) 2 years", "C) 1 year", "D) Until first claim"], correctAnswer: "C", category: "Section C" },
-      { id: 23, question: "Within how many days must a customer buy the plan after phone purchase?", options: ["A) 7 days", "B) 3 days (or 30 days with diagnostics)", "C) 15 days", "D) 60 days"], correctAnswer: "B", category: "Section C" },
-      { id: 26, question: "Can the plan be purchased for non-Samsung phones?", options: ["A) Yes, with additional fee", "B) No, only Samsung phones", "C) Only for phones under warranty", "D) Yes, if registered on My Galaxy App"], correctAnswer: "B", category: "Section C" },
-      { id: 27, question: "How many total repair claims can a customer make in one year?", options: ["A) 1", "B) 3", "C) Unlimited within invoice value limit", "D) 5"], correctAnswer: "C", category: "Section C" },
-      { id: 28, question: "What is the maximum claim value?", options: ["A) Half of invoice value", "B) Unlimited claims with each claim upto invoice value of the phone", "C) No limit", "D) Only for screen repairs"], correctAnswer: "B", category: "Section C" },
-      { id: 29, question: "Is a processing fee charged for every claim?", options: ["A) No", "B) Yes", "C) Only for the first claim", "D) Only for liquid damage claims"], correctAnswer: "B", category: "Section C" },
-      { id: 30, question: "Who else can use the phone under the same plan apart from the buyer?", options: ["A) Only spouse", "B) Spouse, children, or parents", "C) Any friend of the buyer", "D) Only business employees"], correctAnswer: "B", category: "Section C" },
-      { id: 31, question: "A customer claims their phone fell in a pool and stopped working. What 3 questions should you ask before directing them to service?", options: ["A) Was the plan active? When did damage happen?", "B) What colour is the phone? When purchased? Who gifted it?", "C) Did they buy insurance? Did they drop it before purchase? What is the IMEI?", "D) Is it Fold/Flip? Warranty status? Store location?"], correctAnswer: "A", category: "Section D" },
-      { id: 32, question: "Unsure if a customer's plan is active. How do you confirm?", options: ["A) Only Check confirmation email /Whatsapp / SMS received by Customer", "B) Only Check with Samsung Care+ Call Center team", "C) Only ask Zopper POC to confirm", "D) Confirmation of the plan activation can be obtained by using all of the mechanisms mentioned in A, B and C"], correctAnswer: "D", category: "Section D" },
-      { id: 34, question: "Parent buying a phone for child but worries about coverage. What do you say?", options: ["A) Coverage applies only to the buyer", "B) Children are covered under family provision", "C) Only spouse can use phone", "D) Child needs separate plan"], correctAnswer: "B", category: "Section D" },
-      { id: 35, question: "Explain 'Registered Device' to a confused customer.", options: ["A) Device enrolled under plan within valid time frame", "B) Any phone the customer owns", "C) Only Fold/Flip phones", "D) Phone purchased from Zopper only"], correctAnswer: "A", category: "Section D" },
-      { id: 37, question: "How do you explain 'Plan Term' to someone who thinks it means EMI period?", options: ["A) 1-year coverage, not payment period", "B) Number of claims allowed", "C) Time to repair phone", "D) Warranty period"], correctAnswer: "A", category: "Section D" },
-      { id: 39, question: "Customer thinks 'unlimited claims' means 'free repairs every time.' What do you say?", options: ["A) Unlimited claims allowed, but each has processing fee, total up to invoice value", "B) Yes, truly unlimited free repairs", "C) Only 3 free repairs allowed", "D) Fee applies only for liquid damage"], correctAnswer: "A", category: "Section D" },
-      { id: 40, question: "Another employee gives wrong plan info. How do you correct them?", options: ["A) Ignore it", "B) Correct politely using official policy documents", "C) Report immediately to manager", "D) Tell customer instead"], correctAnswer: "B", category: "Section D" },
-      { id: 41, question: "A customer's plan activation is pending; phone gets water damage. What happens?", options: ["A) Claim valid after plan activation", "B) Claim automatically rejected", "C) Claim accepted if purchased within 7 days", "D) Claim partially valid"], correctAnswer: "A", category: "Section E" },
-      { id: 42, question: "Fold phone purchased 2 days ago, plan purchased on same day. Claim for screen crack today — is it valid?", options: ["A) Yes, accidental damage is covered", "B) No, first claim only after 30 days", "C) No, only liquid damage covered", "D) Yes, but only after diagnostics"], correctAnswer: "A", category: "Section E" },
-      { id: 44, question: "Customer's spouse uses the registered device and damages it. Claim?", options: ["A) Denied — only buyer covered", "B) Covered — family members included", "C) Covered only if spouse's name added later", "D) Partially covered"], correctAnswer: "B", category: "Section E" },
-      { id: 45, question: "Customer asks if refurbished phones can have the plan.", options: ["A) Yes, with special approval", "B) No — plan not valid for refurbished or returned phones", "C) Yes, but only Fold/Flip", "D) Only if purchased online"], correctAnswer: "B", category: "Section E" },
-      { id: 47, question: "How is invoice value related to claims?", options: ["A) Maximum total repair claims equal invoice value", "B) Unlimited money reimbursed", "C) Only half invoice value covered", "D) Only processing fee covered"], correctAnswer: "A", category: "Section E" },
-      { id: 48, question: "Plan purchased on same day as phone — when does coverage start?", options: ["A) Day of purchase/activation", "B) Next day", "C) After diagnostics only", "D) After one week"], correctAnswer: "A", category: "Section E" },
-      { id: 50, question: "Employee asks if unlimited claims mean multiple free repairs. How to answer?", options: ["A) Unlimited claims, but total cost cannot exceed invoice value and processing fee applies each time", "B) Truly unlimited free repairs", "C) Only 3 repairs allowed", "D) Only one repair per 6 months"], correctAnswer: "A", category: "Section E" }
-    ]
-    
-    return res.json({ success: true, data: allQuestions })
+
+    // If no questions in database, return empty array
+    return res.json({
+      success: false,
+      message: 'No questions found in database. Please load Samsung ProtectMax questions first.',
+      data: []
+    })
   } catch (e: any) {
     console.error('❌ Error fetching questions:', e)
     return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
@@ -3419,8 +3383,8 @@ app.get('/api/questions', async (req, res) => {
 // POST /api/test-submissions - Submit a test result
 app.post('/api/test-submissions', async (req, res) => {
   try {
-    const { secId, phone, sessionToken, responses, score, totalQuestions, completionTime, isProctoringFlagged, storeId, storeName, storeCity } = req.body
-    
+    const { secId, phone, name, sessionToken, responses, score, totalQuestions, completionTime, isProctoringFlagged, storeId, storeName, storeCity } = req.body
+
     if (!secId || !responses || score === undefined || !totalQuestions) {
       return res.status(400).json({ success: false, message: 'Missing required fields' })
     }
@@ -3454,7 +3418,7 @@ app.post('/api/test-submissions', async (req, res) => {
           },
           orderBy: { createdAt: 'asc' }
         })
-        
+
         // Extract URLs from details field
         screenshotUrls = snapshotEvents
           .map((event: any) => {
@@ -3464,47 +3428,77 @@ app.post('/api/test-submissions', async (req, res) => {
             return null
           })
           .filter((url: string | null): url is string => url !== null)
-        
+
         console.log(`📸 Found ${screenshotUrls.length} screenshot URLs for session ${sessionTok}`)
       }
     } catch (e) {
       console.warn('⚠️ Failed to fetch screenshot URLs (non-critical):', e)
     }
 
-// Atomic upsert to prevent duplicates under concurrent requests
-    // Uses composite unique key (secId, sessionToken)
-    // @ts-ignore - composite unique selector generated by Prisma for named constraint
-    const submission = await prisma.testSubmission.upsert({
-      where: { secId_sessionToken: { secId, sessionToken: sessionTok } },
-      create: {
+    // Fetch all questions for validation and snapshotting
+    const allQuestions = await prisma.questionBank.findMany()
+    const questionMap = new Map(allQuestions.map(q => [q.questionId, q]))
+
+    // Validate answers and create rich snapshot
+    let calculatedScoreCount = 0
+    let validatedResponses: any[] = []
+
+    if (Array.isArray(responses)) {
+      validatedResponses = responses.map((r: any) => {
+        const q = questionMap.get(r.questionId)
+        if (!q) return r // Keep original if not found (shouldn't happen)
+
+        const isCorrect = r.selectedAnswer === q.correctAnswer
+        if (isCorrect) calculatedScoreCount++
+
+        return {
+          questionId: r.questionId,
+          selectedAnswer: r.selectedAnswer,
+          answeredAt: r.answeredAt,
+          // Encapsulate snapshot
+          questionText: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          category: q.category,
+          isCorrect
+        }
+      })
+    }
+
+    const finalTotalQuestions = totalQuestions || validatedResponses.length || 1
+    const finalScore = Math.round((calculatedScoreCount / finalTotalQuestions) * 100)
+
+    // Create new submission (since unique constraint is commented out, we'll just create)
+    const submission = await prisma.testSubmission.create({
+      data: {
         secId,
         phone: phone || null,
+        name: name || null,
         sessionToken: sessionTok,
-        responses,
-        score,
-        totalQuestions,
+        responses: validatedResponses, // Store rich snapshot
+        score: finalScore,
+        totalQuestions: finalTotalQuestions,
         completionTime: completionTime || 0,
         isProctoringFlagged: isProctoringFlagged || false,
         screenshotUrls,
         storeId: storeId || null,
         storeName: storeName || null,
         storeCity: storeCity || null
-      },
-      update: {}
+      }
     })
 
-    console.log(`✅ Test submission created for SEC ${secId}, Score: ${score}%`)
-    
+    console.log(`✅ Test submission created for SEC ${secId}, Server Score: ${finalScore}%`)
+
     // Create notification for the SEC user
     try {
       // Find SEC user by secId
       const secUser = await prisma.sECUser.findFirst({ where: { secId } })
-      
+
       if (secUser) {
         const isPassed = score >= 60
         const title = isPassed ? '🎉 Congratulations!' : '📝 Test Completed'
         const message = `You have successfully attempted the exam and scored ${score}%. ${isPassed ? 'Great job!' : 'Keep learning and try again!'}`
-        
+
         await prisma.notification.create({
           data: {
             secUserId: secUser.id,
@@ -3513,14 +3507,14 @@ app.post('/api/test-submissions', async (req, res) => {
             message
           }
         })
-        
+
         console.log(`✅ Notification created for SEC ${secId}`)
       }
     } catch (notifError) {
       console.error('⚠️ Failed to create notification (non-critical):', notifError)
       // Don't fail the request if notification creation fails
     }
-    
+
     return res.json({ success: true, data: submission })
   } catch (e: any) {
     console.error('❌ Error creating test submission:', e)
@@ -3532,7 +3526,7 @@ app.post('/api/test-submissions', async (req, res) => {
 app.get('/api/test-submissions/statistics', async (req, res) => {
   try {
     const submissions = await prisma.testSubmission.findMany()
-    
+
     if (submissions.length === 0) {
       return res.json({
         success: true,
@@ -3544,16 +3538,16 @@ app.get('/api/test-submissions/statistics', async (req, res) => {
         }
       })
     }
-    
+
     const totalScore = submissions.reduce((sum, sub) => sum + sub.score, 0)
     const avgScore = Math.round(totalScore / submissions.length)
-    
+
     const passed = submissions.filter(sub => sub.score >= 60).length
     const passRate = Math.round((passed / submissions.length) * 100)
-    
+
     const totalTime = submissions.reduce((sum, sub) => sum + sub.completionTime, 0)
     const avgTime = Math.round(totalTime / submissions.length)
-    
+
     return res.json({
       success: true,
       data: {
@@ -3574,7 +3568,7 @@ app.get('/api/admin/question-analysis', async (req, res) => {
   try {
     // Fetch all test submissions
     const submissions = await prisma.testSubmission.findMany()
-    
+
     if (submissions.length === 0) {
       return res.json({
         success: true,
@@ -3589,48 +3583,22 @@ app.get('/api/admin/question-analysis', async (req, res) => {
       })
     }
 
-    // Fetch all questions from database; if empty, fall back to app defaults used by /api/questions
+    // Fetch all questions from database
     let allQuestions = await prisma.questionBank.findMany()
     if (!allQuestions || allQuestions.length === 0) {
-      allQuestions = [
-        { questionId: 1,  question: "A customer drops their new Samsung phone in water two weeks after buying it but didn't buy the plan. They now want to buy it. What do you say and why?", options: ["A) Yes, they can still buy it with extra charges.", "B) Yes, but it will cover only water damage.", "C) No, the plan must be bought within 7 days", "D) Yes, if they show proof of damage."], correctAnswer: "C", category: "Section A" },
-        { questionId: 2,  question: "A Fold phone customer comes on Day 8 after purchase to buy the plan. How do you respond?", options: ["A) Eligible with late purchase fees.", "B) Accept only if diagnostics are done immediately.", "C) Not eligible — Fold/Flip models must buy within 7 days.", "D) Accept the purchase — Fold phones have 30 days to buy."], correctAnswer: "C", category: "Section A" },
-        { questionId: 3,  question: "A customer's name is on the invoice, but their father uses the phone. Will the plan still cover the father?", options: ["A) Yes, coverage extends to spouse, children, and parents.", "B) Yes, but only if father's name is added later.", "C) No, unless a transfer fee is paid.", "D) No, coverage is only for the buyer."], correctAnswer: "A", category: "Section A" },
-        { questionId: 4,  question: "A company buys 50 phones and 50 plans for staff. Who will be treated as the 'Customer' for claim purposes?", options: ["A) The plan provider, Zopper.", "B) Only the store where it was purchased.", "C) The company or its authorised representative/employee.", "D) Any employee who uses the phone."], correctAnswer: "C", category: "Section A" },
-        { questionId: 5,  question: "A buyer lost the phone invoice but has the plan confirmation email. What will you advise before they raise a claim?", options: ["A) Submit only a screenshot of the My Galaxy app.", "B) They must provide both the device and plan invoice or get a copy.", "C) No issue — the email alone is enough.", "D) Ask them to file a police report first."], correctAnswer: "C", category: "Section A" },
-        { questionId: 6,  question: "A customer's phone was damaged on the same day as buying it and the plan. Can they raise a claim immediately?", options: ["A) Yes, damage after plan activation is covered.", "B) No, because the plan starts 7 days later.", "C) Yes, but only for manufacturing defects.", "D) No, because claims before diagnostics are invalid."], correctAnswer: "A", category: "Section A" },
-        { questionId: 7,  question: "If a customer upgrades their phone after six months, can the plan be transferred?", options: ["A) Only if the new device is Samsung.", "B) Yes, the plan moves to the new device automatically.", "C) No, the plan stays linked to the registered device.", "D) Yes, only once per customer."], correctAnswer: "C", category: "Section A" },
-        { questionId: 11, question: "You're trying to convince a hesitant customer. What's the strongest difference between this plan and a normal warranty?", options: ["A) Warranty covers accidental damage; plan covers only manufacturing faults.", "B) Warranty covers manufacturing faults; plan covers accidental and liquid damage.", "C) Warranty and plan both cover the same issues.", "D) Plan covers theft; warranty covers water damage."], correctAnswer: "B", category: "Section B" },
-        { questionId: 12, question: "If a customer made three damage claims in one year, can they still make a fourth? What's the condition?", options: ["A) Yes, unlimited claims allowed within invoice value limit.", "B) No, only three claims allowed.", "C) Yes, but only after paying an extra fee.", "D) No, unless the plan is renewed."], correctAnswer: "A", category: "Section B" },
-        { questionId: 13, question: "How would you explain the 'processing fee' to a customer to avoid confusion later?", options: ["A) Small fee charged per repair; varies by phone category.", "B) Fee only applies for the first claim.", "C) Fee is optional if the customer requests.", "D) Fee covers warranty extensions."], correctAnswer: "A", category: "Section B" },
-        { questionId: 14, question: "A customer says, 'I'll buy the plan next week.' What persuasive yet honest point can you make?", options: ["A) Encourage immediate purchase — must be bought within 7 days", "B) Accept later purchase with penalty.", "C) Advise buying next month for better coverage.", "D) Suggest buying another phone instead."], correctAnswer: "A", category: "Section B" },
-        { questionId: 16, question: "A customer wants to know if screen cracks are covered. How would you clarify using plan terminology?", options: ["A) Only scratches are covered.", "B) No physical damage is covered.", "C) Yes — accidental physical damage like screen cracks is included.", "D) Only water damage is covered."], correctAnswer: "C", category: "Section B" },
-        { questionId: 17, question: "If a device fails due to manufacturing fault, should the plan or the warranty be used first?", options: ["A) Warranty should be used first; plan covers accidental/liquid damage.", "B) Plan should be used first; warranty is optional.", "C) Either can be used interchangeably.", "D) Warranty only if phone is older than 6 months."], correctAnswer: "A", category: "Section B" },
-        { questionId: 18, question: "A customer says, 'I dropped my phone; only the camera glass broke.' Does the plan cover this?", options: ["A) No, camera glass is excluded.", "B) Yes, it counts as accidental physical damage.", "C) Only if entire camera module is broken.", "D) No, only screen damage is covered."], correctAnswer: "B", category: "Section B" },
-        { questionId: 19, question: "A buyer got the phone through a gift from a friend. Can they still buy the plan in their own name?", options: ["A) Yes, if friend transfers invoice.", "B) No — plan only valid for original purchaser from official channel.", "C) Yes, after 3-day waiting period.", "D) Only if it's a Fold/Flip phone."], correctAnswer: "B", category: "Section B" },
-        { questionId: 20, question: "How would you handle a customer accusing the store of hiding plan limitations?", options: ["A) Apologize and refund immediately.", "B) Stay calm, show brochure or official terms, clarify politely.", "C) Escalate to higher management only.", "D) Deny any limitations exist."], correctAnswer: "B", category: "Section B" },
-        { questionId: 22, question: "How long does the plan last from activation?", options: ["A) 6 months", "B) 2 years", "C) 1 year", "D) Until first claim"], correctAnswer: "C", category: "Section C" },
-        { questionId: 23, question: "Within how many days must a customer buy the plan after phone purchase?", options: ["A) 7 days", "B) 3 days (or 30 days with diagnostics)", "C) 15 days", "D) 60 days"], correctAnswer: "B", category: "Section C" },
-        { questionId: 26, question: "Can the plan be purchased for non-Samsung phones?", options: ["A) Yes, with additional fee", "B) No, only Samsung phones", "C) Only for phones under warranty", "D) Yes, if registered on My Galaxy App"], correctAnswer: "B", category: "Section C" },
-        { questionId: 27, question: "How many total repair claims can a customer make in one year?", options: ["A) 1", "B) 3", "C) Unlimited within invoice value limit", "D) 5"], correctAnswer: "C", category: "Section C" },
-        { questionId: 28, question: "What is the maximum claim value?", options: ["A) Half of invoice value", "B) Unlimited claims with each claim upto invoice value of the phone", "C) No limit", "D) Only for screen repairs"], correctAnswer: "B", category: "Section C" },
-        { questionId: 29, question: "Is a processing fee charged for every claim?", options: ["A) No", "B) Yes", "C) Only for the first claim", "D) Only for liquid damage claims"], correctAnswer: "B", category: "Section C" },
-        { questionId: 30, question: "Who else can use the phone under the same plan apart from the buyer?", options: ["A) Only spouse", "B) Spouse, children, or parents", "C) Any friend of the buyer", "D) Only business employees"], correctAnswer: "B", category: "Section C" },
-        { questionId: 31, question: "A customer claims their phone fell in a pool and stopped working. What 3 questions should you ask before directing them to service?", options: ["A) Was the plan active? When did damage happen?", "B) What colour is the phone? When purchased? Who gifted it?", "C) Did they buy insurance? Did they drop it before purchase? What is the IMEI?", "D) Is it Fold/Flip? Warranty status? Store location?"], correctAnswer: "A", category: "Section D" },
-        { questionId: 32, question: "Unsure if a customer's plan is active. How do you confirm?", options: ["A) Only Check confirmation email /Whatsapp / SMS received by Customer", "B) Only Check with Samsung Care+ Call Center team", "C) Only ask Zopper POC to confirm", "D) Confirmation of the plan activation can be obtained by using all of the mechanisms mentioned in A, B and C"], correctAnswer: "D", category: "Section D" },
-        { questionId: 34, question: "Parent buying a phone for child but worries about coverage. What do you say?", options: ["A) Coverage applies only to the buyer", "B) Children are covered under family provision", "C) Only spouse can use phone", "D) Child needs separate plan"], correctAnswer: "B", category: "Section D" },
-        { questionId: 35, question: "Explain 'Registered Device' to a confused customer.", options: ["A) Device enrolled under plan within valid time frame", "B) Any phone the customer owns", "C) Only Fold/Flip phones", "D) Phone purchased from Zopper only"], correctAnswer: "A", category: "Section D" },
-        { questionId: 37, question: "How do you explain 'Plan Term' to someone who thinks it means EMI period?", options: ["A) 1-year coverage, not payment period", "B) Number of claims allowed", "C) Time to repair phone", "D) Warranty period"], correctAnswer: "A", category: "Section D" },
-        { questionId: 39, question: "Customer thinks 'unlimited claims' means 'free repairs every time.' What do you say?", options: ["A) Unlimited claims allowed, but each has processing fee, total up to invoice value", "B) Yes, truly unlimited free repairs", "C) Only 3 free repairs allowed", "D) Fee applies only for liquid damage"], correctAnswer: "A", category: "Section D" },
-        { questionId: 40, question: "Another employee gives wrong plan info. How do you correct them?", options: ["A) Ignore it", "B) Correct politely using official policy documents", "C) Report immediately to manager", "D) Tell customer instead"], correctAnswer: "B", category: "Section D" },
-        { questionId: 41, question: "A customer's plan activation is pending; phone gets water damage. What happens?", options: ["A) Claim valid after plan activation", "B) Claim automatically rejected", "C) Claim accepted if purchased within 7 days", "D) Claim partially valid"], correctAnswer: "A", category: "Section E" },
-        { questionId: 42, question: "Fold phone purchased 2 days ago, plan purchased on same day. Claim for screen crack today — is it valid?", options: ["A) Yes, accidental damage is covered", "B) No, first claim only after 30 days", "C) No, only liquid damage covered", "D) Yes, but only after diagnostics"], correctAnswer: "A", category: "Section E" },
-        { questionId: 44, question: "Customer's spouse uses the registered device and damages it. Claim?", options: ["A) Denied — only buyer covered", "B) Covered — family members included", "C) Covered only if spouse's name added later", "D) Partially covered"], correctAnswer: "B", category: "Section E" },
-        { questionId: 45, question: "Customer asks if refurbished phones can have the plan.", options: ["A) Yes, with special approval", "B) No — plan not valid for refurbished or returned phones", "C) Yes, but only Fold/Flip", "D) Only if purchased online"], correctAnswer: "B", category: "Section E" },
-        { questionId: 47, question: "How is invoice value related to claims?", options: ["A) Maximum total repair claims equal invoice value", "B) Unlimited money reimbursed", "C) Only half invoice value covered", "D) Only processing fee covered"], correctAnswer: "A", category: "Section E" },
-        { questionId: 48, question: "Plan purchased on same day as phone — when does coverage start?", options: ["A) Day of purchase/activation", "B) Next day", "C) After diagnostics only", "D) After one week"], correctAnswer: "A", category: "Section E" },
-        { questionId: 50, question: "Employee asks if unlimited claims mean multiple free repairs. How to answer?", options: ["A) Unlimited claims, but total cost cannot exceed invoice value and processing fee applies each time", "B) Truly unlimited free repairs", "C) Only 3 repairs allowed", "D) Only one repair per 6 months"], correctAnswer: "A", category: "Section E" }
-      ] as any
+      // No questions in database - return empty stats
+      return res.json({
+        success: true,
+        data: {
+          totalSubmissions: submissions.length,
+          averageScore: submissions.length > 0 ? submissions.reduce((sum, s) => sum + s.score, 0) / submissions.length : 0,
+          passRate: submissions.length > 0 ? (submissions.filter(s => s.score >= 70).length / submissions.length) * 100 : 0,
+          averageTime: submissions.length > 0 ? submissions.reduce((sum, s) => sum + s.completionTime, 0) / submissions.length : 0,
+          questionStats: [],
+          easiestQuestion: null,
+          hardestQuestion: null
+        }
+      })
     }
     const questionMap = new Map(allQuestions.map((q: any) => [q.questionId, q]))
 
@@ -3658,14 +3626,14 @@ app.get('/api/admin/question-analysis', async (req, res) => {
       } else {
         responses = []
       }
-      
+
       responses.forEach((response: any) => {
         const questionId = Number(response.questionId ?? response.qid ?? response.question ?? response.id)
         if (!questionId || Number.isNaN(questionId)) return
         const question = questionMap.get(questionId)
-        
+
         if (!question) return // Skip if question not found
-        
+
         if (!questionStatsMap.has(questionId)) {
           questionStatsMap.set(questionId, {
             questionId,
@@ -3676,10 +3644,10 @@ app.get('/api/admin/question-analysis', async (req, res) => {
             wrongAnswers: new Map()
           })
         }
-        
+
         const stats = questionStatsMap.get(questionId)!
         stats.totalAttempts++
-        
+
         const selected = String(response.selectedAnswer ?? response.selected ?? response.answer ?? '').trim()
         const isCorrect = selected && selected === question.correctAnswer
         if (isCorrect) {
@@ -3695,11 +3663,11 @@ app.get('/api/admin/question-analysis', async (req, res) => {
 
     // Convert to array and calculate percentages
     const questionStats = Array.from(questionStatsMap.values()).map(stats => {
-      const correctPercent = stats.totalAttempts > 0 
+      const correctPercent = stats.totalAttempts > 0
         ? Math.round((stats.correctCount / stats.totalAttempts) * 100)
         : 0
       const wrongPercent = 100 - correctPercent
-      
+
       // Find most common wrong answer
       let mostWrongOption = 'N/A'
       let maxWrongCount = 0
@@ -3709,11 +3677,11 @@ app.get('/api/admin/question-analysis', async (req, res) => {
           mostWrongOption = answer
         }
       })
-      
+
       return {
         questionId: stats.questionId,
-        questionText: stats.questionText.length > 100 
-          ? stats.questionText.substring(0, 100) + '...' 
+        questionText: stats.questionText.length > 100
+          ? stats.questionText.substring(0, 100) + '...'
           : stats.questionText,
         correctPercent,
         wrongPercent,
@@ -3745,7 +3713,7 @@ app.get('/api/admin/question-analysis', async (req, res) => {
     const easiestQuestion = questionStats.length > 0
       ? questionStats.reduce((max, q) => q.correctPercent > (max?.correctPercent ?? -1) ? q : max)
       : null
-    
+
     const hardestQuestion = questionStats.length > 0
       ? questionStats.reduce((min, q) => q.correctPercent < (min?.correctPercent ?? 101) ? q : min)
       : null
@@ -3775,11 +3743,66 @@ app.get('/api/admin/question-analysis', async (req, res) => {
   }
 })
 
+// GET /api/test-submissions/:id - Get a single test submission by ID
+app.get('/api/test-submissions/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    // Check if ID is "statistics" to avoid route conflict if order was swapped (safety check)
+    if (id === 'statistics') return res.status(404).json({ success: false })
+
+    const submission = await prisma.testSubmission.findUnique({
+      where: { id }
+    })
+
+    if (!submission) {
+      return res.status(404).json({ success: false, message: 'Submission not found' })
+    }
+
+    // Fetch questions to enrich data with text and correct answers
+    // Only needed for legacy submissions or missing data
+    const allQuestions = await prisma.questionBank.findMany()
+    const questionMap = new Map(allQuestions.map(q => [q.questionId, q]))
+
+    const responses = Array.isArray(submission.responses) ? submission.responses : []
+    const enrichedResponses = responses.map((response: any) => {
+      // If we already have the snapshot data (new schema), use it
+      if (response.questionText && response.correctAnswer) {
+        return response
+      }
+
+      // Otherwise, enrich from current question bank (legacy behavior)
+      const question = questionMap.get(response.questionId)
+      if (question) {
+        return {
+          ...response,
+          questionText: question.question,
+          options: question.options,
+          correctAnswer: question.correctAnswer,
+          isCorrect: response.selectedAnswer === question.correctAnswer
+        }
+      }
+      return response
+    })
+
+    return res.json({
+      success: true,
+      data: {
+        ...submission,
+        responses: enrichedResponses
+      }
+    })
+  } catch (e: any) {
+    console.error('❌ Error fetching test submission:', e)
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
 // GET /api/test-submissions - Get all test submissions
 app.get('/api/test-submissions', async (req, res) => {
   try {
     const secId = req.query.secId ? String(req.query.secId) : undefined
-    
+
     const where = secId ? { secId } : {}
     const submissions = await prisma.testSubmission.findMany({
       where,
@@ -3794,6 +3817,12 @@ app.get('/api/test-submissions', async (req, res) => {
     const enrichedSubmissions = submissions.map(submission => {
       const responses = Array.isArray(submission.responses) ? submission.responses : []
       const enrichedResponses = responses.map((response: any) => {
+        // If we already have the snapshot data (new schema), use it
+        if (response.questionText && response.correctAnswer) {
+          return response
+        }
+
+        // Otherwise, enrich from current question bank (legacy behavior)
         const question = questionMap.get(response.questionId)
         if (question) {
           return {
@@ -3875,7 +3904,7 @@ app.put('/api/notifications/read-all', async (req, res) => {
     }
 
     await prisma.notification.updateMany({
-      where: { 
+      where: {
         secUserId: decoded.userId,
         readAt: null
       },
@@ -3946,7 +3975,7 @@ app.post('/api/help-requests', async (req, res) => {
     })
 
     console.log(`✅ Help request created: ${helpRequest.id} by SEC ${secUser.phone}`)
-    
+
     res.json({
       success: true,
       message: 'Help request submitted successfully',
@@ -4075,7 +4104,7 @@ app.put('/api/admin/help-requests/:id', async (req, res) => {
     const updateData: any = {}
     if (status) updateData.status = status
     if (adminNotes !== undefined) updateData.adminNotes = adminNotes
-    
+
     if (status === 'resolved') {
       updateData.resolvedBy = decoded.username || decoded.userId
       updateData.resolvedAt = new Date()
@@ -4141,12 +4170,12 @@ app.post('/api/questions/upload', uploadQuestions.single('excel'), async (req, r
     const questions: any[] = []
     for (let i = 0; i < data.length; i++) {
       const row: any = data[i]
-      
+
       // Expected columns: questionId, question, option1, option2, option3, option4, correctAnswer, category
       if (!row.questionId || !row.question || !row.option1 || !row.option2 || !row.correctAnswer) {
-        return res.status(400).json({ 
-          success: false, 
-          message: `Invalid data at row ${i + 2}. Required columns: questionId, question, option1, option2, option3, option4, correctAnswer, category` 
+        return res.status(400).json({
+          success: false,
+          message: `Invalid data at row ${i + 2}. Required columns: questionId, question, option1, option2, option3, option4, correctAnswer, category`
         })
       }
 
@@ -4157,9 +4186,9 @@ app.post('/api/questions/upload', uploadQuestions.single('excel'), async (req, r
       if (row.option4) options.push(row.option4)
 
       if (options.length < 2) {
-        return res.status(400).json({ 
-          success: false, 
-          message: `Row ${i + 2} must have at least 2 options` 
+        return res.status(400).json({
+          success: false,
+          message: `Row ${i + 2} must have at least 2 options`
         })
       }
 
@@ -4201,6 +4230,132 @@ app.post('/api/questions/upload', uploadQuestions.single('excel'), async (req, r
   }
 })
 
+// GET /api/questions/unique/:secId - Get unique question set for a specific SEC
+// Returns exactly 10 questions (1 from each of the 10 categories)
+// Each SEC gets different random questions, but the same SEC always gets the same set
+app.get('/api/questions/unique/:secId', async (req, res) => {
+  try {
+    const { secId } = req.params
+
+    if (!secId) {
+      return res.status(400).json({ success: false, message: 'SEC ID is required' })
+    }
+
+    console.log(`🎯 Generating unique 10-question set for SEC: ${secId}`)
+
+    // Get all categories with their question counts
+    const categories = await prisma.questionBank.groupBy({
+      by: ['category'],
+      _count: {
+        category: true
+      }
+    })
+
+    if (categories.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No questions found in database. Please load questions first.'
+      })
+    }
+
+    console.log(`📚 Found ${categories.length} categories`)
+
+    // Sort categories alphabetically for consistency
+    categories.sort((a, b) => (a.category || '').localeCompare(b.category || ''))
+
+    const selectedQuestions = []
+    const secHash = hashString(secId)
+
+    // Select exactly 1 question from each category
+    for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex++) {
+      const categoryGroup = categories[categoryIndex]
+      if (!categoryGroup.category) continue
+
+      // Fetch all questions from this category
+      const categoryQuestions = await prisma.questionBank.findMany({
+        where: {
+          category: categoryGroup.category
+        },
+        orderBy: {
+          questionId: 'asc'
+        }
+      })
+
+      if (categoryQuestions.length > 0) {
+        // Deterministic selection: same SEC always gets same question from this category
+        // Different SECs get different questions
+        const questionIndex = (secHash + (categoryIndex * 31) + (categoryIndex * 17)) % categoryQuestions.length
+        const selectedQuestion = categoryQuestions[questionIndex]
+
+        selectedQuestions.push({
+          id: selectedQuestion.questionId,
+          question: selectedQuestion.question,
+          options: selectedQuestion.options,
+          correctAnswer: selectedQuestion.correctAnswer,
+          category: selectedQuestion.category
+        })
+
+        console.log(`   ✅ Category ${categoryIndex + 1}/${categories.length}: "${categoryGroup.category}" - Selected Q${selectedQuestion.questionId} (${questionIndex + 1}/${categoryQuestions.length})`)
+      } else {
+        console.warn(`   ⚠️  Category "${categoryGroup.category}" has no questions!`)
+      }
+    }
+
+    // Ensure we have exactly 10 questions
+    if (selectedQuestions.length !== 10) {
+      console.warn(`⚠️  Expected 10 questions but got ${selectedQuestions.length}`)
+    }
+
+    console.log(`🎉 Generated ${selectedQuestions.length} unique questions for SEC ${secId}`)
+
+    // Shuffle the questions to randomize order (but deterministically based on SEC ID)
+    const shuffledQuestions = shuffleArrayWithSeed(selectedQuestions, secId)
+
+    res.json({
+      success: true,
+      data: shuffledQuestions,
+      meta: {
+        totalQuestions: shuffledQuestions.length,
+        categoriesCount: categories.length,
+        questionsPerCategory: 1,
+        secId: secId
+      }
+    })
+
+  } catch (error) {
+    console.error('❌ Error generating unique question set:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate unique question set',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+// Helper function to hash string to number
+function hashString(str: string): number {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // Convert to 32-bit integer
+  }
+  return Math.abs(hash)
+}
+
+// Helper function to shuffle array with seed for consistent results
+function shuffleArrayWithSeed<T>(array: T[], seed: string): T[] {
+  const shuffled = [...array]
+  const seedHash = hashString(seed)
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(((seedHash + i) * 9301 + 49297) % 233280) % (i + 1)
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+
+  return shuffled
+}
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
@@ -4216,7 +4371,7 @@ if (!process.env.VERCEL) {
     // Run essential data checks on startup (silently)
     await ensureEssentialSKUs()
     await syncMassA07PlanPricesWithA06()
-    
+
     console.log(`🚀 API Server running on http://localhost:${PORT}`)
     console.log(`📍 Available endpoints:`)
     console.log(`   GET /api/health - Health check`)

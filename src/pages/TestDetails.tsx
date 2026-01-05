@@ -1,22 +1,26 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { TestSubmission, Question } from '@/lib/testData'
+import { useNavigate, useLocation, useParams } from 'react-router-dom'
+import { TestSubmission, Question, getTestSubmissionById } from '@/lib/testData'
+import { config } from '@/lib/config'
 
 export function TestDetails() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { id } = useParams()
   const [submission, setSubmission] = useState<TestSubmission | null>(null)
   const [allQuestions, setAllQuestions] = useState<Question[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchQuestions = async () => {
+    const fetchDetails = async () => {
+      setLoading(true)
+
+      // Strategy 1: Use state passed from navigation
       if (location.state?.submission) {
-        const sub = location.state.submission
-        setSubmission(sub)
-        
-        // Fetch all questions from the question bank
+        setSubmission(location.state.submission)
+        // Ensure questions are loaded
         try {
-          const response = await fetch('http://localhost:3001/api/questions')
+          const response = await fetch(`${config.apiUrl}/questions`)
           const result = await response.json()
           if (result.success && result.data) {
             setAllQuestions(result.data)
@@ -24,14 +28,52 @@ export function TestDetails() {
         } catch (error) {
           console.error('Error fetching questions:', error)
         }
-      } else {
-        navigate('/results')
+        setLoading(false)
+        return
       }
-    }
-    fetchQuestions()
-  }, [location, navigate])
 
-  if (!submission) {
+      // Strategy 2: Fetch by ID from URL
+      if (id) {
+        const data = await getTestSubmissionById(id)
+
+        if (data) {
+          setSubmission(data)
+
+          // The backend endpoint returns enriched responses with question text etc.
+          const constructedQuestions: Question[] = data.responses.map((r: any) => ({
+            id: r.questionId,
+            question: r.questionText || '',
+            options: r.options || [],
+            correctAnswer: r.correctAnswer || '',
+            category: r.category
+          }))
+
+          if (constructedQuestions.length > 0 && constructedQuestions[0].question) {
+            setAllQuestions(constructedQuestions)
+          } else {
+            // Fallback if enriched data is missing
+            const qResponse = await fetch(`${config.apiUrl}/questions`)
+            const qResult = await qResponse.json()
+            if (qResult.success && qResult.data) {
+              setAllQuestions(qResult.data)
+            }
+          }
+        } else {
+          console.error('Submission not found')
+          navigate('/results')
+        }
+        setLoading(false)
+        return
+      }
+
+      // No ID and no State -> Redirect
+      navigate('/results')
+    }
+
+    fetchDetails()
+  }, [id, location.state, navigate])
+
+  if (loading || !submission) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -62,7 +104,7 @@ export function TestDetails() {
           </div>
 
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Test Details</h1>
-          
+
           <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
             <div>
               <span className="text-gray-500">SEC ID:</span>
@@ -70,7 +112,7 @@ export function TestDetails() {
             </div>
             <div>
               <span className="text-gray-500">Time:</span>
-              <span className="ml-2 font-semibold">{Math.floor(submission.completionTime/60)}m {submission.completionTime%60}s</span>
+              <span className="ml-2 font-semibold">{Math.floor(submission.completionTime / 60)}m {submission.completionTime % 60}s</span>
             </div>
             <div>
               <span className="text-gray-500">Correct Answers:</span>
@@ -86,19 +128,32 @@ export function TestDetails() {
         {/* Questions Review */}
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-gray-900">Answer Review</h2>
-          
+
           {submission.responses.map((response, index) => {
-            const question = allQuestions.find(q => q.id === response.questionId)
+            // Try to find question in allQuestions (which might be constructed from enriched response)
+            // or fallback to looking up by ID if we fetched the full list
+            let question = allQuestions.find(q => q.id === response.questionId)
+
+            // If response itself has enriched data, use that as fallback if question not found
+            if (!question && (response as any).questionText) {
+              question = {
+                id: response.questionId,
+                question: (response as any).questionText,
+                options: (response as any).options || [],
+                correctAnswer: (response as any).correctAnswer,
+                category: (response as any).category
+              }
+            }
+
             if (!question) return null
-            
+
             const isCorrect = response.selectedAnswer === question.correctAnswer
-            
+
             return (
               <div
                 key={response.questionId}
-                className={`bg-white rounded-lg shadow p-6 border-l-4 ${
-                  isCorrect ? 'border-green-500' : 'border-red-500'
-                }`}
+                className={`bg-white rounded-lg shadow p-6 border-l-4 ${isCorrect ? 'border-green-500' : 'border-red-500'
+                  }`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -123,24 +178,22 @@ export function TestDetails() {
                     const optionLetter = String.fromCharCode(65 + optIndex) // A, B, C, D
                     const isSelected = response.selectedAnswer === optionLetter
                     const isCorrectAnswer = question.correctAnswer === optionLetter
-                    
+
                     return (
                       <div
                         key={optIndex}
-                        className={`p-3 rounded-lg border-2 ${
-                          isCorrectAnswer
-                            ? 'bg-green-50 border-green-500'
-                            : isSelected
+                        className={`p-3 rounded-lg border-2 ${isCorrectAnswer
+                          ? 'bg-green-50 border-green-500'
+                          : isSelected
                             ? 'bg-red-50 border-red-500'
                             : 'bg-gray-50 border-gray-200'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className={`${
-                            isCorrectAnswer ? 'text-green-900 font-semibold' : 
-                            isSelected ? 'text-red-900 font-semibold' : 
-                            'text-gray-700'
-                          }`}>
+                          <span className={`${isCorrectAnswer ? 'text-green-900 font-semibold' :
+                            isSelected ? 'text-red-900 font-semibold' :
+                              'text-gray-700'
+                            }`}>
                             {option}
                           </span>
                           {isCorrectAnswer && (
