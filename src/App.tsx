@@ -29,11 +29,13 @@ import { TestDetails } from './pages/TestDetails'
 import { AdminQuestionUpload } from './pages/AdminQuestionUpload'
 import { AdminQuestionAnalysis } from './pages/AdminQuestionAnalysis'
 import { AdminAnswerDetails } from './pages/AdminAnswerDetails'
+import { PitchSultan } from './pages/PitchSultan'
+import { PitchSultanBattle } from './pages/PitchSultanBattle'
 
 export default function App() {
   const location = useLocation()
   const showFooter = location.pathname !== '/' && location.pathname !== '/leaderboard' && location.pathname !== '/admin/leaderboard'
-  const isFullScreenPage = location.pathname === '/leaderboard' || location.pathname === '/admin/leaderboard'
+  const isFullScreenPage = location.pathname === '/leaderboard' || location.pathname === '/admin/leaderboard' || location.pathname === '/pitchsultan' || location.pathname === '/pitchsultan/battle'
 
   return (
     <AuthProvider>
@@ -49,6 +51,8 @@ export default function App() {
               <AdminLeaderboard />
             </AdminRoute>
           } />
+          <Route path="/pitchsultan" element={<PitchSultan />} />
+          <Route path="/pitchsultan/battle" element={<PitchSultanBattle />} />
         </Routes>
       ) : (
         <div className="min-h-screen flex items-center justify-center p-4">

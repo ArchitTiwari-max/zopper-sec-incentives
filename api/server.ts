@@ -62,7 +62,7 @@ const uploadQuestions = multer({
 })
 
 // Middleware
-app.use(cors({ credentials: true, origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'] }))
+app.use(cors({ credentials: true, origin: true }))
 app.use(express.json())
 app.use(cookieParser())
 
@@ -1647,8 +1647,11 @@ app.get('/api/reports/admin', async (req, res) => {
       })
     }
 
-    // Fetch all sales reports with related data
+    console.log(`📡 GET /api/reports/admin called by ${decoded.username || decoded.phone}`)
+
+    // Fetch all sales reports with related data - LIMIT 50 for debugging
     const reports = await prisma.salesReport.findMany({
+      take: 50,
       include: {
         secUser: true,
         store: true,
@@ -1660,7 +1663,7 @@ app.get('/api/reports/admin', async (req, res) => {
       }
     })
 
-    console.log(`✅ Admin fetched ${reports.length} total reports`)
+    console.log(`✅ Admin fetched ${reports.length} reports (limited to 50)`)
     res.json({
       success: true,
       data: reports,
