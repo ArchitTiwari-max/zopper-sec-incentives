@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/config';
 import pitchSultanImage from '../assets/pitch-sultan.jpg';
 import pitchSultanDesktopImage from '../assets/pitch-sultan-desktop.jpg';
 import enterBattleBg from '../assets/enter-battle-bg.png';
@@ -6,6 +8,36 @@ import whoWillBeSultanImage from '../assets/who-will-be-sultan.png';
 
 export const PitchSultan = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
+
+    const handleEnterBattle = async () => {
+        if (user && 'phone' in user) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/pitch-sultan/user?phone=${user.phone}`);
+                const data = await res.json();
+
+                if (data.success && data.data) {
+                    // Sync local storage just in case
+                    localStorage.setItem('pitchSultanUserId', data.data.id);
+                    localStorage.setItem('pitchSultanUser', JSON.stringify({
+                        name: data.data.name,
+                        store: {
+                            id: data.data.store.id,
+                            name: data.data.store.storeName,
+                            city: data.data.store.city
+                        },
+                        region: data.data.region
+                    }));
+                    setTimeout(() => navigate('/pitchsultan/battle'), 150);
+                    return;
+                }
+            } catch (e) {
+                console.error("Failed to check user status:", e);
+            }
+        }
+        // If no user found or error, go to setup
+        setTimeout(() => navigate('/pitchsultan/setup'), 150);
+    };
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-0 overflow-hidden">
@@ -36,9 +68,7 @@ export const PitchSultan = () => {
                 {/* Interactive Button: Enter Battle */}
                 <div className="absolute top-[48%] lg:top-[63%] left-[50%] -translate-x-1/2 -translate-y-1/2 z-20 w-fit">
                     <button
-                        onClick={() => {
-                            setTimeout(() => navigate('/pitchsultan/battle'), 150);
-                        }}
+                        onClick={handleEnterBattle}
                         className="relative group cursor-pointer focus:outline-none bg-transparent"
                         style={{ width: 'clamp(240px, 80vw, 400px)', aspectRatio: '212/36' }}
                         aria-label="Enter The Battle"

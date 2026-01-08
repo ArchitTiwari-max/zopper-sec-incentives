@@ -3,20 +3,20 @@ import { Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { QuestionCard } from '@/components/QuestionCard'
 import { TestTimer } from '@/components/TestTimer'
 import { ProctoringPanel } from '@/components/ProctoringPanel'
-import { 
-  extractPhoneFromUrl, 
-  validateTestToken, 
-  createTestSession, 
-  saveTestSession, 
-  endTestSession 
+import {
+  extractPhoneFromUrl,
+  validateTestToken,
+  createTestSession,
+  saveTestSession,
+  endTestSession
 } from '@/lib/testToken'
 import { config } from '@/lib/config'
-import { 
+import {
   getQuestionsForPhone,
   Question,
-  TestResponse, 
-  saveTestSubmission, 
-  calculateScore 
+  TestResponse,
+  saveTestSubmission,
+  calculateScore
 } from '@/lib/testData'
 
 // Test configuration
@@ -116,7 +116,7 @@ export function TestPage() {
         const resp = await fetch(`${config.apiUrl}/sec/by-phone?phone=${encodeURIComponent(phone)}`)
         const j = await resp.json()
         if (j?.success && j?.data) setSecDetails(j.data)
-      } catch {}
+      } catch { }
 
       setTestState(prev => ({
         ...prev,
@@ -167,7 +167,7 @@ export function TestPage() {
       // Update or add response for current question
       const existingIndex = prev.responses.findIndex(r => r.questionId === currentQuestion.id)
       let newResponses: TestResponse[]
-      
+
       if (existingIndex >= 0) {
         // Update existing response
         newResponses = [...prev.responses]
@@ -176,7 +176,7 @@ export function TestPage() {
         // Add new response
         newResponses = [...prev.responses, response]
       }
-      
+
       const isLastQuestion = prev.currentQuestionIndex === testQuestions.length - 1
 
       if (isLastQuestion) {
@@ -201,7 +201,7 @@ export function TestPage() {
   // Handle previous question
   const handlePreviousQuestion = useCallback(() => {
     if (testState.currentQuestionIndex === 0) return
-    
+
     setTestState(prev => ({
       ...prev,
       currentQuestionIndex: prev.currentQuestionIndex - 1
@@ -231,7 +231,7 @@ export function TestPage() {
       return
     }
     setHasSubmitted(true)
-    
+
     const identifier = (secDetails?.secId && secDetails.secId.trim()) || testState.phone
     const score = calculateScore(responses, testQuestions)
     const completionTime = Math.floor((Date.now() - new Date(startTime || new Date().toISOString()).getTime()) / 1000)
@@ -246,7 +246,7 @@ export function TestPage() {
         const proctoringData = await proctoringRes.json()
         if (proctoringData.data && proctoringData.data.length > 0) {
           // Filter out benign events (mic_active and snapshot) to determine if actually flagged
-          const violations = proctoringData.data.filter((e: any) => 
+          const violations = proctoringData.data.filter((e: any) =>
             e.eventType !== 'mic_active' && e.eventType !== 'snapshot'
           )
           isProctoringFlagged = violations.length > 0
@@ -278,7 +278,7 @@ export function TestPage() {
       }
       try {
         endTestSession()
-      } catch {}
+      } catch { }
     } catch (e) {
       // Non-blocking; still show result
       console.error('Test submission error:', e)
@@ -298,20 +298,35 @@ export function TestPage() {
 
   // Derive score safely in UI (handles any race conditions)
   const resultScore = useMemo(() => {
-    return typeof testState.score === 'number' 
-      ? testState.score 
+    return typeof testState.score === 'number'
+      ? testState.score
       : calculateScore(testState.responses, testQuestions)
   }, [testState.score, testState.responses, testQuestions])
 
   // Navigate to results page on completion
   useEffect(() => {
     if (testState.isCompleted && !testState.isSubmitting) {
+      // Enrich responses with question data so the review page has full context
+      // This is crucial because standard /questions API might hide correct answers
+      const enrichedResponses = testState.responses.map(r => {
+        const q = testQuestions.find(q => q.id === r.questionId)
+        if (!q) return r
+        return {
+          ...r,
+          questionText: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer, // Pass the correct answer we know locally!
+          category: q.category,
+          isCorrect: q.correctAnswer === r.selectedAnswer
+        }
+      })
+
       // Store result data for the results page
       const resultData = {
         phone: testState.phone!,
         score: resultScore,
         totalQuestions: testQuestions.length,
-        responses: testState.responses,
+        responses: enrichedResponses,
         submittedAt: new Date().toISOString(),
         completionTime: Math.floor((Date.now() - new Date(testState.startTime).getTime()) / 1000),
         secDetails,
@@ -320,7 +335,7 @@ export function TestPage() {
       localStorage.setItem('last_test_result', JSON.stringify(resultData))
       navigate('/test-result', { state: { result: resultData }, replace: true })
     }
-  }, [testState.isCompleted, testState.isSubmitting, testState.phone, testState.responses, testState.startTime, resultScore, secDetails, navigate])
+  }, [testState.isCompleted, testState.isSubmitting, testState.phone, testState.responses, testState.startTime, resultScore, secDetails, navigate, testQuestions])
 
   // Redirect only after verification completes
   if (!testState.isVerifying && (testState.phone === null || !testState.isValidToken)) {
@@ -354,7 +369,7 @@ export function TestPage() {
 
   // Main test interface
   const currentQuestion = testQuestions[testState.currentQuestionIndex]
-  
+
   // Don't render if we don't have a valid question
   if (!currentQuestion) {
     return (
@@ -366,7 +381,7 @@ export function TestPage() {
       </div>
     )
   }
-  
+
   // Get existing answer for current question if it exists
   const existingResponse = testState.responses.find(r => r.questionId === currentQuestion.id)
   const initialSelectedAnswer = existingResponse?.selectedAnswer || ''
@@ -374,14 +389,14 @@ export function TestPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 select-none" onCopy={(e) => e.preventDefault()} onCut={(e) => e.preventDefault()}>
       {/* Timer */}
-      <TestTimer 
+      <TestTimer
         duration={TEST_DURATION}
         onTimeUp={handleTimeUp}
         isActive={!testState.isCompleted}
       />
 
       {/* Proctoring */}
-      <ProctoringPanel 
+      <ProctoringPanel
         secId={testState.phone!}
         phone={testState.phone!}
         sessionToken={sessionToken}

@@ -8,28 +8,20 @@ import {
     MdSearch, MdNotificationsNone, MdCast,
     MdThumbUp, MdThumbDown,
     MdComment, MdShare, MdMoreVert,
-    MdClose, MdUpload, MdRemoveRedEye
+    MdClose, MdUpload, MdRemoveRedEye,
+    MdHelpOutline, MdHelp, MdEmail, MdPhone, MdQuestionAnswer
 } from 'react-icons/md';
 import { BiLike, BiDislike, BiCommentDetail, BiShare } from "react-icons/bi";
 
 
 // --- Mock Data ---
 
-const CURRENT_USER = {
-    name: "Zopper Champion",
-    handle: "@zopper_champ",
-    avatar: "https://ui-avatars.com/api/?name=Zopper+Champion&background=ffd700&color=000",
-    subscribers: "1.2K",
-    role: "SEC Master"
-};
-
-const LEADERBOARD_DATA = [
-    { rank: 1, name: "Amit Sharma", points: "2450", avatar: "https://ui-avatars.com/api/?name=Amit+Sharma&background=FFD700" },
-    { rank: 2, name: "Priya Singh", points: "2320", avatar: "https://ui-avatars.com/api/?name=Priya+Singh&background=C0C0C0" },
-    { rank: 3, name: "Rahul Verma", points: "2180", avatar: "https://ui-avatars.com/api/?name=Rahul+Verma&background=CD7F32" },
-    { rank: 4, name: "Sneha Gupta", points: "1950", avatar: "https://ui-avatars.com/api/?name=Sneha+Gupta&background=random" },
-    { rank: 5, name: "Vikram Malhotra", points: "1890", avatar: "https://ui-avatars.com/api/?name=Vikram+Malhotra&background=random" },
-    { rank: 6, name: "Anjali Desai", points: "1760", avatar: "https://ui-avatars.com/api/?name=Anjali+Desai&background=random" },
+const HELP_TOPICS = [
+    { id: 1, icon: MdQuestionAnswer, title: "How to Upload a Video", description: "Learn how to share your pitch with the community" },
+    { id: 2, icon: MdQuestionAnswer, title: "Creating Shorts", description: "Quick tips on making engaging short videos" },
+    { id: 3, icon: MdQuestionAnswer, title: "Contest Rules", description: "Understand the Pitch Sultan competition guidelines" },
+    { id: 4, icon: MdQuestionAnswer, title: "Scoring System", description: "How your pitches are evaluated and ranked" },
+    { id: 5, icon: MdQuestionAnswer, title: "Technical Issues", description: "Troubleshooting common problems" },
 ];
 
 const VIDEO_FEED = [
@@ -107,7 +99,7 @@ const SHORTS_FEED = [
 
 // --- Components ---
 
-const Navbar = ({ currentUser }: { currentUser: typeof CURRENT_USER }) => (
+const Navbar = ({ currentUser }: { currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string } }) => (
     <div className="fixed top-0 left-0 right-0 h-14 bg-[#0f0f0f] flex items-center justify-between px-4 z-50 border-b border-gray-800">
         <div className="flex items-center gap-1">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center">
@@ -129,7 +121,7 @@ const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTa
         { id: 'home', icon: MdHome, activeIcon: MdHomeFilled, label: 'Home' },
         { id: 'shorts', icon: MdOutlineSlowMotionVideo, activeIcon: MdSlowMotionVideo, label: 'Shorts' },
         { id: 'create', icon: MdAddCircleOutline, activeIcon: MdAddCircle, label: '', isAction: true },
-        { id: 'leaderboard', icon: MdLeaderboard, activeIcon: MdLeaderboard, label: 'Leaderboard' },
+        { id: 'help', icon: MdHelpOutline, activeIcon: MdHelp, label: 'Help' },
         { id: 'profile', icon: MdPersonOutline, activeIcon: MdPerson, label: 'You' },
     ];
 
@@ -270,35 +262,67 @@ const CreateView = () => (
     </div>
 );
 
-const LeaderboardView = () => (
-    <div className="min-h-screen text-white md:p-4 max-w-4xl mx-auto">
+const HelpSupportView = () => (
+    <div className="min-h-screen text-white md:p-4 max-w-4xl mx-auto pb-20">
         <div className="p-4">
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                <span className="text-yellow-500 text-3xl">🏆</span> Leaderboard
+            <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+                <MdHelp className="text-3xl text-blue-400" /> Help & Support
             </h2>
-            <div className="space-y-4">
-                {LEADERBOARD_DATA.map((user) => (
-                    <div key={user.rank} className={`flex items-center gap-4 p-4 rounded-xl ${user.rank === 1 ? 'bg-gradient-to-r from-yellow-900/40 to-black border border-yellow-600/30' : 'bg-gray-900'}`}>
-                        <div className={`text-xl font-bold w-8 text-center ${user.rank === 1 ? 'text-yellow-400' : user.rank === 2 ? 'text-gray-300' : user.rank === 3 ? 'text-orange-400' : 'text-gray-500'}`}>
-                            #{user.rank}
+            <p className="text-gray-400 text-sm mb-6">Get answers to your questions and reach out for support</p>
+
+            {/* FAQ Section */}
+            <div className="mb-8">
+                <h3 className="text-lg font-semibold mb-4 text-gray-200">Frequently Asked Questions</h3>
+                <div className="space-y-3">
+                    {HELP_TOPICS.map((topic) => {
+                        const Icon = topic.icon;
+                        return (
+                            <div key={topic.id} className="bg-gray-900 p-4 rounded-xl hover:bg-gray-800 transition-colors cursor-pointer">
+                                <div className="flex items-start gap-3">
+                                    <Icon className="text-2xl text-blue-400 mt-1 flex-shrink-0" />
+                                    <div className="flex-1">
+                                        <h4 className="font-semibold text-white mb-1">{topic.title}</h4>
+                                        <p className="text-sm text-gray-400">{topic.description}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Contact Support */}
+            <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 p-6 rounded-xl border border-blue-800/30">
+                <h3 className="text-lg font-semibold mb-4 text-gray-200">Contact Support</h3>
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 text-gray-300">
+                        <div className="w-10 h-10 bg-blue-600/20 rounded-full flex items-center justify-center">
+                            <MdEmail className="text-xl text-blue-400" />
                         </div>
-                        <img src={user.avatar} className="w-12 h-12 rounded-full border-2 border-gray-700" alt="" />
-                        <div className="flex-1">
-                            <h3 className="font-bold">{user.name}</h3>
-                            <p className="text-xs text-gray-400">Total Score</p>
-                        </div>
-                        <div className="text-right">
-                            <span className="text-yellow-500 font-bold block text-lg">{user.points}</span>
-                            <span className="text-xs text-gray-500">Pts</span>
+                        <div>
+                            <p className="text-sm text-gray-400">Email Support</p>
+                            <p className="font-medium">support@pitchsultan.com</p>
                         </div>
                     </div>
-                ))}
+                    <div className="flex items-center gap-3 text-gray-300">
+                        <div className="w-10 h-10 bg-green-600/20 rounded-full flex items-center justify-center">
+                            <MdPhone className="text-xl text-green-400" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-400">Phone Support</p>
+                            <p className="font-medium">1800-123-4567</p>
+                        </div>
+                    </div>
+                </div>
+                <button className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-full transition-colors">
+                    Send us a message
+                </button>
             </div>
         </div>
     </div>
 );
 
-const ProfileView = ({ currentUser }: { currentUser: typeof CURRENT_USER }) => (
+const ProfileView = ({ currentUser }: { currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string } }) => (
     <div className="min-h-screen pb-20 pt-4">
 
         {/* Info */}
@@ -307,7 +331,7 @@ const ProfileView = ({ currentUser }: { currentUser: typeof CURRENT_USER }) => (
             <div className="mt-3 text-white">
                 <h1 className="text-2xl font-bold">{currentUser.name}</h1>
                 <div className="text-gray-400 text-sm flex items-center gap-2">
-                    {currentUser.handle} • {currentUser.role}
+                    {currentUser.handle} • {currentUser.role} {currentUser.region ? `• ${currentUser.region}` : ''}
                 </div>
                 <p className="text-gray-300 text-sm mt-3">
                     Sharing my best sales tips for Godrej appliances! Aspiring Pitch Sultan 👑
@@ -339,6 +363,36 @@ const ProfileView = ({ currentUser }: { currentUser: typeof CURRENT_USER }) => (
 
 export const PitchSultanBattle = () => {
     const [activeTab, setActiveTab] = useState('home');
+    const [currentUser, setCurrentUser] = useState({
+        name: "Zopper Champion",
+        handle: "@zopper_champ",
+        avatar: "https://ui-avatars.com/api/?name=Zopper+Champion&background=ffd700&color=000",
+        subscribers: "1.2K",
+        role: "SEC Master",
+        store: "",
+        region: ""
+    });
+
+    // Load user info from localStorage
+    useEffect(() => {
+        const userDataStr = localStorage.getItem('pitchSultanUser');
+        if (userDataStr) {
+            try {
+                const userData = JSON.parse(userDataStr);
+                setCurrentUser({
+                    name: userData.name || "Zopper Champion",
+                    handle: `@${userData.name?.toLowerCase().replace(/\s+/g, '_') || 'zopper_champ'}`,
+                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name || 'Zopper Champion')}&background=ffd700&color=000`,
+                    subscribers: "1.2K",
+                    role: userData.store?.name || "SEC Master",
+                    store: userData.store?.name || "",
+                    region: userData.region || ""
+                });
+            } catch (e) {
+                console.error('Failed to parse user data:', e);
+            }
+        }
+    }, []);
 
     // Scroll to top on tab change
     useEffect(() => {
@@ -347,7 +401,7 @@ export const PitchSultanBattle = () => {
 
     return (
         <div className="min-h-screen bg-[#0f0f0f] text-white">
-            <Navbar currentUser={CURRENT_USER} />
+            <Navbar currentUser={currentUser} />
 
             <div className="pt-14 pb-16 md:pl-0">
                 {activeTab === 'home' && (
@@ -381,9 +435,9 @@ export const PitchSultanBattle = () => {
 
                 {activeTab === 'create' && <CreateView />}
 
-                {activeTab === 'leaderboard' && <LeaderboardView />}
+                {activeTab === 'help' && <HelpSupportView />}
 
-                {activeTab === 'profile' && <ProfileView currentUser={CURRENT_USER} />}
+                {activeTab === 'profile' && <ProfileView currentUser={currentUser} />}
             </div>
 
             <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />

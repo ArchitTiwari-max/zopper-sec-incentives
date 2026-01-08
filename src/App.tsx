@@ -30,12 +30,13 @@ import { AdminQuestionUpload } from './pages/AdminQuestionUpload'
 import { AdminQuestionAnalysis } from './pages/AdminQuestionAnalysis'
 import { AdminAnswerDetails } from './pages/AdminAnswerDetails'
 import { PitchSultan } from './pages/PitchSultan'
+import { PitchSultanSetup } from './pages/PitchSultanSetup'
 import { PitchSultanBattle } from './pages/PitchSultanBattle'
 
 export default function App() {
   const location = useLocation()
   const showFooter = location.pathname !== '/' && location.pathname !== '/leaderboard' && location.pathname !== '/admin/leaderboard'
-  const isFullScreenPage = location.pathname === '/leaderboard' || location.pathname === '/admin/leaderboard' || location.pathname === '/pitchsultan' || location.pathname === '/pitchsultan/battle'
+  const isFullScreenPage = location.pathname === '/leaderboard' || location.pathname === '/admin/leaderboard' || location.pathname === '/pitchsultan' || location.pathname === '/pitchsultan/setup' || location.pathname === '/pitchsultan/battle'
 
   return (
     <AuthProvider>
@@ -52,6 +53,7 @@ export default function App() {
             </AdminRoute>
           } />
           <Route path="/pitchsultan" element={<PitchSultan />} />
+          <Route path="/pitchsultan/setup" element={<PitchSultanSetup />} />
           <Route path="/pitchsultan/battle" element={<PitchSultanBattle />} />
         </Routes>
       ) : (

@@ -28,6 +28,7 @@ model Store {
   secUsers    SECUser[]     // One store can have multiple SECs (backward compatibility)
   salesReports SalesReport[] // Store sales reports
   helpRequests HelpRequest[] // Help requests from this store
+  pitchSultanUsers PitchSultanUser[] // Add relation to PitchSultanUser
 }
 
 model SamsungSKU {
@@ -283,3 +284,13 @@ model QuestionBank {
   @@index([category])
 }
 
+model PitchSultanUser {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  phone     String   @unique
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id])
+  region    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

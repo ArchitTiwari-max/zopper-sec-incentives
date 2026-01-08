@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
-import { TestSubmission, Question, getTestSubmissionById } from '@/lib/testData'
+import { TestSubmission, Question, getTestSubmissionById, getQuestionsForSEC } from '@/lib/testData'
 import { config } from '@/lib/config'
 
 export function TestDetails() {
@@ -17,13 +17,20 @@ export function TestDetails() {
 
       // Strategy 1: Use state passed from navigation
       if (location.state?.submission) {
-        setSubmission(location.state.submission)
-        // Ensure questions are loaded
+        const sub = location.state.submission
+        setSubmission(sub)
+
+        // Fetch questions specifically for this SEC/User to ensure we get the correct data/answers
         try {
-          const response = await fetch(`${config.apiUrl}/questions`)
-          const result = await response.json()
-          if (result.success && result.data) {
-            setAllQuestions(result.data)
+          const identifier = sub.secId || sub.phone || ''
+          if (identifier) {
+            const questions = await getQuestionsForSEC(identifier)
+            setAllQuestions(questions)
+          } else {
+            // Fallback
+            const response = await fetch(`${config.apiUrl}/questions`)
+            const result = await response.json()
+            if (result.success) setAllQuestions(result.data)
           }
         } catch (error) {
           console.error('Error fetching questions:', error)
@@ -39,24 +46,14 @@ export function TestDetails() {
         if (data) {
           setSubmission(data)
 
-          // The backend endpoint returns enriched responses with question text etc.
-          const constructedQuestions: Question[] = data.responses.map((r: any) => ({
-            id: r.questionId,
-            question: r.questionText || '',
-            options: r.options || [],
-            correctAnswer: r.correctAnswer || '',
-            category: r.category
-          }))
-
-          if (constructedQuestions.length > 0 && constructedQuestions[0].question) {
-            setAllQuestions(constructedQuestions)
-          } else {
-            // Fallback if enriched data is missing
-            const qResponse = await fetch(`${config.apiUrl}/questions`)
-            const qResult = await qResponse.json()
-            if (qResult.success && qResult.data) {
-              setAllQuestions(qResult.data)
+          try {
+            const identifier = data.secId || data.phone || ''
+            if (identifier) {
+              const questions = await getQuestionsForSEC(identifier)
+              setAllQuestions(questions)
             }
+          } catch (e) {
+            console.error('Error fetching SEC questions', e)
           }
         } else {
           console.error('Submission not found')
@@ -130,24 +127,70 @@ export function TestDetails() {
           <h2 className="text-xl font-bold text-gray-900">Answer Review</h2>
 
           {submission.responses.map((response, index) => {
-            // Try to find question in allQuestions (which might be constructed from enriched response)
-            // or fallback to looking up by ID if we fetched the full list
+            // Try to find question in allQuestions
             let question = allQuestions.find(q => q.id === response.questionId)
+            const enrichedData = response as any
 
-            // If response itself has enriched data, use that as fallback if question not found
-            if (!question && (response as any).questionText) {
-              question = {
-                id: response.questionId,
-                question: (response as any).questionText,
-                options: (response as any).options || [],
-                correctAnswer: (response as any).correctAnswer,
-                category: (response as any).category
+            // Fallback/Merge enriched data if local question is missing or incomplete
+            if (enrichedData.questionText) {
+              if (!question) {
+                question = {
+                  id: response.questionId,
+                  question: enrichedData.questionText,
+                  options: enrichedData.options || [],
+                  correctAnswer: enrichedData.correctAnswer,
+                  category: enrichedData.category
+                }
+              } else if (!question.correctAnswer && enrichedData.correctAnswer) {
+                question = { ...question, correctAnswer: enrichedData.correctAnswer }
               }
             }
 
             if (!question) return null
 
-            const isCorrect = response.selectedAnswer === question.correctAnswer
+            // Clean values for comparison
+            const correctAnsRaw = (question.correctAnswer || '').trim() // Keep case for now
+            const selectedAnsRaw = (response.selectedAnswer || '').trim()
+
+            // Robust Matcher Function - STRICT VERSION
+            const isMatch = (optionStr: string, benchmarkVal: string, optionIndex: number) => {
+              if (!benchmarkVal) return false
+
+              const opt = optionStr.toUpperCase().trim()
+              const bench = benchmarkVal.toUpperCase().trim()
+
+              // 1. Identify Option Identifier (A, B, C...)
+              let optionId = ''
+              const prefixMatch = optionStr.match(/^([A-Da-d])[\)\.]/);
+              if (prefixMatch) {
+                optionId = prefixMatch[1].toUpperCase()
+              } else {
+                optionId = String.fromCharCode(65 + optionIndex) // 0->A
+              }
+
+              // 2. Identify Just the Text
+              const cleanOptText = optionStr.replace(/^([A-Da-d0-9]+)[\)\.]\s*/, '').toUpperCase().trim();
+
+              // Rule A: Match by ID (e.g. Answer="A", Option="A")
+              if (bench === optionId) return true
+
+              // Rule B: Match by Exact Text
+              if (opt === bench) return true
+              if (cleanOptText === bench) return true
+
+              return false
+            }
+
+            // Determine explicit correctness state
+            let isCorrect = response.isCorrect
+            if (isCorrect === undefined) {
+              isCorrect = isMatch(selectedAnsRaw, correctAnsRaw, -1) // -1 index ignores index check for simple equality check
+              // Re-verify strictly:
+              if (selectedAnsRaw.toUpperCase() === correctAnsRaw.toUpperCase()) isCorrect = true
+            }
+
+            // Check if we successfully highlighted ANY option as correct
+            const anyOptionHighlighted = question.options.some((opt, idx) => isMatch(opt, correctAnsRaw, idx))
 
             return (
               <div
@@ -170,38 +213,59 @@ export function TestDetails() {
                       )}
                     </div>
                     <p className="text-gray-900 font-medium">{question.question}</p>
+                    {/* Fallback Warning if we couldn't match the correct answer to a UI option */}
+                    {!isCorrect && !anyOptionHighlighted && correctAnsRaw && (
+                      <div className="mt-2 text-sm bg-yellow-50 text-yellow-800 p-2 rounded border border-yellow-200">
+                        <strong>Note:</strong> Expected answer is "{correctAnsRaw}" but it didn't match the options perfectly.
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-2 mt-4">
                   {question.options.map((option, optIndex) => {
-                    const optionLetter = String.fromCharCode(65 + optIndex) // A, B, C, D
-                    const isSelected = response.selectedAnswer === optionLetter
-                    const isCorrectAnswer = question.correctAnswer === optionLetter
+                    // Robust check: Is this option the one selected?
+                    const isSelected = isMatch(option, selectedAnsRaw, optIndex)
+
+                    // Robust check: Is this option the correct one?
+                    const isCorrectOption = isMatch(option, correctAnsRaw, optIndex)
 
                     return (
                       <div
                         key={optIndex}
-                        className={`p-3 rounded-lg border-2 ${isCorrectAnswer
-                          ? 'bg-green-50 border-green-500'
+                        className={`p-3 rounded-lg border-2 ${isCorrectOption
+                          ? 'bg-green-50 border-green-500' // Correct is always green bg
                           : isSelected
-                            ? 'bg-red-50 border-red-500'
+                            ? 'bg-red-50 border-red-500' // Wrong selection is red bg
                             : 'bg-gray-50 border-gray-200'
                           }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className={`${isCorrectAnswer ? 'text-green-900 font-semibold' :
+                          <span className={`flex-1 ${isCorrectOption ? 'text-green-900 font-bold' :
                             isSelected ? 'text-red-900 font-semibold' :
                               'text-gray-700'
                             }`}>
                             {option}
                           </span>
-                          {isCorrectAnswer && (
-                            <span className="text-green-700 text-sm font-semibold">✓ Correct Answer</span>
-                          )}
-                          {isSelected && !isCorrectAnswer && (
-                            <span className="text-red-700 text-sm font-semibold">Your Answer</span>
-                          )}
+
+                          <div className="flex md:flex-row flex-col items-end gap-1 ml-3 min-w-[max-content]">
+                            {/* Show CORRECT badge if this is the right option */}
+                            {isCorrectOption && (
+                              <span className="text-green-700 text-xs uppercase font-bold bg-green-200 px-2 py-1 rounded whitespace-nowrap">
+                                ✓ Correct Answer
+                              </span>
+                            )}
+
+                            {/* Show YOUR ANSWER badge if this is what user picked */}
+                            {isSelected && (
+                              <span className={`text-xs uppercase font-bold px-2 py-1 rounded whitespace-nowrap ${isCorrectOption
+                                ? 'text-green-800 bg-green-100 border border-green-300'
+                                : 'text-red-700 bg-red-100 border border-red-300'
+                                }`}>
+                                {isCorrectOption ? '(You Chose This)' : 'Your Answer'}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )

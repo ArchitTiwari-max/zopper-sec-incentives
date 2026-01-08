@@ -4359,6 +4359,83 @@ function shuffleArrayWithSeed<T>(array: T[], seed: string): T[] {
   return shuffled
 }
 
+// Pitch Sultan User APIs
+
+/**
+ * POST /api/pitch-sultan/user
+ * Create or Update a Pitch Sultan user
+ */
+app.post('/api/pitch-sultan/user', async (req, res) => {
+  try {
+    const { name, storeId, region, phone } = req.body
+
+    if (!name || !storeId || !region || !phone) {
+      return res.status(400).json({ success: false, error: "Missing required fields" })
+    }
+
+    // Upsert logic: Update if exists, otherwise create
+    const user = await prisma.pitchSultanUser.upsert({
+      where: { phone },
+      update: {
+        name,
+        storeId,
+        region,
+      },
+      create: {
+        name,
+        storeId,
+        region,
+        phone,
+      },
+      include: {
+        store: true
+      }
+    })
+
+    res.json({ success: true, data: user })
+  } catch (error) {
+    console.error("Error creating/updating Pitch Sultan user:", error)
+    res.status(500).json({ success: false, error: "Failed to process user" })
+  }
+})
+
+/**
+ * GET /api/pitch-sultan/user
+ * Get Pitch Sultan user by ID or Phone
+ */
+app.get('/api/pitch-sultan/user', async (req, res) => {
+  try {
+    const id = req.query.id as string
+    const phone = req.query.phone as string
+
+    if (!id && !phone) {
+      return res.status(400).json({ success: false, error: "Missing ID or Phone" })
+    }
+
+    let user
+    if (phone) {
+      user = await prisma.pitchSultanUser.findUnique({
+        where: { phone },
+        include: { store: true }
+      })
+    } else {
+      user = await prisma.pitchSultanUser.findUnique({
+        where: { id },
+        include: { store: true }
+      })
+    }
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found" })
+    }
+
+    res.json({ success: true, data: user })
+  } catch (error) {
+    console.error("Error fetching Pitch Sultan user:", error)
+    res.status(500).json({ success: false, error: "Failed to fetch user" })
+  }
+})
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
