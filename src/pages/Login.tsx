@@ -30,7 +30,7 @@ export function LoginPage() {
         return
       }
       if (isAdmin) navigate('/admin/dashboard', { replace: true })
-      else if (isSEC) navigate('/plan-sell-info', { replace: true })
+      else if (isSEC) navigate('/welcome', { replace: true })
     }
   }, [isAuthenticated, isAdmin, isSEC, navigate, location.state])
 
@@ -105,7 +105,7 @@ export function LoginPage() {
         const from = (location.state as any)?.from
         const next = from && typeof from === 'object'
           ? `${from.pathname || ''}${from.search || ''}${from.hash || ''}`
-          : '/plan-sell-info'
+          : '/welcome'
         setTimeout(() => navigate(next, { replace: true }), 800)
       } else {
         setToast({ message: data.message || 'Invalid OTP', type: 'error' })
@@ -128,7 +128,7 @@ export function LoginPage() {
       <div className="mt-6 space-y-3">
         <label className="block text-sm font-medium">Phone Number</label>
         <div className="relative">
-<FaPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none scale-x-[-1]" />
+          <FaPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none scale-x-[-1]" />
           <input
             inputMode="numeric"
             pattern="[0-9]*"
@@ -176,11 +176,10 @@ export function LoginPage() {
 
       {toast && (
         <div className="fixed inset-x-0 bottom-6 flex justify-center z-50">
-          <div className={`px-4 py-2 rounded-full shadow-lg ${
-            toast.type === 'success' 
-              ? 'bg-green-100 text-green-700' 
+          <div className={`px-4 py-2 rounded-full shadow-lg ${toast.type === 'success'
+              ? 'bg-green-100 text-green-700'
               : 'bg-red-100 text-red-700'
-          }`}>
+            }`}>
             {toast.message}
           </div>
         </div>
