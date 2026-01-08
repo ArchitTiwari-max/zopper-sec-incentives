@@ -32,11 +32,12 @@ import { AdminAnswerDetails } from './pages/AdminAnswerDetails'
 import { PitchSultan } from './pages/PitchSultan'
 import { PitchSultanSetup } from './pages/PitchSultanSetup'
 import { PitchSultanBattle } from './pages/PitchSultanBattle'
+import { SecLanding } from './pages/SecLanding'
 
 export default function App() {
   const location = useLocation()
-  const showFooter = location.pathname !== '/' && location.pathname !== '/leaderboard' && location.pathname !== '/admin/leaderboard'
-  const isFullScreenPage = location.pathname === '/leaderboard' || location.pathname === '/admin/leaderboard' || location.pathname === '/pitchsultan' || location.pathname === '/pitchsultan/setup' || location.pathname === '/pitchsultan/battle'
+  const showFooter = location.pathname !== '/' && location.pathname !== '/leaderboard' && location.pathname !== '/admin/leaderboard' && location.pathname !== '/welcome'
+  const isFullScreenPage = location.pathname === '/leaderboard' || location.pathname === '/admin/leaderboard' || location.pathname === '/pitchsultan' || location.pathname === '/pitchsultan/setup' || location.pathname === '/pitchsultan/battle' || location.pathname === '/welcome'
 
   return (
     <AuthProvider>
@@ -55,6 +56,11 @@ export default function App() {
           <Route path="/pitchsultan" element={<PitchSultan />} />
           <Route path="/pitchsultan/setup" element={<PitchSultanSetup />} />
           <Route path="/pitchsultan/battle" element={<PitchSultanBattle />} />
+          <Route path="/welcome" element={
+            <SECRoute>
+              <SecLanding />
+            </SECRoute>
+          } />
         </Routes>
       ) : (
         <div className="min-h-screen flex items-center justify-center p-4">

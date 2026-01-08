@@ -9,9 +9,10 @@ import {
     MdThumbUp, MdThumbDown,
     MdComment, MdShare, MdMoreVert,
     MdClose, MdUpload, MdRemoveRedEye,
-    MdHelpOutline, MdHelp, MdEmail, MdPhone, MdQuestionAnswer
+    MdHelpOutline, MdHelp, MdEmail, MdPhone, MdQuestionAnswer, MdKeyboardArrowDown
 } from 'react-icons/md';
 import { BiLike, BiDislike, BiCommentDetail, BiShare } from "react-icons/bi";
+import contestRulesImg from '../assets/contest-rules.jpg';
 
 
 // --- Mock Data ---
@@ -262,65 +263,100 @@ const CreateView = () => (
     </div>
 );
 
-const HelpSupportView = () => (
-    <div className="min-h-screen text-white md:p-4 max-w-4xl mx-auto pb-20">
-        <div className="p-4">
-            <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
-                <MdHelp className="text-3xl text-blue-400" /> Help & Support
-            </h2>
-            <p className="text-gray-400 text-sm mb-6">Get answers to your questions and reach out for support</p>
+const HelpSupportView = () => {
+    const [expandedId, setExpandedId] = useState<number | null>(null);
 
-            {/* FAQ Section */}
-            <div className="mb-8">
-                <h3 className="text-lg font-semibold mb-4 text-gray-200">Frequently Asked Questions</h3>
-                <div className="space-y-3">
-                    {HELP_TOPICS.map((topic) => {
-                        const Icon = topic.icon;
-                        return (
-                            <div key={topic.id} className="bg-gray-900 p-4 rounded-xl hover:bg-gray-800 transition-colors cursor-pointer">
-                                <div className="flex items-start gap-3">
-                                    <Icon className="text-2xl text-blue-400 mt-1 flex-shrink-0" />
-                                    <div className="flex-1">
-                                        <h4 className="font-semibold text-white mb-1">{topic.title}</h4>
-                                        <p className="text-sm text-gray-400">{topic.description}</p>
+    const toggleExpand = (id: number) => {
+        setExpandedId(expandedId === id ? null : id);
+    };
+
+    return (
+        <div className="min-h-screen text-white md:p-4 max-w-4xl mx-auto pb-20">
+            <div className="p-4">
+                <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+                    <MdHelp className="text-3xl text-blue-400" /> Help & Support
+                </h2>
+                <p className="text-gray-400 text-sm mb-6">Get answers to your questions and reach out for support</p>
+
+                {/* FAQ Section */}
+                <div className="mb-8">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-200">Frequently Asked Questions</h3>
+                    <div className="space-y-3">
+                        {HELP_TOPICS.map((topic) => {
+                            const Icon = topic.icon;
+                            const isExpanded = expandedId === topic.id;
+                            return (
+                                <div
+                                    key={topic.id}
+                                    className={`bg-gray-900 overflow-hidden rounded-xl transition-all duration-300 ${isExpanded ? 'ring-1 ring-blue-500/50' : 'hover:bg-gray-800 cursor-pointer'}`}
+                                    onClick={() => toggleExpand(topic.id)}
+                                >
+                                    <div className="p-4 flex items-start gap-3">
+                                        <Icon className="text-2xl text-blue-400 mt-1 flex-shrink-0" />
+                                        <div className="flex-1">
+                                            <h4 className="font-semibold text-white mb-1">{topic.title}</h4>
+                                            <p className="text-sm text-gray-400">{topic.description}</p>
+                                        </div>
+                                        <MdKeyboardArrowDown className={`text-2xl text-gray-500 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                                    </div>
+
+                                    {/* Expanded Content */}
+                                    <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                                        <div className="overflow-hidden">
+                                            <div className="px-4 pb-4 pt-0">
+                                                {topic.id === 3 ? (
+                                                    <div className="mt-2 rounded-lg overflow-hidden border border-gray-700">
+                                                        <img
+                                                            src={contestRulesImg}
+                                                            alt="Contest Rules"
+                                                            className="w-full h-auto object-contain bg-[#1a1a1a]"
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-sm text-gray-400 pl-9">
+                                                        Detailed information about {topic.title.toLowerCase()} will be available here.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
-            </div>
 
-            {/* Contact Support */}
-            <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 p-6 rounded-xl border border-blue-800/30">
-                <h3 className="text-lg font-semibold mb-4 text-gray-200">Contact Support</h3>
-                <div className="space-y-4">
-                    <div className="flex items-center gap-3 text-gray-300">
-                        <div className="w-10 h-10 bg-blue-600/20 rounded-full flex items-center justify-center">
-                            <MdEmail className="text-xl text-blue-400" />
+                {/* Contact Support */}
+                <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 p-6 rounded-xl border border-blue-800/30">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-200">Contact Support</h3>
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3 text-gray-300">
+                            <div className="w-10 h-10 bg-blue-600/20 rounded-full flex items-center justify-center">
+                                <MdEmail className="text-xl text-blue-400" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-400">Email Support</p>
+                                <p className="font-medium">support@pitchsultan.com</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-sm text-gray-400">Email Support</p>
-                            <p className="font-medium">support@pitchsultan.com</p>
+                        <div className="flex items-center gap-3 text-gray-300">
+                            <div className="w-10 h-10 bg-green-600/20 rounded-full flex items-center justify-center">
+                                <MdPhone className="text-xl text-green-400" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-400">Phone Support</p>
+                                <p className="font-medium">1800-123-4567</p>
+                            </div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 text-gray-300">
-                        <div className="w-10 h-10 bg-green-600/20 rounded-full flex items-center justify-center">
-                            <MdPhone className="text-xl text-green-400" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-400">Phone Support</p>
-                            <p className="font-medium">1800-123-4567</p>
-                        </div>
-                    </div>
+                    <button className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-full transition-colors">
+                        Send us a message
+                    </button>
                 </div>
-                <button className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-full transition-colors">
-                    Send us a message
-                </button>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const ProfileView = ({ currentUser }: { currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string } }) => (
     <div className="min-h-screen pb-20 pt-4">
