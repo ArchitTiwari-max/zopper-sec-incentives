@@ -11,30 +11,26 @@ export const PitchSultan = () => {
     const { user } = useAuth();
 
     const handleEnterBattle = async () => {
-        if (user && 'phone' in user) {
-            try {
-                const res = await fetch(`${API_BASE_URL}/pitch-sultan/user?phone=${user.phone}`);
-                const data = await res.json();
-
-                if (data.success && data.data) {
-                    // Sync local storage just in case
-                    localStorage.setItem('pitchSultanUserId', data.data.id);
-                    localStorage.setItem('pitchSultanUser', JSON.stringify({
-                        name: data.data.name,
-                        store: {
-                            id: data.data.store.id,
-                            name: data.data.store.storeName,
-                            city: data.data.store.city
-                        },
-                        region: data.data.region
-                    }));
-                    setTimeout(() => navigate('/pitchsultan/battle'), 150);
-                    return;
-                }
-            } catch (e) {
-                console.error("Failed to check user status:", e);
-            }
+        // Check if user is logged in as SEC
+        if (!user || !('phone' in user)) {
+            // Not logged in, redirect to login
+            navigate('/');
+            return;
         }
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/pitch-sultan/user?phone=${user.phone}`);
+            const data = await res.json();
+
+            if (data.success && data.data) {
+                // User exists, go to battle
+                setTimeout(() => navigate('/pitchsultan/battle'), 150);
+                return;
+            }
+        } catch (e) {
+            console.error("Failed to check user status:", e);
+        }
+        
         // If no user found or error, go to setup
         setTimeout(() => navigate('/pitchsultan/setup'), 150);
     };

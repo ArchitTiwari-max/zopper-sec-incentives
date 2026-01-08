@@ -28,7 +28,6 @@ model Store {
   secUsers    SECUser[]     // One store can have multiple SECs (backward compatibility)
   salesReports SalesReport[] // Store sales reports
   helpRequests HelpRequest[] // Help requests from this store
-  pitchSultanUsers PitchSultanUser[] // Add relation to PitchSultanUser
 }
 
 model SamsungSKU {
@@ -78,10 +77,12 @@ model SECUser {
   name         String?
   storeId      String?
   store        Store?        @relation(fields: [storeId], references: [id])
+  region       String?       // Optional - Region for Pitch Sultan (north/south/east/west)
   isActive     Boolean       @default(true)
   lastLoginAt  DateTime?
   salesReports SalesReport[] // SEC sales reports
   deductions   IncentiveDeduction[] // Deductions applied to this SEC
+  videos       PitchSultanVideo[]   // Videos uploaded by this SEC
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 }
@@ -284,22 +285,10 @@ model QuestionBank {
   @@index([category])
 }
 
-model PitchSultanUser {
-  id        String              @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  phone     String              @unique
-  storeId   String
-  store     Store               @relation(fields: [storeId], references: [id])
-  region    String
-  videos    PitchSultanVideo[]  // Videos uploaded by this user
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
-}
-
 model PitchSultanVideo {
   id              String           @id @default(auto()) @map("_id") @db.ObjectId
-  userId          String           @db.ObjectId
-  user            PitchSultanUser  @relation(fields: [userId], references: [id])
+  secUserId       String           @db.ObjectId
+  secUser         SECUser          @relation(fields: [secUserId], references: [id])
   title           String?          // Optional video title
   description     String?          // Optional video description
   fileId          String           // ImageKit file ID
@@ -316,7 +305,7 @@ model PitchSultanVideo {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
-  @@index([userId])
+  @@index([secUserId])
   @@index([uploadedAt])
   @@index([isActive])
 }
