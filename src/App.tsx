@@ -53,9 +53,21 @@ export default function App() {
               <AdminLeaderboard />
             </AdminRoute>
           } />
-          <Route path="/pitchsultan" element={<PitchSultan />} />
-          <Route path="/pitchsultan/setup" element={<PitchSultanSetup />} />
-          <Route path="/pitchsultan/battle" element={<PitchSultanBattle />} />
+          <Route path="/pitchsultan" element={
+            <SECRoute>
+              <PitchSultan />
+            </SECRoute>
+          } />
+          <Route path="/pitchsultan/setup" element={
+            <SECRoute>
+              <PitchSultanSetup />
+            </SECRoute>
+          } />
+          <Route path="/pitchsultan/battle" element={
+            <SECRoute>
+              <PitchSultanBattle />
+            </SECRoute>
+          } />
           <Route path="/welcome" element={
             <SECRoute>
               <SecLanding />
