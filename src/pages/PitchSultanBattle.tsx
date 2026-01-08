@@ -12,9 +12,10 @@ import {
     MdHelpOutline, MdHelp, MdEmail, MdPhone, MdQuestionAnswer
 } from 'react-icons/md';
 import { BiLike, BiDislike, BiCommentDetail, BiShare } from "react-icons/bi";
+import { VideoUploadModal } from '../components/VideoUploadModal';
 
 
-// --- Mock Data ---
+// --- Mock Data (REMOVED - Now using database) ---
 
 const HELP_TOPICS = [
     { id: 1, icon: MdQuestionAnswer, title: "How to Upload a Video", description: "Learn how to share your pitch with the community" },
@@ -22,49 +23,6 @@ const HELP_TOPICS = [
     { id: 3, icon: MdQuestionAnswer, title: "Contest Rules", description: "Understand the Pitch Sultan competition guidelines" },
     { id: 4, icon: MdQuestionAnswer, title: "Scoring System", description: "How your pitches are evaluated and ranked" },
     { id: 5, icon: MdQuestionAnswer, title: "Technical Issues", description: "Troubleshooting common problems" },
-];
-
-const VIDEO_FEED = [
-    {
-        id: 1,
-        title: "How to Sell Godrej ACs like a Pro! ❄️",
-        thumbnail: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=1000&auto=format&fit=crop",
-        duration: "4:20",
-        uploader: "Amit Sharma",
-        avatar: "https://ui-avatars.com/api/?name=Amit+Sharma&background=random",
-        views: "1.5K",
-        time: "2 hours ago"
-    },
-    {
-        id: 2,
-        title: "Pitching the New Warranty Plan 🛡️",
-        thumbnail: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1000&auto=format&fit=crop",
-        duration: "8:15",
-        uploader: "Priya Singh",
-        avatar: "https://ui-avatars.com/api/?name=Priya+Singh&background=random",
-        views: "3.2K",
-        time: "5 hours ago"
-    },
-    {
-        id: 3,
-        title: "Handling Customer Objections - Live Demo",
-        thumbnail: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?q=80&w=1000&auto=format&fit=crop",
-        duration: "12:00",
-        uploader: "Rahul Verma",
-        avatar: "https://ui-avatars.com/api/?name=Rahul+Verma&background=random",
-        views: "890",
-        time: "1 day ago"
-    },
-    {
-        id: 4,
-        title: "Morning Routine of a Top Performer ☀️",
-        thumbnail: "https://images.unsplash.com/photo-1493612276216-ee3925520721?q=80&w=1000&auto=format&fit=crop",
-        duration: "3:45",
-        uploader: "Sneha Gupta",
-        avatar: "https://ui-avatars.com/api/?name=Sneha+Gupta&background=random",
-        views: "10K",
-        time: "2 days ago"
-    }
 ];
 
 const SHORTS_FEED = [
@@ -154,28 +112,59 @@ const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTa
     );
 };
 
-const VideoCard = ({ video }: { video: any }) => (
-    <div className="flex flex-col mb-6 cursor-pointer group">
-        <div className="relative w-full aspect-video bg-gray-800 overflow-hidden">
-            <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
-            <span className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1 rounded font-medium">
-                {video.duration}
-            </span>
-        </div>
-        <div className="flex gap-3 mt-3 px-3 md:px-0">
-            <img src={video.avatar} alt="" className="w-9 h-9 rounded-full mt-1 flex-shrink-0" />
-            <div className="flex flex-col">
-                <h3 className="text-white text-sm md:text-base font-semibold line-clamp-2 leading-tight">
-                    {video.title}
-                </h3>
-                <div className="text-gray-400 text-xs mt-1">
-                    {video.uploader} • {video.views} views • {video.time}
-                </div>
+const VideoCard = ({ video }: { video: any }) => {
+    const videoSource = video.url;
+    const uploaderName = video.user?.name || video.uploader || 'Unknown';
+    const uploaderAvatar = video.user?.name 
+        ? `https://ui-avatars.com/api/?name=${encodeURIComponent(video.user.name)}&background=ffd700&color=000`
+        : 'https://ui-avatars.com/api/?name=Unknown&background=random';
+    
+    // Format views
+    const formatViews = (views: number) => {
+        if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
+        if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
+        return views.toString();
+    };
+
+    // Format time ago
+    const formatTimeAgo = (date: string) => {
+        const now = new Date();
+        const uploaded = new Date(date);
+        const diffMs = now.getTime() - uploaded.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffMins < 60) return `${diffMins} minutes ago`;
+        if (diffHours < 24) return `${diffHours} hours ago`;
+        if (diffDays < 7) return `${diffDays} days ago`;
+        return uploaded.toLocaleDateString();
+    };
+
+    return (
+        <div className="flex flex-col mb-6 cursor-pointer group">
+            <div className="relative w-full aspect-video bg-gray-800 overflow-hidden">
+                <video 
+                    src={videoSource} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    preload="metadata"
+                />
             </div>
-            <MdMoreVert className="text-white ml-auto flex-shrink-0 mt-1" />
+            <div className="flex gap-3 mt-3 px-3 md:px-0">
+                <img src={uploaderAvatar} alt="" className="w-9 h-9 rounded-full mt-1 flex-shrink-0" />
+                <div className="flex flex-col">
+                    <h3 className="text-white text-sm md:text-base font-semibold line-clamp-2 leading-tight">
+                        {video.title || video.fileName || 'Untitled Video'}
+                    </h3>
+                    <div className="text-gray-400 text-xs mt-1">
+                        {uploaderName} • {formatViews(video.views || 0)} views • {formatTimeAgo(video.uploadedAt)}
+                    </div>
+                </div>
+                <MdMoreVert className="text-white ml-auto flex-shrink-0 mt-1" />
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const ShortsPlayer = () => {
     const [currentShortIndex, setCurrentShortIndex] = useState(0);
@@ -243,7 +232,7 @@ const ShortsPlayer = () => {
     );
 };
 
-const CreateView = () => (
+const CreateView = ({ onUploadClick }: { onUploadClick: () => void }) => (
     <div className="flex flex-col items-center justify-center h-[80vh] text-white p-6">
         <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mb-6 animate-bounce">
             <MdUpload className="text-5xl text-gray-400" />
@@ -252,7 +241,10 @@ const CreateView = () => (
         <p className="text-gray-400 text-center mb-8 max-w-xs">Share your sales pitch with the Sultan community. Upload a video or create a Short.</p>
 
         <div className="flex flex-col gap-4 w-full max-w-sm">
-            <button className="bg-[#3ea6ff] hover:bg-[#3095ef] text-black font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2">
+            <button 
+                onClick={onUploadClick}
+                className="bg-[#3ea6ff] hover:bg-[#3095ef] text-black font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2"
+            >
                 <MdUpload className="text-xl" /> Upload Video
             </button>
             <button className="bg-white hover:bg-gray-200 text-black font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2">
@@ -363,6 +355,10 @@ const ProfileView = ({ currentUser }: { currentUser: { name: string; handle: str
 
 export const PitchSultanBattle = () => {
     const [activeTab, setActiveTab] = useState('home');
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [videos, setVideos] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [currentUser, setCurrentUser] = useState({
         name: "Zopper Champion",
         handle: "@zopper_champ",
@@ -373,35 +369,86 @@ export const PitchSultanBattle = () => {
         region: ""
     });
 
-    // Load user info from localStorage
+    // Load user info and fetch videos from database
     useEffect(() => {
-        const userDataStr = localStorage.getItem('pitchSultanUser');
-        if (userDataStr) {
-            try {
-                const userData = JSON.parse(userDataStr);
-                setCurrentUser({
-                    name: userData.name || "Zopper Champion",
-                    handle: `@${userData.name?.toLowerCase().replace(/\s+/g, '_') || 'zopper_champ'}`,
-                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name || 'Zopper Champion')}&background=ffd700&color=000`,
-                    subscribers: "1.2K",
-                    role: userData.store?.name || "SEC Master",
-                    store: userData.store?.name || "",
-                    region: userData.region || ""
-                });
-            } catch (e) {
-                console.error('Failed to parse user data:', e);
+        const loadUserAndVideos = async () => {
+            // Load user from localStorage
+            const userDataStr = localStorage.getItem('pitchSultanUser');
+            if (userDataStr) {
+                try {
+                    const userData = JSON.parse(userDataStr);
+                    console.log('📦 Loaded user data:', userData);
+                    setCurrentUserId(userData.id);
+                    setCurrentUser({
+                        name: userData.name || "Zopper Champion",
+                        handle: `@${userData.name?.toLowerCase().replace(/\s+/g, '_') || 'zopper_champ'}`,
+                        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name || 'Zopper Champion')}&background=ffd700&color=000`,
+                        subscribers: "1.2K",
+                        role: userData.store?.name || "SEC Master",
+                        store: userData.store?.name || "",
+                        region: userData.region || ""
+                    });
+                } catch (e) {
+                    console.error('Failed to parse user data:', e);
+                }
+            } else {
+                console.log('⚠️ No user data found in localStorage - using default user');
+                // Keep default user for demo purposes
             }
-        }
+
+            // Fetch videos from database
+            await fetchVideos();
+        };
+
+        loadUserAndVideos();
     }, []);
+
+    const fetchVideos = async () => {
+        try {
+            setLoading(true);
+            const API_URL = window.location.hostname === 'localhost' 
+                ? 'http://localhost:3001' 
+                : `${window.location.protocol}//${window.location.hostname}:3001`;
+
+            console.log('📡 Fetching videos from:', `${API_URL}/api/pitch-sultan/videos`);
+            const response = await fetch(`${API_URL}/api/pitch-sultan/videos?limit=50`);
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('✅ Fetched videos:', data.data.length);
+                setVideos(data.data);
+            } else {
+                console.error('❌ Failed to fetch videos:', data.error);
+            }
+        } catch (error) {
+            console.error('❌ Error fetching videos:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Scroll to top on tab change
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [activeTab]);
 
+    const handleUploadSuccess = (videoData: any) => {
+        console.log('✅ Video uploaded successfully:', videoData);
+        
+        // Refresh videos from database
+        fetchVideos();
+
+        // Show success message
+        alert('Video uploaded successfully! 🎉');
+    };
+
+    const handleUploadClick = () => {
+        setIsUploadModalOpen(true);
+    };
+
     return (
         <div className="min-h-screen bg-[#0f0f0f] text-white">
-            <Navbar currentUser={currentUser} />
+            {currentUser && <Navbar currentUser={currentUser} />}
 
             <div className="pt-14 pb-16 md:pl-0">
                 {activeTab === 'home' && (
@@ -415,15 +462,30 @@ export const PitchSultanBattle = () => {
                             ))}
                         </div>
 
-                        {/* Feed */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-4">
-                            {VIDEO_FEED.map(video => (
-                                <VideoCard key={video.id} video={video} />
-                            ))}
-                            {VIDEO_FEED.map(video => (
-                                <VideoCard key={`dup-${video.id}`} video={{ ...video, id: `dup-${video.id}` }} />
-                            ))}
-                        </div>
+                        {/* Loading State */}
+                        {loading && (
+                            <div className="flex justify-center items-center py-20">
+                                <div className="w-12 h-12 border-4 border-gray-700 border-t-white rounded-full animate-spin"></div>
+                            </div>
+                        )}
+
+                        {/* Empty State */}
+                        {!loading && videos.length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                                <MdOutlineSlowMotionVideo className="text-6xl mb-4" />
+                                <p className="text-lg">No videos yet</p>
+                                <p className="text-sm">Be the first to upload a pitch!</p>
+                            </div>
+                        )}
+
+                        {/* Video Feed */}
+                        {!loading && videos.length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-4">
+                                {videos.map(video => (
+                                    <VideoCard key={video.id} video={video} />
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -433,14 +495,22 @@ export const PitchSultanBattle = () => {
                     </div>
                 )}
 
-                {activeTab === 'create' && <CreateView />}
+                {activeTab === 'create' && <CreateView onUploadClick={handleUploadClick} />}
 
                 {activeTab === 'help' && <HelpSupportView />}
 
-                {activeTab === 'profile' && <ProfileView currentUser={currentUser} />}
+                {activeTab === 'profile' && currentUser && <ProfileView currentUser={currentUser} />}
             </div>
 
             <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+
+            {/* Video Upload Modal */}
+            <VideoUploadModal
+                isOpen={isUploadModalOpen}
+                onClose={() => setIsUploadModalOpen(false)}
+                onUploadSuccess={handleUploadSuccess}
+                currentUserId={currentUserId || undefined}
+            />
         </div>
     );
 };

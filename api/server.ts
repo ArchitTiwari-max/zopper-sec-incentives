@@ -4400,6 +4400,169 @@ app.post('/api/pitch-sultan/user', async (req, res) => {
 })
 
 /**
+ * POST /api/pitch-sultan/videos
+ * Save uploaded video metadata to database
+ */
+app.post('/api/pitch-sultan/videos', async (req, res) => {
+  try {
+    const { userId, fileId, url, fileName, title, description, thumbnailUrl, fileSize, duration, tags } = req.body
+
+    if (!userId || !fileId || !url || !fileName) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing required fields: userId, fileId, url, fileName" 
+      })
+    }
+
+    const video = await prisma.pitchSultanVideo.create({
+      data: {
+        userId,
+        fileId,
+        url,
+        fileName,
+        title: title || null,
+        description: description || null,
+        thumbnailUrl: thumbnailUrl || null,
+        fileSize: fileSize || null,
+        duration: duration || null,
+        tags: tags || []
+      },
+      include: {
+        user: {
+          include: {
+            store: true
+          }
+        }
+      }
+    })
+
+    res.json({ success: true, data: video })
+  } catch (error) {
+    console.error("Error saving video:", error)
+    res.status(500).json({ success: false, error: "Failed to save video" })
+  }
+})
+
+/**
+ * GET /api/pitch-sultan/videos
+ * Get all videos (with pagination and filters)
+ */
+app.get('/api/pitch-sultan/videos', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 50
+    const skip = parseInt(req.query.skip as string) || 0
+    const userId = req.query.userId as string
+
+    const where: any = { isActive: true }
+    if (userId) {
+      where.userId = userId
+    }
+
+    const videos = await prisma.pitchSultanVideo.findMany({
+      where,
+      include: {
+        user: {
+          include: {
+            store: true
+          }
+        }
+      },
+      orderBy: {
+        uploadedAt: 'desc'
+      },
+      take: limit,
+      skip
+    })
+
+    const total = await prisma.pitchSultanVideo.count({ where })
+
+    res.json({ 
+      success: true, 
+      data: videos,
+      pagination: {
+        total,
+        limit,
+        skip,
+        hasMore: skip + videos.length < total
+      }
+    })
+  } catch (error) {
+    console.error("Error fetching videos:", error)
+    res.status(500).json({ success: false, error: "Failed to fetch videos" })
+  }
+})
+
+/**
+ * PUT /api/pitch-sultan/videos/:id/view
+ * Increment video view count
+ */
+app.put('/api/pitch-sultan/videos/:id/view', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const video = await prisma.pitchSultanVideo.update({
+      where: { id },
+      data: {
+        views: {
+          increment: 1
+        }
+      }
+    })
+
+    res.json({ success: true, data: video })
+  } catch (error) {
+    console.error("Error incrementing view count:", error)
+    res.status(500).json({ success: false, error: "Failed to update view count" })
+  }
+})
+
+/**
+ * PUT /api/pitch-sultan/videos/:id/like
+ * Increment video like count
+ */
+app.put('/api/pitch-sultan/videos/:id/like', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const video = await prisma.pitchSultanVideo.update({
+      where: { id },
+      data: {
+        likes: {
+          increment: 1
+        }
+      }
+    })
+
+    res.json({ success: true, data: video })
+  } catch (error) {
+    console.error("Error incrementing like count:", error)
+    res.status(500).json({ success: false, error: "Failed to update like count" })
+  }
+})
+
+/**
+ * DELETE /api/pitch-sultan/videos/:id
+ * Soft delete a video (set isActive to false)
+ */
+app.delete('/api/pitch-sultan/videos/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const video = await prisma.pitchSultanVideo.update({
+      where: { id },
+      data: {
+        isActive: false
+      }
+    })
+
+    res.json({ success: true, data: video })
+  } catch (error) {
+    console.error("Error deleting video:", error)
+    res.status(500).json({ success: false, error: "Failed to delete video" })
+  }
+})
+
+/**
  * GET /api/pitch-sultan/user
  * Get Pitch Sultan user by ID or Phone
  */
@@ -4434,6 +4597,55 @@ app.get('/api/pitch-sultan/user', async (req, res) => {
     console.error("Error fetching Pitch Sultan user:", error)
     res.status(500).json({ success: false, error: "Failed to fetch user" })
   }
+})
+
+/**
+ * GET /api/imagekit-config
+ * Get ImageKit public configuration
+ */
+app.get('/api/imagekit-config', (req, res) => {
+  const publicKey = process.env.IMAGEKIT_PUBLIC_KEY
+  const urlEndpoint = process.env.IMAGEKIT_URL_ENDPOINT
+
+  if (!publicKey || !urlEndpoint) {
+    return res.status(500).json({ 
+      success: false, 
+      error: 'ImageKit configuration not found. Please set IMAGEKIT_PUBLIC_KEY and IMAGEKIT_URL_ENDPOINT in .env' 
+    })
+  }
+
+  res.json({
+    publicKey,
+    urlEndpoint
+  })
+})
+
+/**
+ * GET /api/imagekit-auth
+ * Generate ImageKit authentication parameters for client-side upload
+ */
+app.get('/api/imagekit-auth', (req, res) => {
+  const privateKey = process.env.IMAGEKIT_PRIVATE_KEY
+
+  if (!privateKey) {
+    return res.status(500).json({ 
+      success: false, 
+      error: 'ImageKit private key not configured' 
+    })
+  }
+
+  const token = req.query.token || crypto.randomBytes(16).toString('hex')
+  const expire = req.query.expire || (Math.floor(Date.now() / 1000) + 2400).toString() // 40 minutes
+  const signature = crypto
+    .createHmac('sha1', privateKey)
+    .update(token + expire)
+    .digest('hex')
+
+  res.json({
+    token,
+    expire,
+    signature
+  })
 })
 
 // Health check endpoint

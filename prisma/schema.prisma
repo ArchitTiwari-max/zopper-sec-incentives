@@ -285,12 +285,38 @@ model QuestionBank {
 }
 
 model PitchSultanUser {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String              @id @default(auto()) @map("_id") @db.ObjectId
   name      String
-  phone     String   @unique
+  phone     String              @unique
   storeId   String
-  store     Store    @relation(fields: [storeId], references: [id])
+  store     Store               @relation(fields: [storeId], references: [id])
   region    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  videos    PitchSultanVideo[]  // Videos uploaded by this user
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+}
+
+model PitchSultanVideo {
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String           @db.ObjectId
+  user            PitchSultanUser  @relation(fields: [userId], references: [id])
+  title           String?          // Optional video title
+  description     String?          // Optional video description
+  fileId          String           // ImageKit file ID
+  url             String           // ImageKit video URL
+  thumbnailUrl    String?          // ImageKit thumbnail URL
+  fileName        String           // Original file name
+  fileSize        Int?             // File size in bytes
+  duration        Int?             // Video duration in seconds
+  views           Int              @default(0)
+  likes           Int              @default(0)
+  tags            String[]         @default([])
+  isActive        Boolean          @default(true)
+  uploadedAt      DateTime         @default(now())
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([uploadedAt])
+  @@index([isActive])
 }
