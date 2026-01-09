@@ -59,27 +59,27 @@ export default function App() {
           } />
           <Route path="/pitchsultan" element={
             <SECRoute>
-              {import.meta.env.DEV ? <PitchSultan /> : <ComingSoon />}
+              <PitchSultan />
             </SECRoute>
           } />
           <Route path="/pitchsultan/setup" element={
             <SECRoute>
-              {import.meta.env.DEV ? <PitchSultanSetup /> : <ComingSoon />}
+              <PitchSultanSetup />
             </SECRoute>
           } />
           <Route path="/pitchsultan/battle" element={
             <SECRoute>
-              {import.meta.env.DEV ? <PitchSultanBattle /> : <ComingSoon />}
+              <PitchSultanBattle />
             </SECRoute>
           } />
           <Route path="/pitchsultan/rules" element={
             <SECRoute>
-              {import.meta.env.DEV ? <PitchSultanRules /> : <ComingSoon />}
+              <PitchSultanRules />
             </SECRoute>
           } />
           <Route path="/pitchsultan/rewards" element={
             <SECRoute>
-              {import.meta.env.DEV ? <PitchSultanRewards /> : <ComingSoon />}
+              <PitchSultanRewards />
             </SECRoute>
           } />
           <Route path="/welcome" element={
