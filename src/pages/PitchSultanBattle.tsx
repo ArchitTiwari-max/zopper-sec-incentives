@@ -9,7 +9,7 @@ import {
     MdSearch, MdNotificationsNone, MdCast,
     MdThumbUp, MdThumbDown,
     MdComment, MdShare,
-    MdClose, MdUpload, MdRemoveRedEye,
+    MdClose, MdUpload, MdRemoveRedEye, MdArrowBack,
     MdHelpOutline, MdHelp, MdEmail, MdPhone, MdQuestionAnswer, MdKeyboardArrowDown,
     MdPlayArrow, MdVideocam
 } from 'react-icons/md';
@@ -125,6 +125,18 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick }: {
 
                     {/* Right Icons */}
                     <div className="flex items-center gap-4 text-white">
+                        <button
+                            onClick={() => navigate('/welcome')}
+                            className="hidden md:flex items-center gap-1 text-xs font-bold text-white hover:bg-red-700 transition-colors bg-red-600 px-3 py-1.5 rounded-full shadow-sm mr-2"
+                        >
+                            <MdArrowBack className="text-sm" />
+                            Back
+                        </button>
+                        {/* Mobile Back Icon only */}
+                        <MdArrowBack
+                            className="md:hidden text-xl cursor-pointer text-red-500 hover:text-red-400"
+                            onClick={() => navigate('/welcome')}
+                        />
                         <MdNotificationsNone
                             className="text-xl cursor-pointer hover:text-gray-300"
                             onClick={onNotificationClick}
@@ -285,18 +297,17 @@ const VideoCard = ({ video, onVideoClick, currentUser }: { video: any, onVideoCl
                     alt={video.title || video.fileName || 'Video thumbnail'}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                 />
-                
+
                 {/* Sultan Admin Status Banner */}
                 {currentUser && currentUser.isSultanAdmin === true && (
-                    <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${
-                        video.isActive === false 
-                            ? 'bg-red-600 text-white' 
-                            : 'bg-green-600 text-white'
-                    }`}>
+                    <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${video.isActive === false
+                        ? 'bg-red-600 text-white'
+                        : 'bg-green-600 text-white'
+                        }`}>
                         {video.isActive === false ? 'INACTIVE' : 'ACTIVE'}
                     </div>
                 )}
-                
+
                 {/* Play overlay */}
                 <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
@@ -924,14 +935,14 @@ export const PitchSultanBattle = () => {
         try {
             setLoading(true);
             console.log('📡 Fetching videos from:', `${API_BASE_URL}/pitch-sultan/videos`);
-            
+
             // Include authorization header for sultan admin
             const token = localStorage.getItem('token');
             const headers: any = {};
             if (token) {
                 headers.Authorization = `Bearer ${token}`;
             }
-            
+
             const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?limit=50&_t=${new Date().getTime()}`, {
                 headers
             });
@@ -1106,7 +1117,7 @@ export const PitchSultanBattle = () => {
                     : video
             )
         );
-        
+
         // Also update filtered videos to keep UI consistent
         setFilteredVideos(prevFiltered =>
             prevFiltered.map(video =>
@@ -1157,6 +1168,8 @@ export const PitchSultanBattle = () => {
             <div className="pt-14 pb-16 md:pl-0">
                 <div className={`${activeTab === 'home' ? 'block' : 'hidden'}`}>
                     <div className="max-w-4xl mx-auto md:p-4">
+                        {/* Back Button */}
+
                         {/* Chips */}
                         <div className="flex gap-2 overflow-x-auto p-4 md:px-0 no-scrollbar">
                             {/* Search indicator */}

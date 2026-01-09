@@ -56,34 +56,42 @@ export function SecLanding() {
 
                 {/* Feature Tiles */}
                 <div className="grid grid-cols-2 gap-6 mb-8">
-                    <motion.div
-                        variants={item}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => navigate('/pitchsultan')}
-                        className="cursor-pointer relative rounded-2xl overflow-hidden aspect-[3/4] shadow-lg border border-white/10 group bg-black"
-                    >
-                        <img src={pitchSultanImg} alt="Pitch Sultan" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
-
-                        {/* New Badge */}
-                        <motion.div
-                            animate={{
-                                scale: [1, 1.1, 1],
-                                rotate: [0, -5, 5, 0]
-                            }}
-                            transition={{
-                                duration: 1.5,
-                                repeat: Infinity,
-                                ease: "easeInOut"
-                            }}
-                            className="absolute top-0 left-0 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-br-lg shadow-md z-20"
+                    {/* Pitch Sultan Tile with Wave Animation */}
+                    <motion.div variants={item}>
+                        <style>{`
+                            @keyframes float {
+                                0% { transform: translateY(0px); }
+                                50% { transform: translateY(-10px); }
+                                100% { transform: translateY(0px); }
+                            }
+                        `}</style>
+                        <div
+                            style={{ animation: 'float 3s ease-in-out infinite' }}
+                            onClick={() => navigate('/pitchsultan')}
+                            className="cursor-pointer relative rounded-2xl overflow-hidden aspect-[3/4] shadow-lg border border-white/10 group bg-black"
                         >
-                            NEW
-                        </motion.div>
+                            <img src={pitchSultanImg} alt="Pitch Sultan" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
 
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-5">
-                            <span className="text-white font-bold text-xl mb-1">Pitch Sultan</span>
-                            <span className="text-yellow-400 text-sm text-left font-medium">Live Now!</span>
+                            {/* New Badge */}
+                            <motion.div
+                                animate={{
+                                    scale: [1, 1.1, 1],
+                                    rotate: [0, -5, 5, 0]
+                                }}
+                                transition={{
+                                    duration: 1.5,
+                                    repeat: Infinity,
+                                    ease: "easeInOut"
+                                }}
+                                className="absolute top-0 left-0 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-br-lg shadow-md z-20"
+                            >
+                                NEW
+                            </motion.div>
+
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-5">
+                                <span className="text-white font-bold text-xl mb-1">Pitch Sultan</span>
+                                <span className="text-yellow-400 text-sm text-left font-medium">Live Now!</span>
+                            </div>
                         </div>
                     </motion.div>
 
@@ -106,7 +114,7 @@ export function SecLanding() {
                     <p className="text-xs text-blue-200/40">Powered by Zopper</p>
                 </motion.div>
 
-            </motion.div>
-        </div>
+            </motion.div >
+        </div >
     )
 }
