@@ -494,15 +494,11 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
                     borderRadius: '4px',
                     minHeight: '20px',
                     outline: 'none',
-                    fontFamily: 'monospace',
+                    fontFamily: 'inherit', // Changed from monospace to match other inputs
                     fontSize: '14px',
-                    whiteSpace: 'pre-wrap',
-                    wordSpacing: '8px'
+                    whiteSpace: 'pre-wrap'
                   }}
                 />
-                <div className="text-xs text-gray-400 mt-1">
-                  Debug: "{videoTitle}" ({videoTitle.length} chars)
-                </div>
                 <div className="text-xs text-gray-500 mt-1">
                   {videoTitle.length}/100 characters
                 </div>

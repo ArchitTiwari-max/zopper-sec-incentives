@@ -99,6 +99,28 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     // Set starting video index based on startingVideoId and scroll to it
     const hasScrolledRef = useRef(false);
 
+    // Helpers for ImageKit optimization
+    // 1. Get Thumbnail for poster (prevents black flash)
+    const getThumbnailUrl = (url: string) => {
+        if (!url) return '';
+        if (url.includes('ik.imagekit.io')) {
+            // Use the standard ik-thumbnail.jpg endpoint
+            return `${url}/ik-thumbnail.jpg`;
+        }
+        return url;
+    };
+
+    // 2. Force MP4 format for iOS/Mobile compatibility
+    const getOptimizedVideoUrl = (url: string) => {
+        if (!url) return '';
+        if (url.includes('ik.imagekit.io')) {
+            const separator = url.includes('?') ? '&' : '?';
+            // tr=f-mp4 forces conversion to MP4 format
+            return `${url}${separator}tr=f-mp4`;
+        }
+        return url;
+    };
+
     // Reset scroll ref when startingVideoId changes
     useEffect(() => {
         hasScrolledRef.current = false;
@@ -578,7 +600,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 
     if (loading) {
         return (
-            <div className="h-[calc(100vh-100px)] w-full bg-black flex items-center justify-center">
+            <div className="h-[calc(100dvh-100px)] w-full bg-black flex items-center justify-center">
                 <div className="w-full max-w-[400px] h-full bg-black flex items-center justify-center">
                     <div className="w-12 h-12 border-4 border-gray-700 border-t-white rounded-full animate-spin"></div>
                 </div>
@@ -588,7 +610,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 
     if (videos.length === 0) {
         return (
-            <div className="h-[calc(100vh-100px)] w-full bg-black flex items-center justify-center">
+            <div className="h-[calc(100dvh-100px)] w-full bg-black flex items-center justify-center">
                 <div className="w-full max-w-[400px] h-full bg-black flex items-center justify-center">
                     <div className="text-center text-white">
                         <div className="text-6xl mb-4">📹</div>
@@ -603,7 +625,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     const currentVideo = videos[currentIndex];
 
     return (
-        <div className="h-[calc(100vh-100px)] w-full bg-black flex items-center justify-center overflow-hidden">
+        <div className="h-[calc(100dvh-100px)] w-full bg-black flex items-center justify-center overflow-hidden">
             {/* Vertical scrollable container */}
             <div
                 ref={containerRef}
@@ -622,7 +644,8 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                             ref={(el) => {
                                 videoRefs.current[index] = el;
                             }}
-                            src={video.url}
+                            src={getOptimizedVideoUrl(video.url)}
+                            poster={getThumbnailUrl(video.thumbnailUrl || video.url)}
                             className="w-full h-full object-cover"
                             loop
                             muted={muted}

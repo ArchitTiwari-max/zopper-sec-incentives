@@ -40,6 +40,17 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
   const uploaderName = video.secUser?.name || `SEC ${video.secUser?.phone?.slice(-4) || 'User'}`;
   const uploaderAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(uploaderName)}&background=ffd700&color=000`;
 
+  // Helper to get efficient thumbnail or force MP4 for video
+  const getThumbnailUrl = (url: string) => {
+    if (!url) return '';
+    if (url.includes('ik.imagekit.io')) {
+      // Use the standard ik-thumbnail.jpg endpoint which works for all video files
+      // This is safer than transformation parameters for thumbnails
+      return `${url}/ik-thumbnail.jpg`;
+    }
+    return url;
+  };
+
   const formatTimeAgo = (date: string) => {
     const now = new Date();
     const uploaded = new Date(date);
@@ -86,10 +97,16 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
   return (
     <div className="flex flex-col mb-6 cursor-pointer group" onClick={handleVideoClick}>
       <div className="relative w-full aspect-video bg-gray-800 overflow-hidden rounded-lg">
-        <video
-          src={video.url}
+        {/* Use Image for Thumbnail - much better for mobile performance and battery */}
+        <img
+          src={getThumbnailUrl(video.thumbnailUrl || video.url)}
+          alt={video.title || 'Video thumbnail'}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-          preload="metadata"
+          loading="lazy"
+          onError={(e) => {
+            // Fallback if image fails - try to use video tag or placeholder
+            e.currentTarget.style.display = 'none';
+          }}
         />
 
         {/* Play overlay */}

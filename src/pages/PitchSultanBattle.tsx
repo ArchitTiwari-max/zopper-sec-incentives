@@ -64,6 +64,17 @@ const SHORTS_FEED = [
     }
 ];
 
+// --- Helper Functions ---
+
+// Helper for ImageKit thumbnails (Shared)
+const getThumbnailUrl = (url: string) => {
+    if (!url) return '';
+    if (url.includes('ik.imagekit.io')) {
+        return `${url}/ik-thumbnail.jpg`;
+    }
+    return url;
+};
+
 // --- Components ---
 
 const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick }: {
@@ -261,6 +272,8 @@ const VideoCard = ({ video, onVideoClick }: { video: any, onVideoClick?: (video:
         return uploaded.toLocaleDateString();
     };
 
+
+
     const handleVideoClick = () => {
         if (onVideoClick) {
             onVideoClick(video);
@@ -270,10 +283,10 @@ const VideoCard = ({ video, onVideoClick }: { video: any, onVideoClick?: (video:
     return (
         <div className="flex flex-col mb-6 cursor-pointer group" onClick={handleVideoClick}>
             <div className="relative w-full aspect-video bg-gray-800 overflow-hidden">
-                <video
-                    src={videoSource}
+                <img
+                    src={getThumbnailUrl(videoSource)}
+                    alt={video.title || video.fileName || 'Video thumbnail'}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                    preload="metadata"
                 />
                 {/* Play overlay */}
                 <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -640,10 +653,12 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
                                     {userVideos.map(video => (
                                         <div key={video.id} className="bg-gray-800 p-3 rounded-lg">
                                             <div className="flex items-start gap-3">
-                                                <video
-                                                    src={video.url}
-                                                    className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded flex-shrink-0"
-                                                    preload="metadata"
+                                                <img
+                                                    src={getThumbnailUrl(video.thumbnailUrl || video.url)}
+                                                    alt={video.title}
+                                                    className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded flex-shrink-0 bg-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
+                                                    loading="lazy"
+                                                    onClick={() => onVideoClick && onVideoClick(video)}
                                                 />
                                                 <div className="flex-1 min-w-0">
                                                     <h5 className="font-medium text-white text-sm sm:text-base leading-tight mb-2 break-words">
@@ -686,10 +701,12 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
                             {userVideos.map(video => (
                                 <div key={video.id} className="bg-gray-800 p-3 sm:p-4 rounded-lg">
                                     <div className="flex items-start gap-3 sm:gap-4">
-                                        <video
-                                            src={video.url}
-                                            className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded flex-shrink-0"
-                                            preload="metadata"
+                                        <img
+                                            src={getThumbnailUrl(video.thumbnailUrl || video.url)}
+                                            alt={video.title}
+                                            className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded flex-shrink-0 bg-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
+                                            loading="lazy"
+                                            onClick={() => onVideoClick && onVideoClick(video)}
                                         />
                                         <div className="flex-1 min-w-0">
                                             <h5 className="font-medium text-white mb-2 text-sm sm:text-base break-words">
@@ -883,6 +900,8 @@ export const PitchSultanBattle = () => {
             setSelectedVideoId(null);
         }
     }, [activeTab]);
+
+
 
     const handleVideoClick = (video: any) => {
         console.log('🎬 Video clicked:', video.id);
