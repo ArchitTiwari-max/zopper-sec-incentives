@@ -8,7 +8,7 @@ import {
     MdPerson, MdPersonOutline,
     MdSearch, MdNotificationsNone, MdCast,
     MdThumbUp, MdThumbDown,
-    MdComment, MdShare, MdMoreVert,
+    MdComment, MdShare,
     MdClose, MdUpload, MdRemoveRedEye,
     MdHelpOutline, MdHelp, MdEmail, MdPhone, MdQuestionAnswer, MdKeyboardArrowDown,
     MdPlayArrow, MdVideocam
@@ -64,22 +64,133 @@ const SHORTS_FEED = [
 
 // --- Components ---
 
-const Navbar = ({ currentUser }: { currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string } }) => (
-    <div className="fixed top-0 left-0 right-0 h-14 bg-[#0f0f0f] flex items-center justify-between px-4 z-50 border-b border-gray-800">
-        <div className="flex items-center gap-1">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center">
-                <span className="text-black font-black text-xs">PS</span>
-            </div>
-            <span className="text-white font-bold tracking-tighter text-lg ml-1 font-sans">PitchSultan</span>
-        </div>
+const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick }: { 
+    currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string },
+    onSearch?: (query: string) => void,
+    onNotificationClick?: () => void,
+    onLogoClick?: () => void
+}) => {
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [isSearchActive, setIsSearchActive] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const { logout } = useAuth();
+    const navigate = useNavigate();
 
-        <div className="flex items-center gap-4 text-white">
-            <MdNotificationsNone className="text-xl cursor-pointer hover:text-gray-300" />
-            <MdSearch className="text-xl cursor-pointer hover:text-gray-300" />
-            <img src={currentUser.avatar} alt="Profile" className="w-6 h-6 rounded-full cursor-pointer" />
+    const handleLogout = () => {
+        logout();
+        navigate('/', { replace: true });
+    };
+
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (onSearch) {
+            onSearch(searchQuery);
+        }
+    };
+
+    const handleSearchClose = () => {
+        setIsSearchActive(false);
+        setSearchQuery('');
+        if (onSearch) {
+            onSearch(''); // Clear search
+        }
+    };
+
+    return (
+        <div className="fixed top-0 left-0 right-0 h-14 bg-[#0f0f0f] flex items-center justify-between px-4 z-50 border-b border-gray-800">
+            {!isSearchActive ? (
+                <>
+                    {/* Logo */}
+                    <div 
+                        className="flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={onLogoClick}
+                    >
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center">
+                            <span className="text-black font-black text-xs">PS</span>
+                        </div>
+                        <span className="text-white font-bold tracking-tighter text-lg ml-1 font-sans">PitchSultan</span>
+                    </div>
+
+                    {/* Right Icons */}
+                    <div className="flex items-center gap-4 text-white">
+                        <MdNotificationsNone 
+                            className="text-xl cursor-pointer hover:text-gray-300" 
+                            onClick={onNotificationClick}
+                        />
+                        <MdSearch 
+                            className="text-xl cursor-pointer hover:text-gray-300" 
+                            onClick={() => setIsSearchActive(true)}
+                        />
+                        
+                        {/* Profile Menu */}
+                        <div className="relative">
+                            <img 
+                                src={currentUser.avatar} 
+                                alt="Profile" 
+                                className="w-6 h-6 rounded-full cursor-pointer hover:ring-2 hover:ring-gray-600 transition-all" 
+                                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                            />
+                            
+                            {/* Dropdown Menu */}
+                            {showProfileMenu && (
+                                <>
+                                    {/* Backdrop to close menu */}
+                                    <div 
+                                        className="fixed inset-0 z-10" 
+                                        onClick={() => setShowProfileMenu(false)}
+                                    />
+                                    
+                                    {/* Menu */}
+                                    <div className="absolute right-0 top-8 mt-2 w-48 bg-[#282828] rounded-lg shadow-lg border border-gray-700 z-20 animate-in fade-in duration-200">
+                                        <div className="py-2">
+                                            {/* User Info */}
+                                            <div className="px-4 py-2 border-b border-gray-700">
+                                                <p className="text-white font-medium text-sm">{currentUser.name}</p>
+                                                <p className="text-gray-400 text-xs">{currentUser.handle}</p>
+                                                <p className="text-gray-500 text-xs">{currentUser.role}</p>
+                                            </div>
+                                            
+                                            {/* Logout Button */}
+                                            <button
+                                                onClick={handleLogout}
+                                                className="w-full px-4 py-2 text-left text-red-400 hover:bg-red-900/20 transition-colors flex items-center gap-2 text-sm"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                                </svg>
+                                                Logout
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </>
+            ) : (
+                /* Search Mode - Expanded */
+                <form onSubmit={handleSearchSubmit} className="flex items-center w-full gap-3">
+                    <MdSearch className="text-white text-xl flex-shrink-0" />
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search videos by title..."
+                        className="flex-1 bg-transparent text-white placeholder-gray-400 outline-none text-sm"
+                        autoFocus
+                    />
+                    <button
+                        type="button"
+                        onClick={handleSearchClose}
+                        className="text-gray-400 hover:text-white transition-colors flex-shrink-0"
+                    >
+                        <MdClose className="text-xl" />
+                    </button>
+                </form>
+            )}
         </div>
-    </div>
-);
+    );
+};
 
 const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (tab: string) => void }) => {
     const navItems = [
@@ -179,14 +290,17 @@ const VideoCard = ({ video, onVideoClick }: { video: any, onVideoClick?: (video:
                         {uploaderName} • {formatViews(video.views || 0)} views • {formatTimeAgo(video.uploadedAt)}
                     </div>
                 </div>
-                <MdMoreVert className="text-white ml-auto flex-shrink-0 mt-1" />
             </div>
         </div>
     );
 };
 
-const ShortsView = ({ videos, startingVideoId }: { videos: any[], startingVideoId?: string | null }) => {
-    return <ShortsPlayer videos={videos} startingVideoId={startingVideoId || undefined} />;
+const ShortsView = ({ videos, startingVideoId, onVideoStatsUpdate }: { 
+    videos: any[], 
+    startingVideoId?: string | null,
+    onVideoStatsUpdate?: (videoId: string, updates: { views?: number, likes?: number }) => void
+}) => {
+    return <ShortsPlayer videos={videos} startingVideoId={startingVideoId || undefined} onVideoStatsUpdate={onVideoStatsUpdate} />;
 };
 
 const CreateView = ({ onUploadClick, onRecordClick }: { onUploadClick: () => void, onRecordClick: () => void }) => (
@@ -213,6 +327,20 @@ const CreateView = ({ onUploadClick, onRecordClick }: { onUploadClick: () => voi
         </div>
     </div>
 );
+
+const NotificationsView = () => {
+    return (
+        <div className="min-h-screen text-white flex items-center justify-center pb-20">
+            {/* Simple Empty State */}
+            <div className="flex flex-col items-center justify-center text-gray-400">
+                <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mb-6">
+                    <MdNotificationsNone className="text-5xl text-gray-500" />
+                </div>
+                <h3 className="text-xl font-semibold text-white">No notifications yet</h3>
+            </div>
+        </div>
+    );
+};
 
 const HelpSupportView = () => {
     const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -309,42 +437,309 @@ const HelpSupportView = () => {
     );
 };
 
-const ProfileView = ({ currentUser }: { currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string } }) => (
-    <div className="min-h-screen pb-20 pt-4">
+const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideoDelete }: { 
+    currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string }, 
+    videos: any[],
+    onVideoClick?: (video: any) => void,
+    onVideoUpdate?: (videoId: string, updates: { title?: string, description?: string }) => void,
+    onVideoDelete?: (videoId: string) => void
+}) => {
+    const [profileTab, setProfileTab] = useState<'analytics' | 'manage'>('analytics');
+    const [editingVideo, setEditingVideo] = useState<any>(null);
+    const [newTitle, setNewTitle] = useState('');
+    const [newDescription, setNewDescription] = useState('');
+    
+    // Filter videos by current user (if we have user ID)
+    const userVideos = videos.filter(video => 
+        video.secUser?.name === currentUser.name || 
+        video.secUser?.phone === currentUser.handle.replace('@', '')
+    );
 
-        {/* Info */}
-        <div className="px-4 flex flex-col mb-4">
-            <img src={currentUser.avatar} className="w-20 h-20 rounded-full border-4 border-[#0f0f0f]" alt="Profile" />
-            <div className="mt-3 text-white">
-                <h1 className="text-2xl font-bold">{currentUser.name}</h1>
-                <div className="text-gray-400 text-sm flex items-center gap-2">
-                    {currentUser.handle} • {currentUser.role} {currentUser.region ? `• ${currentUser.region}` : ''}
-                </div>
-                <p className="text-gray-300 text-sm mt-3">
-                    Sharing my best sales tips for Godrej appliances! Aspiring Pitch Sultan 👑
-                </p>
-                <div className="flex gap-2 mt-4">
-                    <button className="bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-full flex-1">Analytics</button>
-                    <button className="bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-full flex-1">Manage Videos</button>
+    const handleDeleteVideo = async (videoId: string) => {
+        if (!confirm('Are you sure you want to delete this video?')) return;
+        
+        try {
+            const API_URL = window.location.hostname === 'localhost' 
+                ? 'http://localhost:3001' 
+                : `${window.location.protocol}//${window.location.hostname}:3001`;
+                
+            const response = await fetch(`${API_URL}/api/pitch-sultan/videos/${videoId}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                // Update parent component's state
+                if (onVideoDelete) {
+                    onVideoDelete(videoId);
+                }
+                alert('Video deleted successfully!');
+                console.log('✅ Video deleted successfully');
+            } else {
+                alert('Failed to delete video');
+            }
+        } catch (error) {
+            console.error('Error deleting video:', error);
+            alert('Failed to delete video');
+        }
+    };
+
+    const handleUpdateDescription = async (videoId: string, title: string, description: string) => {
+        try {
+            console.log('🔄 Updating video:', { videoId, title, description });
+            
+            const API_URL = window.location.hostname === 'localhost' 
+                ? 'http://localhost:3001' 
+                : `${window.location.protocol}//${window.location.hostname}:3001`;
+                
+            const response = await fetch(`${API_URL}/api/pitch-sultan/videos/${videoId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ title, description })
+            });
+            
+            const data = await response.json();
+            console.log('📝 Update response:', data);
+            
+            if (response.ok && data.success) {
+                // Update parent component's state
+                if (onVideoUpdate) {
+                    onVideoUpdate(videoId, { title, description });
+                }
+                
+                setEditingVideo(null);
+                setNewTitle('');
+                setNewDescription('');
+                alert('Video updated successfully!');
+                console.log('✅ Video updated successfully');
+            } else {
+                console.error('❌ Update failed:', data);
+                alert(`Failed to update video: ${data.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('❌ Error updating video:', error);
+            alert('Failed to update video. Please check your connection.');
+        }
+    };
+
+    return (
+        <div className="min-h-screen pb-20 pt-4">
+            {/* Info */}
+            <div className="px-4 flex flex-col mb-4">
+                <img src={currentUser.avatar} className="w-20 h-20 rounded-full border-4 border-[#0f0f0f]" alt="Profile" />
+                <div className="mt-3 text-white">
+                    <h1 className="text-2xl font-bold">{currentUser.name}</h1>
+                    <div className="text-gray-400 text-sm flex items-center gap-2">
+                        {currentUser.handle} • {currentUser.role}
+                    </div>
+                    <p className="text-gray-300 text-sm mt-3">
+                        Sharing my best sales tips for Samsung appliances! Aspiring Pitch Sultan 👑
+                    </p>
                 </div>
             </div>
-        </div>
 
-        {/* Content Tabs mock */}
-        <div className="flex border-b border-gray-800 text-white text-sm font-medium sticky top-14 bg-[#0f0f0f]">
-            <div className="flex-1 py-3 text-center border-b-2 border-white">Videos</div>
-            <div className="flex-1 py-3 text-center text-gray-500">Shorts</div>
-        </div>
-
-        {/* User Videos */}
-        <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Mock user content */}
-            <div className="text-center text-gray-500 py-10 col-span-full">
-                <p>No videos uploaded yet. Tap Create to get started!</p>
+            {/* Content Tabs */}
+            <div className="flex border-b border-gray-800 text-white text-sm font-medium sticky top-14 bg-[#0f0f0f]">
+                <div 
+                    className={`flex-1 py-3 text-center cursor-pointer ${profileTab === 'analytics' ? 'border-b-2 border-white' : 'text-gray-500'}`}
+                    onClick={() => setProfileTab('analytics')}
+                >
+                    Analytics
+                </div>
+                <div 
+                    className={`flex-1 py-3 text-center cursor-pointer ${profileTab === 'manage' ? 'border-b-2 border-white' : 'text-gray-500'}`}
+                    onClick={() => setProfileTab('manage')}
+                >
+                    Manage
+                </div>
             </div>
+
+            {/* Content */}
+            {profileTab === 'analytics' && (
+                <div className="p-4 text-white">
+                    <h3 className="text-xl font-bold mb-6">Video Analytics</h3>
+                    
+                    {userVideos.length > 0 ? (
+                        <div className="space-y-6">
+                            {/* Overview Stats */}
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                                <div className="bg-gray-800 p-3 sm:p-4 rounded-lg text-center">
+                                    <div className="text-xl sm:text-2xl font-bold text-blue-400">
+                                        {userVideos.length}
+                                    </div>
+                                    <div className="text-xs sm:text-sm text-gray-400">Total Videos</div>
+                                </div>
+                                <div className="bg-gray-800 p-3 sm:p-4 rounded-lg text-center">
+                                    <div className="text-xl sm:text-2xl font-bold text-green-400">
+                                        {userVideos.reduce((sum, video) => sum + (video.views || 0), 0)}
+                                    </div>
+                                    <div className="text-xs sm:text-sm text-gray-400">Total Views</div>
+                                </div>
+                                <div className="bg-gray-800 p-3 sm:p-4 rounded-lg text-center">
+                                    <div className="text-xl sm:text-2xl font-bold text-red-400">
+                                        {userVideos.reduce((sum, video) => sum + (video.likes || 0), 0)}
+                                    </div>
+                                    <div className="text-xs sm:text-sm text-gray-400">Total Likes</div>
+                                </div>
+                                <div className="bg-gray-800 p-3 sm:p-4 rounded-lg text-center">
+                                    <div className="text-xl sm:text-2xl font-bold text-purple-400">
+                                        {userVideos.length > 0 ? Math.round(userVideos.reduce((sum, video) => sum + (video.views || 0), 0) / userVideos.length) : 0}
+                                    </div>
+                                    <div className="text-xs sm:text-sm text-gray-400">Avg Views</div>
+                                </div>
+                            </div>
+
+                            {/* Individual Video Stats */}
+                            <div>
+                                <h4 className="text-lg font-semibold mb-4">Video Performance</h4>
+                                <div className="space-y-3">
+                                    {userVideos.map(video => (
+                                        <div key={video.id} className="bg-gray-800 p-3 rounded-lg">
+                                            <div className="flex items-start gap-3">
+                                                <video 
+                                                    src={video.url} 
+                                                    className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded flex-shrink-0"
+                                                    preload="metadata"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <h5 className="font-medium text-white text-sm sm:text-base leading-tight mb-2 break-words">
+                                                        {video.title || video.fileName}
+                                                    </h5>
+                                                    <div className="text-xs sm:text-sm text-gray-400 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                                        <span>{video.views || 0} views</span>
+                                                        <span className="hidden sm:inline">•</span>
+                                                        <span>{video.likes || 0} likes</span>
+                                                        <span className="hidden sm:inline">•</span>
+                                                        <span className="text-gray-500">
+                                                            {new Date(video.uploadedAt).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center text-gray-400 py-10">
+                            <div className="text-6xl mb-4">📊</div>
+                            <p className="text-lg">No analytics yet</p>
+                            <p className="text-sm">Upload videos to see analytics</p>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {profileTab === 'manage' && (
+                <div className="p-4 text-white">
+                    <h3 className="text-xl font-bold mb-6">Manage Videos</h3>
+                    
+                    {userVideos.length > 0 ? (
+                        <div className="space-y-4">
+                            {userVideos.map(video => (
+                                <div key={video.id} className="bg-gray-800 p-3 sm:p-4 rounded-lg">
+                                    <div className="flex items-start gap-3 sm:gap-4">
+                                        <video 
+                                            src={video.url} 
+                                            className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded flex-shrink-0"
+                                            preload="metadata"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <h5 className="font-medium text-white mb-2 text-sm sm:text-base break-words">
+                                                {video.title || video.fileName}
+                                            </h5>
+                                            
+                                            {editingVideo?.id === video.id ? (
+                                                <div className="space-y-3">
+                                                    <div>
+                                                        <label className="block text-xs text-gray-400 mb-1">Title</label>
+                                                        <input
+                                                            type="text"
+                                                            value={newTitle}
+                                                            onChange={(e) => setNewTitle(e.target.value)}
+                                                            placeholder="Enter video title..."
+                                                            className="w-full p-2 bg-gray-700 text-white rounded text-sm"
+                                                            maxLength={100}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs text-gray-400 mb-1">Description</label>
+                                                        <textarea
+                                                            value={newDescription}
+                                                            onChange={(e) => setNewDescription(e.target.value)}
+                                                            placeholder="Add a description..."
+                                                            className="w-full p-2 bg-gray-700 text-white rounded text-sm resize-none"
+                                                            rows={3}
+                                                            maxLength={500}
+                                                        />
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleUpdateDescription(video.id, newTitle, newDescription)}
+                                                            disabled={!newTitle.trim() || !newDescription.trim()}
+                                                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded text-sm"
+                                                        >
+                                                            Save
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingVideo(null);
+                                                                setNewTitle('');
+                                                                setNewDescription('');
+                                                            }}
+                                                            className="bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded text-sm"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <p className="text-gray-400 text-sm mb-3">
+                                                        {video.description || 'No description'}
+                                                    </p>
+                                                    <div className="text-xs text-gray-500 mb-3">
+                                                        {video.views || 0} views • {video.likes || 0} likes • {new Date(video.uploadedAt).toLocaleDateString()}
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingVideo(video);
+                                                                setNewTitle(video.title || video.fileName || '');
+                                                                setNewDescription(video.description || '');
+                                                            }}
+                                                            className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm"
+                                                        >
+                                                            Edit Video
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteVideo(video.id)}
+                                                            className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center text-gray-400 py-10">
+                            <div className="text-6xl mb-4">🎬</div>
+                            <p className="text-lg">No videos to manage</p>
+                            <p className="text-sm">Upload videos to manage them</p>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
-    </div>
-);
+    );
+};
 
 // --- Main Page Component ---
 
@@ -358,6 +753,9 @@ export const PitchSultanBattle = () => {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [isRecorderOpen, setIsRecorderOpen] = useState(false); // Add recorder state
     const [videos, setVideos] = useState<any[]>([]);
+    const [filteredVideos, setFilteredVideos] = useState<any[]>([]); // Add filtered videos state
+    const [activeFilter, setActiveFilter] = useState('All'); // Add active filter state
+    const [searchQuery, setSearchQuery] = useState(''); // Add search query state
     const [loading, setLoading] = useState(true);
     const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null); // Add this state
     const [currentUser, setCurrentUser] = useState({
@@ -401,8 +799,8 @@ export const PitchSultanBattle = () => {
                 handle: `@${(user.name || 'sec_user').toLowerCase().replace(/\s+/g, '_')}`,
                 avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'SEC User')}&background=ffd700&color=000`,
                 subscribers: "1.2K",
-                role: user.store?.storeName || "SEC",
-                store: user.store?.storeName || "",
+                role: (user as any).store?.storeName || "SEC",
+                store: (user as any).store?.storeName || "",
                 region: user.region || ""
             });
 
@@ -422,6 +820,7 @@ export const PitchSultanBattle = () => {
 
             if (data.success) {
                 setVideos(data.data);
+                setFilteredVideos(data.data); // Initialize filtered videos
             } else {
                 console.error('❌ Failed to fetch videos:', data.error);
             }
@@ -432,9 +831,8 @@ export const PitchSultanBattle = () => {
         }
     };
 
-    // Scroll to top on tab change and reset selected video
+    // Reset selected video when switching away from shorts
     useEffect(() => {
-        window.scrollTo(0, 0);
         // Reset selected video when switching away from shorts
         if (activeTab !== 'shorts') {
             setSelectedVideoId(null);
@@ -443,8 +841,10 @@ export const PitchSultanBattle = () => {
 
     const handleVideoClick = (video: any) => {
         console.log('🎬 Video clicked:', video.id);
+        console.log('🎬 Current selectedVideoId:', selectedVideoId);
         setSelectedVideoId(video.id);
         setActiveTab('shorts');
+        console.log('🎬 Set selectedVideoId to:', video.id, 'and switched to shorts tab');
     };
 
     const handleRecordClick = () => {
@@ -505,6 +905,96 @@ export const PitchSultanBattle = () => {
         alert('Video uploaded successfully! 🎉');
     };
 
+    const handleVideoUpdate = (videoId: string, updates: { title?: string, description?: string }) => {
+        // Update local videos state immediately
+        setVideos(prevVideos => {
+            const updatedVideos = prevVideos.map(video => 
+                video.id === videoId 
+                    ? { ...video, ...updates }
+                    : video
+            );
+            // Also update filtered videos
+            applyFilter(activeFilter, updatedVideos, searchQuery);
+            return updatedVideos;
+        });
+    };
+
+    const handleVideoDelete = (videoId: string) => {
+        // Remove video from local state immediately
+        setVideos(prevVideos => {
+            const updatedVideos = prevVideos.filter(video => video.id !== videoId);
+            // Also update filtered videos
+            applyFilter(activeFilter, updatedVideos, searchQuery);
+            return updatedVideos;
+        });
+    };
+
+    const applyFilter = (filter: string, videosToFilter: any[] = videos, searchTerm: string = searchQuery) => {
+        let filtered = [...videosToFilter];
+        
+        // Apply search filter first if there's a search term
+        if (searchTerm.trim()) {
+            filtered = filtered.filter(video => {
+                const title = (video.title || video.fileName || '').toLowerCase();
+                return title.includes(searchTerm.toLowerCase());
+            });
+        }
+        
+        // Then apply category filter
+        switch (filter) {
+            case 'All':
+                // Already filtered by search if applicable
+                break;
+            case 'Recently Uploaded':
+                // Sort by upload date, most recent first
+                filtered = filtered.sort((a, b) => 
+                    new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+                );
+                break;
+            default:
+                // Already filtered by search if applicable
+                break;
+        }
+        
+        setFilteredVideos(filtered);
+    };
+
+    const handleFilterChange = (filter: string) => {
+        setActiveFilter(filter);
+        applyFilter(filter, videos, searchQuery);
+    };
+
+    const handleSearch = (query: string) => {
+        setSearchQuery(query);
+        applyFilter(activeFilter, videos, query);
+    };
+
+    const handleNotificationClick = () => {
+        setActiveTab('notifications');
+    };
+
+    const handleLogoClick = () => {
+        setActiveTab('home');
+    };
+
+    const handleVideoStatsUpdate = (videoId: string, updates: { views?: number, likes?: number }) => {
+        // Update local videos state with new stats
+        setVideos(prevVideos => 
+            prevVideos.map(video => 
+                video.id === videoId 
+                    ? { ...video, ...updates }
+                    : video
+            )
+        );
+    };
+
+    // Apply filter when videos change
+    useEffect(() => {
+        if (videos.length > 0) {
+            applyFilter(activeFilter, videos, searchQuery);
+        }
+    }, [videos, activeFilter, searchQuery]);
+
     const handleUploadClick = () => {
         // Direct check from localStorage
         const authData = localStorage.getItem('spot_incentive_auth');
@@ -533,15 +1023,38 @@ export const PitchSultanBattle = () => {
 
     return (
         <div className="min-h-screen bg-[#0f0f0f] text-white">
-            {currentUser && <Navbar currentUser={currentUser} />}
+            {currentUser && <Navbar currentUser={currentUser} onSearch={handleSearch} onNotificationClick={handleNotificationClick} onLogoClick={handleLogoClick} />}
 
             <div className="pt-14 pb-16 md:pl-0">
-                {activeTab === 'home' && (
+                <div className={`${activeTab === 'home' ? 'block' : 'hidden'}`}>
                     <div className="max-w-4xl mx-auto md:p-4">
                         {/* Chips */}
                         <div className="flex gap-2 overflow-x-auto p-4 md:px-0 no-scrollbar">
-                            {['All', 'Sales Tips', 'Godrej', 'ACs', 'Refrigerators', 'Recently Uploaded'].map((chip, i) => (
-                                <span key={i} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer ${i === 0 ? 'bg-white text-black' : 'bg-gray-800 text-white hover:bg-gray-700'}`}>
+                            {/* Search indicator */}
+                            {searchQuery && (
+                                <span className="whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white flex items-center gap-2">
+                                    <MdSearch className="text-sm" />
+                                    "{searchQuery}"
+                                    <button 
+                                        onClick={() => handleSearch('')}
+                                        className="hover:bg-blue-700 rounded-full p-0.5"
+                                    >
+                                        <MdClose className="text-sm" />
+                                    </button>
+                                </span>
+                            )}
+                            
+                            {/* Filter chips */}
+                            {['All', 'Recently Uploaded'].map((chip, i) => (
+                                <span 
+                                    key={i} 
+                                    onClick={() => handleFilterChange(chip)}
+                                    className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
+                                        activeFilter === chip 
+                                            ? 'bg-white text-black' 
+                                            : 'bg-gray-800 text-white hover:bg-gray-700'
+                                    }`}
+                                >
                                     {chip}
                                 </span>
                             ))}
@@ -555,6 +1068,22 @@ export const PitchSultanBattle = () => {
                         )}
 
                         {/* Empty State */}
+                        {!loading && filteredVideos.length === 0 && videos.length > 0 && (
+                            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                                <MdOutlineSlowMotionVideo className="text-6xl mb-4" />
+                                <p className="text-lg">
+                                    {searchQuery ? 'No videos found' : 'No videos found'}
+                                </p>
+                                <p className="text-sm">
+                                    {searchQuery 
+                                        ? `No videos match "${searchQuery}". Try a different search term.`
+                                        : 'Try a different filter or upload new content'
+                                    }
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Empty State - No videos at all */}
                         {!loading && videos.length === 0 && (
                             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                                 <MdOutlineSlowMotionVideo className="text-6xl mb-4" />
@@ -564,9 +1093,9 @@ export const PitchSultanBattle = () => {
                         )}
 
                         {/* Video Feed */}
-                        {!loading && videos.length > 0 && (
+                        {!loading && filteredVideos.length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-4">
-                                {videos.map(video => (
+                                {filteredVideos.map(video => (
                                     <VideoCard 
                                         key={video.id} 
                                         video={video} 
@@ -576,19 +1105,27 @@ export const PitchSultanBattle = () => {
                             </div>
                         )}
                     </div>
-                )}
+                </div>
 
-                {activeTab === 'shorts' && (
-                    <div className="bg-black">
-                        <ShortsView videos={videos} startingVideoId={selectedVideoId} />
-                    </div>
-                )}
+                <div className={`${activeTab === 'shorts' ? 'block' : 'hidden'} bg-black`}>
+                    <ShortsView videos={videos} startingVideoId={selectedVideoId} onVideoStatsUpdate={handleVideoStatsUpdate} />
+                </div>
 
-                {activeTab === 'create' && <CreateView onUploadClick={handleUploadClick} onRecordClick={handleRecordClick} />}
+                <div className={`${activeTab === 'create' ? 'block' : 'hidden'}`}>
+                    <CreateView onUploadClick={handleUploadClick} onRecordClick={handleRecordClick} />
+                </div>
 
-                {activeTab === 'help' && <HelpSupportView />}
+                <div className={`${activeTab === 'help' ? 'block' : 'hidden'}`}>
+                    <HelpSupportView />
+                </div>
 
-                {activeTab === 'profile' && currentUser && <ProfileView currentUser={currentUser} />}
+                <div className={`${activeTab === 'notifications' ? 'block' : 'hidden'}`}>
+                    <NotificationsView />
+                </div>
+
+                <div className={`${activeTab === 'profile' ? 'block' : 'hidden'}`}>
+                    {currentUser && <ProfileView currentUser={currentUser} videos={videos} onVideoClick={handleVideoClick} onVideoUpdate={handleVideoUpdate} onVideoDelete={handleVideoDelete} />}
+                </div>
             </div>
 
             <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />

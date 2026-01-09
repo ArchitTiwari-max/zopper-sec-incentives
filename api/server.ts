@@ -4547,6 +4547,40 @@ app.put('/api/pitch-sultan/videos/:id/like', async (req, res) => {
 })
 
 /**
+ * PUT /api/pitch-sultan/videos/:id
+ * Update video details (title, description, etc.)
+ */
+app.put('/api/pitch-sultan/videos/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { title, description } = req.body
+
+    console.log('🔄 Updating video:', { id, title, description });
+
+    const video = await prisma.pitchSultanVideo.update({
+      where: { id },
+      data: {
+        ...(title !== undefined && { title }),
+        ...(description !== undefined && { description })
+      },
+      include: {
+        secUser: {
+          include: {
+            store: true
+          }
+        }
+      }
+    })
+
+    console.log('✅ Video updated successfully:', video.id);
+    res.json({ success: true, data: video })
+  } catch (error) {
+    console.error("❌ Error updating video:", error)
+    res.status(500).json({ success: false, error: "Failed to update video" })
+  }
+})
+
+/**
  * DELETE /api/pitch-sultan/videos/:id
  * Soft delete a video (set isActive to false)
  */

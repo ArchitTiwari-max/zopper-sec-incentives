@@ -18,6 +18,9 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
   const [progress, setProgress] = useState(0);
   const [imagekit, setImagekit] = useState<any>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [videoTitle, setVideoTitle] = useState(''); // Add title state
+  const [videoDescription, setVideoDescription] = useState(''); // Add description state
+  const [validationErrors, setValidationErrors] = useState<{title?: string, description?: string}>({}); // Add validation errors
 
   useEffect(() => {
     if (!isOpen) return;
@@ -76,6 +79,11 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
           setSelectedFile(null);
           setUploadSuccess(false);
           
+          // Clear title and description when file is rejected
+          setVideoTitle('');
+          setVideoDescription('');
+          setValidationErrors({});
+          
           // Clear the file input
           if (e.target) {
             e.target.value = '';
@@ -101,6 +109,11 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
         setSelectedFile(file);
         setUploadSuccess(false);
         
+        // Clear title and description when new file is selected
+        setVideoTitle('');
+        setVideoDescription('');
+        setValidationErrors({});
+        
         // Clean up
         URL.revokeObjectURL(video.src);
       };
@@ -111,6 +124,12 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
         setSelectedFile(file);
         setError(null);
         setUploadSuccess(false);
+        
+        // Clear title and description when new file is selected
+        setVideoTitle('');
+        setVideoDescription('');
+        setValidationErrors({});
+        
         URL.revokeObjectURL(video.src);
       };
       
@@ -122,8 +141,30 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
     }
   };
 
+  // Validation function
+  const validateFields = () => {
+    const errors: {title?: string, description?: string} = {};
+    
+    if (!videoTitle.trim()) {
+      errors.title = 'Title is required';
+    }
+    
+    if (!videoDescription.trim()) {
+      errors.description = 'Description is required';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleUpload = async () => {
     if (!selectedFile || !imagekit) return;
+
+    // Validate required fields
+    if (!validateFields()) {
+      setError('Please fill in all required fields');
+      return;
+    }
 
     console.log('🚀 Starting upload process:', {
       fileName: selectedFile.name,
@@ -234,6 +275,8 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
                 fileId: result.fileId,
                 url: result.url,
                 fileName: result.name,
+                title: videoTitle || result.name, // Use title if provided, fallback to filename
+                description: videoDescription || null, // Add description
                 thumbnailUrl: result.thumbnailUrl || null,
                 fileSize: result.size || null,
                 tags: result.tags || []
@@ -292,6 +335,9 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
       setStatusMessage('');
       setProgress(0);
       setUploadSuccess(false);
+      setVideoTitle(''); // Reset title
+      setVideoDescription(''); // Reset description
+      setValidationErrors({}); // Reset validation errors
       onClose();
     }
   };
@@ -448,6 +494,81 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
           />
         </div>
 
+        {/* Video Title and Description - Only show when file is selected */}
+        {selectedFile && (
+          <>
+            {/* Video Title */}
+            <div className="mb-4">
+              <label className="block mb-2 text-sm font-medium text-gray-300">
+                Video Title <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={videoTitle}
+                onChange={(e) => {
+                  setVideoTitle(e.target.value);
+                  // Clear validation error when user starts typing
+                  if (validationErrors.title) {
+                    setValidationErrors(prev => ({ ...prev, title: undefined }));
+                  }
+                }}
+                placeholder="Enter a catchy title for your video..."
+                disabled={uploading}
+                required
+                className={`block w-full p-3 text-sm text-white bg-gray-700 border rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  validationErrors.title ? 'border-red-500' : 'border-gray-600'
+                }`}
+                maxLength={100}
+              />
+              <div className="flex justify-between items-center mt-1">
+                <div className="text-xs text-gray-500">
+                  {videoTitle.length}/100 characters (Required)
+                </div>
+                {validationErrors.title && (
+                  <div className="text-xs text-red-400">
+                    {validationErrors.title}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Video Description */}
+            <div className="mb-6">
+              <label className="block mb-2 text-sm font-medium text-gray-300">
+                Video Description <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                value={videoDescription}
+                onChange={(e) => {
+                  setVideoDescription(e.target.value);
+                  // Clear validation error when user starts typing
+                  if (validationErrors.description) {
+                    setValidationErrors(prev => ({ ...prev, description: undefined }));
+                  }
+                }}
+                placeholder="Add a description for your video..."
+                disabled={uploading}
+                required
+                className={`block w-full p-3 text-sm text-white bg-gray-700 border rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                  validationErrors.description ? 'border-red-500' : 'border-gray-600'
+                }`}
+                rows={3}
+                maxLength={500}
+              />
+              <div className="flex justify-between items-center mt-1">
+                <div className="text-xs text-gray-500">
+                  {videoDescription.length}/500 characters (Required)
+                </div>
+                {validationErrors.description && (
+                  <div className="text-xs text-red-400">
+                    {validationErrors.description}
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
         {/* File Info */}
         {selectedFile && (
           <div className="mb-6 p-4 bg-gray-800 rounded-lg">
@@ -515,7 +636,7 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
             </button>
             <button
               onClick={handleUpload}
-              disabled={!selectedFile || uploading || !imagekit || uploadSuccess || !!error}
+              disabled={!selectedFile || uploading || !imagekit || uploadSuccess || !!error || !videoTitle.trim() || !videoDescription.trim()}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {uploading ? (
