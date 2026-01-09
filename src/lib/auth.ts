@@ -9,6 +9,7 @@ export interface SECAuthData {
   name?: string
   storeId?: string
   region?: string   // Optional region for Pitch Sultan
+  isSultanAdmin?: boolean  // Flag for sultanadmin users
 }
 
 export interface AdminAuthData {
@@ -51,4 +52,8 @@ export function isSECUser(user: SECAuthData | AdminAuthData): user is SECAuthDat
 
 export function isAdminUser(user: SECAuthData | AdminAuthData): user is AdminAuthData {
   return 'username' in user
+}
+
+export function isSultanAdmin(user: SECAuthData | AdminAuthData): boolean {
+  return isSECUser(user) && user.isSultanAdmin === true
 }

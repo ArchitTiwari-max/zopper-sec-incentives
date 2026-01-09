@@ -8,6 +8,7 @@ import { API_BASE_URL } from '@/lib/config';
 import { CommentsModal } from './CommentsModal';
 import { RatingModal } from './RatingModal';
 import { StarRating } from './StarRating';
+import { isSultanAdmin } from '@/lib/auth';
 
 interface Video {
     id: string;
@@ -40,6 +41,7 @@ interface ShortsPlayerProps {
     startingVideoId?: string; // Add this to start from a specific video
     onVideoStatsUpdate?: (videoId: string, updates: { views?: number, likes?: number, commentsCount?: number }) => void;
     currentUserId?: string; // Add current user ID for interactions
+    currentUser?: any; // Add current user data for sultanadmin check
 }
 
 export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
@@ -47,7 +49,8 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     onVideoChange,
     startingVideoId,
     onVideoStatsUpdate,
-    currentUserId
+    currentUserId,
+    currentUser
 }) => {
     const [videos, setVideos] = useState<Video[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -691,9 +694,13 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                             <MdVolumeUp className="text-white text-xl" />
                                         )}
                                     </button>
-                                    {/* <button className="p-2 bg-black/30 rounded-full backdrop-blur-sm">
-                                        <MdMoreVert className="text-white text-xl" />
-                                    </button> */}
+                                    {currentUser && currentUser.isSultanAdmin === true && (
+                                        <button 
+                                            className="p-2 bg-black/30 rounded-full backdrop-blur-sm"
+                                        >
+                                            <MdMoreVert className="text-white text-xl" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -722,9 +729,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                         <span className="text-white font-semibold text-sm">
                                             {getUploaderHandle(video)}
                                         </span>
-                                        <button className="bg-white text-black text-xs font-bold px-3 py-1 rounded-full pointer-events-auto">
-                                            Follow
-                                        </button>
+
                                     </div>
 
                                     <p className="text-white text-sm line-clamp-2 mb-2">

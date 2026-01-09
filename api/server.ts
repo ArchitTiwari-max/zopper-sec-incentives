@@ -71,6 +71,13 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
+// Check if user is sultanadmin
+function isSultanAdmin(phone: string): boolean {
+  const sultanAdminPhones = process.env.SULTAN_ADMIN_PHONES || ''
+  const adminPhones = sultanAdminPhones.split(',').map(p => p.trim())
+  return adminPhones.includes(phone)
+}
+
 // Ensure required Samsung SKUs exist (runs at startup)
 async function ensureEssentialSKUs() {
   const requiredSKUs = [
@@ -423,18 +430,20 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 
     // Generate JWT token
     console.log(`🔐 Generating JWT for user ${secUser.id}, phone: ${phone}`)
+    const isSultanAdminUser = isSultanAdmin(phone)
     let token
     try {
       token = jwt.sign(
         {
           userId: secUser.id,
           role: 'sec',
-          phone: secUser.phone
+          phone: secUser.phone,
+          isSultanAdmin: isSultanAdminUser
         },
         JWT_SECRET,
         { expiresIn: '7d' }
       )
-      console.log(`✅ JWT token generated successfully for ${phone}`)
+      console.log(`✅ JWT token generated successfully for ${phone}${isSultanAdminUser ? ' (Sultan Admin)' : ''}`)
     } catch (jwtError) {
       console.error(`❌ JWT signing failed for ${phone}:`, jwtError)
       return res.status(500).json({
@@ -455,7 +464,8 @@ app.post('/api/auth/verify-otp', async (req, res) => {
         name: secUser.name,   // Can be null
         storeId: secUser.storeId,
         store: secUser.store,
-        region: secUser.region // Can be null
+        region: secUser.region, // Can be null
+        isSultanAdmin: isSultanAdminUser
       }
     })
   } catch (error) {

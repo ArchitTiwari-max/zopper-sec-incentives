@@ -317,13 +317,14 @@ const VideoCard = ({ video, onVideoClick }: { video: any, onVideoClick?: (video:
     );
 };
 
-const ShortsView = ({ videos, startingVideoId, onVideoStatsUpdate, currentUserId }: {
+const ShortsView = ({ videos, startingVideoId, onVideoStatsUpdate, currentUserId, currentUser }: {
     videos: any[],
     startingVideoId?: string | null,
     onVideoStatsUpdate?: (videoId: string, updates: { views?: number, likes?: number }) => void,
-    currentUserId?: string
+    currentUserId?: string,
+    currentUser?: any
 }) => {
-    return <ShortsPlayer videos={videos} startingVideoId={startingVideoId || undefined} onVideoStatsUpdate={onVideoStatsUpdate} currentUserId={currentUserId} />;
+    return <ShortsPlayer videos={videos} startingVideoId={startingVideoId || undefined} onVideoStatsUpdate={onVideoStatsUpdate} currentUserId={currentUserId} currentUser={currentUser} />;
 };
 
 const CreateView = ({ onUploadClick, onRecordClick }: { onUploadClick: () => void, onRecordClick: () => void }) => (
@@ -881,15 +882,18 @@ export const PitchSultanBattle = () => {
             }
 
             // 3. Set current user for display
-            setCurrentUser({
+            const currentUserData = {
                 name: user.name || "SEC User",
                 handle: `@${(user.name || 'sec_user').toLowerCase().replace(/\s+/g, '_')}`,
                 avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'SEC User')}&background=ffd700&color=000`,
                 subscribers: "1.2K",
                 role: (user as any).store?.storeName || "SEC",
                 store: (user as any).store?.storeName || "",
-                region: user.region || ""
-            });
+                region: user.region || "",
+                phone: user.phone, // Add phone property
+                isSultanAdmin: user.isSultanAdmin || false
+            };
+            setCurrentUser(currentUserData);
 
             // 4. Fetch videos
             await fetchVideos();
@@ -1196,7 +1200,7 @@ export const PitchSultanBattle = () => {
                 </div>
 
                 <div className={`${activeTab === 'shorts' ? 'block' : 'hidden'} bg-black`}>
-                    <ShortsView videos={videos} startingVideoId={selectedVideoId} onVideoStatsUpdate={handleVideoStatsUpdate} currentUserId={secUser?.id} />
+                    <ShortsView videos={videos} startingVideoId={selectedVideoId} onVideoStatsUpdate={handleVideoStatsUpdate} currentUserId={secUser?.id} currentUser={currentUser} />
                 </div>
 
                 <div className={`${activeTab === 'create' ? 'block' : 'hidden'}`}>
