@@ -483,13 +483,21 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     const handleCommentAdded = (newCount?: number) => {
         // Update the comment count for the selected video
         if (selectedVideoForModal) {
+            const finalCount = newCount ?? ((videos.find(v => v.id === selectedVideoForModal)?.commentsCount || 0) + 1);
+            
+            // Update local state
             setVideos(prevVideos =>
                 prevVideos.map(video =>
                     video.id === selectedVideoForModal
-                        ? { ...video, commentsCount: newCount ?? ((video.commentsCount || 0) + 1) }
+                        ? { ...video, commentsCount: finalCount }
                         : video
                 )
             );
+            
+            // Notify parent component to update its state
+            if (onVideoStatsUpdate) {
+                onVideoStatsUpdate(selectedVideoForModal, { commentsCount: finalCount });
+            }
         }
     };
 

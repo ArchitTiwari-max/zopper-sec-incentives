@@ -330,7 +330,7 @@ const VideoCard = ({ video, onVideoClick, currentUser }: { video: any, onVideoCl
 const ShortsView = ({ videos, startingVideoId, onVideoStatsUpdate, currentUserId, currentUser }: {
     videos: any[],
     startingVideoId?: string | null,
-    onVideoStatsUpdate?: (videoId: string, updates: { views?: number, likes?: number }) => void,
+    onVideoStatsUpdate?: (videoId: string, updates: { views?: number, likes?: number, commentsCount?: number }) => void,
     currentUserId?: string,
     currentUser?: any
 }) => {
@@ -579,11 +579,7 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
         try {
             console.log('🔄 Updating video:', { videoId, title, description });
 
-            const API_URL = window.location.hostname === 'localhost'
-                ? 'http://localhost:3001'
-                : `${window.location.protocol}//${window.location.hostname}:3001`;
-
-            const response = await fetch(`${API_URL}/api/pitch-sultan/videos/${videoId}`, {
+            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos/${videoId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -1089,10 +1085,19 @@ export const PitchSultanBattle = () => {
         setActiveTab('home');
     };
 
-    const handleVideoStatsUpdate = (videoId: string, updates: { views?: number, likes?: number }) => {
+    const handleVideoStatsUpdate = (videoId: string, updates: { views?: number, likes?: number, commentsCount?: number }) => {
         // Update local videos state with new stats
         setVideos(prevVideos =>
             prevVideos.map(video =>
+                video.id === videoId
+                    ? { ...video, ...updates }
+                    : video
+            )
+        );
+        
+        // Also update filtered videos to keep UI consistent
+        setFilteredVideos(prevFiltered =>
+            prevFiltered.map(video =>
                 video.id === videoId
                     ? { ...video, ...updates }
                     : video
