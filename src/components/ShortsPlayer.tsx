@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     MdThumbUp, MdThumbDown, MdComment, MdShare, MdMoreVert,
     MdVolumeOff, MdVolumeUp, MdPause, MdPlayArrow, MdStar,
-    MdOutlineThumbUp, MdStarOutline
+    MdOutlineThumbUp, MdStarOutline, MdVisibility, MdVisibilityOff
 } from 'react-icons/md';
 import { API_BASE_URL } from '@/lib/config';
 import { CommentsModal } from './CommentsModal';
@@ -23,6 +23,7 @@ interface Video {
     ratingCount?: number;
     commentsCount?: number;
     uploadedAt: string;
+    isActive?: boolean; // Add isActive field
     secUser: {
         id: string;
         name?: string;
@@ -64,6 +65,8 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     const [showCommentsModal, setShowCommentsModal] = useState(false);
     const [showRatingModal, setShowRatingModal] = useState(false);
     const [selectedVideoForModal, setSelectedVideoForModal] = useState<string | null>(null);
+    const [showAdminMenu, setShowAdminMenu] = useState(false);
+    const [showUserTooltip, setShowUserTooltip] = useState<string | null>(null); // For user tooltip (changed from hoveredUser)
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
     const viewTimers = useRef<Map<string, NodeJS.Timeout>>(new Map()); // Track view timers
@@ -82,7 +85,17 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         try {
             setLoading(true);
             console.log('📡 Fetching videos for shorts:', `${API_BASE_URL}/pitch-sultan/videos`);
-            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?limit=50`);
+            
+            // Include authorization header for sultan admin
+            const token = localStorage.getItem('token');
+            const headers: any = {};
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
+            
+            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?limit=50`, {
+                headers
+            });
             const data = await response.json();
 
             if (data.success && data.data.length > 0) {
@@ -493,6 +506,45 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         }
     };
 
+    // Toggle video active/inactive status (Sultan Admin only)
+    const handleToggleVideoStatus = async (videoId: string, currentStatus: boolean) => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Authentication required');
+                return;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos/${videoId}/toggle-active`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                // Update the video in local state
+                setVideos(prevVideos => 
+                    prevVideos.map(video => 
+                        video.id === videoId 
+                            ? { ...video, isActive: data.data.isActive }
+                            : video
+                    )
+                );
+                alert(`Video ${data.data.isActive ? 'activated' : 'deactivated'} successfully!`);
+                setShowAdminMenu(false);
+            } else {
+                alert(data.error || 'Failed to toggle video status');
+            }
+        } catch (error) {
+            console.error('Error toggling video status:', error);
+            alert('Failed to toggle video status');
+        }
+    };
+
     // Fetch user interactions for current user
     const fetchUserInteractions = async (videoId: string) => {
         if (!currentUserId) return;
@@ -597,6 +649,16 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         return `@${name.toLowerCase().replace(/\s+/g, '_')}`;
     };
 
+    const getUserTooltipInfo = (video: Video) => {
+        const user = video.secUser;
+        return {
+            name: user?.name || 'Unknown User',
+            phone: user?.phone || 'N/A',
+            store: user?.store ? `${user.store.storeName}, ${user.store.city}` : 'No store info',
+            region: video.secUser?.region || 'N/A'
+        };
+    };
+
     const getUploaderAvatar = (video: Video) => {
         const name = getUploaderName(video);
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=ffd700&color=000`;
@@ -695,11 +757,46 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                         )}
                                     </button>
                                     {currentUser && currentUser.isSultanAdmin === true && (
-                                        <button 
-                                            className="p-2 bg-black/30 rounded-full backdrop-blur-sm"
-                                        >
-                                            <MdMoreVert className="text-white text-xl" />
-                                        </button>
+                                        <div className="relative">
+                                            <button 
+                                                className="p-2 bg-black/30 rounded-full backdrop-blur-sm"
+                                                onClick={() => setShowAdminMenu(!showAdminMenu)}
+                                            >
+                                                <MdMoreVert className="text-white text-xl" />
+                                            </button>
+                                            
+                                            {showAdminMenu && (
+                                                <>
+                                                    {/* Backdrop */}
+                                                    <div
+                                                        className="fixed inset-0 z-10"
+                                                        onClick={() => setShowAdminMenu(false)}
+                                                    />
+                                                    
+                                                    {/* Menu */}
+                                                    <div className="absolute right-0 top-12 w-48 bg-[#282828] rounded-lg shadow-lg border border-gray-700 z-20">
+                                                        <div className="py-2">
+                                                            <button
+                                                                onClick={() => handleToggleVideoStatus(video.id, video.isActive || true)}
+                                                                className="w-full px-4 py-2 text-left text-white hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
+                                                            >
+                                                                {video.isActive === false ? (
+                                                                    <>
+                                                                        <MdVisibility className="text-base" />
+                                                                        Activate Video
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <MdVisibilityOff className="text-base" />
+                                                                        Deactivate Video
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -721,20 +818,78 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                 {/* Video Info */}
                                 <div className="flex-1 pr-4">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <img
-                                            src={getUploaderAvatar(video)}
-                                            alt="Profile"
-                                            className="w-8 h-8 rounded-full"
-                                        />
-                                        <span className="text-white font-semibold text-sm">
+                                        <div className="relative pointer-events-auto">
+                                            <img
+                                                src={getUploaderAvatar(video)}
+                                                alt="Profile"
+                                                className={`w-8 h-8 rounded-full pointer-events-auto ${currentUser && currentUser.isSultanAdmin === true ? 'cursor-pointer hover:ring-2 hover:ring-yellow-400' : ''}`}
+                                                onClick={(e) => {
+                                                    if (currentUser && currentUser.isSultanAdmin === true) {
+                                                        e.stopPropagation();
+                                                        e.preventDefault();
+                                                        setShowUserTooltip(showUserTooltip === video.id ? null : video.id);
+                                                        console.log('Profile clicked, showing tooltip for:', video.id);
+                                                    }
+                                                }}
+                                            />
+                                            
+                                            {/* Sultan Admin User Tooltip */}
+                                            {currentUser && currentUser.isSultanAdmin === true && showUserTooltip === video.id && (
+                                                <>
+                                                    {/* Backdrop to close tooltip */}
+                                                    <div
+                                                        className="fixed inset-0 z-[100]"
+                                                        onClick={() => setShowUserTooltip(null)}
+                                                    />
+                                                    
+                                                    {/* Tooltip */}
+                                                    <div className="absolute bottom-full left-0 mb-2 w-64 bg-black/95 backdrop-blur-md text-white text-xs rounded-lg p-3 shadow-lg border border-gray-600 z-[101]">
+                                                        <div className="space-y-2">
+                                                            <div className="font-semibold text-yellow-400 border-b border-gray-600 pb-1">User Details</div>
+                                                            <div><span className="text-gray-400">Name:</span> <span className="text-white">{getUserTooltipInfo(video).name}</span></div>
+                                                            <div><span className="text-gray-400">Phone:</span> <span className="text-white">{getUserTooltipInfo(video).phone}</span></div>
+                                                            <div><span className="text-gray-400">Store:</span> <span className="text-white">{getUserTooltipInfo(video).store}</span></div>
+                                                            <div><span className="text-gray-400">Region:</span> <span className="text-white">{getUserTooltipInfo(video).region}</span></div>
+                                                        </div>
+                                                        {/* Tooltip arrow */}
+                                                        <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-black/95"></div>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                        
+                                        <span 
+                                            className={`text-white font-semibold text-sm pointer-events-auto ${currentUser && currentUser.isSultanAdmin === true ? 'cursor-pointer hover:text-yellow-400' : ''}`}
+                                            onClick={(e) => {
+                                                if (currentUser && currentUser.isSultanAdmin === true) {
+                                                    e.stopPropagation();
+                                                    e.preventDefault();
+                                                    setShowUserTooltip(showUserTooltip === video.id ? null : video.id);
+                                                    console.log('Username clicked, showing tooltip for:', video.id);
+                                                }
+                                            }}
+                                        >
                                             {getUploaderHandle(video)}
                                         </span>
-
                                     </div>
 
                                     <p className="text-white text-sm line-clamp-2 mb-2">
                                         {video.title || video.fileName || 'Untitled Video'}
                                     </p>
+                                    
+                                    {/* Sultan Admin Status Info */}
+                                    {currentUser && currentUser.isSultanAdmin === true && (
+                                        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold mb-2 ${
+                                            video.isActive === false 
+                                                ? 'bg-red-600/20 text-red-400 border border-red-600/40' 
+                                                : 'bg-green-600/20 text-green-400 border border-green-600/40'
+                                        }`}>
+                                            <div className={`w-2 h-2 rounded-full ${
+                                                video.isActive === false ? 'bg-red-400' : 'bg-green-400'
+                                            }`}></div>
+                                            {video.isActive === false ? 'Video Inactive' : 'Video Active'}
+                                        </div>
+                                    )}
 
                                     <div className="text-white/80 text-xs flex items-center gap-4">
                                         <span>{formatCount(video.views)} views</span>
@@ -824,6 +979,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                 }}
                 videoId={selectedVideoForModal || ''}
                 currentUserId={currentUserId}
+                currentUser={currentUser}
                 onCommentAdded={handleCommentAdded}
             />
 

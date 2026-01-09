@@ -16,6 +16,7 @@ interface VideoPreviewProps {
     rating?: number;
     ratingCount?: number;
     uploadedAt: string;
+    isActive?: boolean; // Add isActive field
     secUser: {
       id: string;
       name?: string;
@@ -29,12 +30,14 @@ interface VideoPreviewProps {
   };
   onVideoClick?: (video: any) => void;
   showMenu?: boolean;
+  currentUser?: any; // Add currentUser prop
 }
 
 export const VideoPreview: React.FC<VideoPreviewProps> = ({
   video,
   onVideoClick,
-  showMenu = false
+  showMenu = false,
+  currentUser
 }) => {
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
 
@@ -109,6 +112,17 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
             e.currentTarget.style.display = 'none';
           }}
         />
+
+        {/* Sultan Admin Status Banner */}
+        {currentUser && currentUser.isSultanAdmin === true && (
+          <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${
+            video.isActive === false 
+              ? 'bg-red-600 text-white' 
+              : 'bg-green-600 text-white'
+          }`}>
+            {video.isActive === false ? 'INACTIVE' : 'ACTIVE'}
+          </div>
+        )}
 
         {/* Play overlay */}
         <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">

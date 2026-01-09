@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { MdClose, MdSend, MdPerson } from 'react-icons/md';
+import { MdClose, MdSend, MdPerson, MdDelete } from 'react-icons/md';
 import { API_BASE_URL } from '@/lib/config';
+import { isSultanAdmin } from '@/lib/auth';
 
 interface Comment {
   id: string;
@@ -18,6 +19,7 @@ interface CommentsModalProps {
   onClose: () => void;
   videoId: string;
   currentUserId?: string;
+  currentUser?: any; // Add currentUser prop for sultan admin check
   onCommentAdded?: (newCount?: number) => void;
 }
 
@@ -26,6 +28,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
   onClose,
   videoId,
   currentUserId,
+  currentUser,
   onCommentAdded
 }) => {
   const [comments, setComments] = useState<Comment[]>([]);
@@ -117,6 +120,44 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=32`;
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('Are you sure you want to permanently delete this comment? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Authentication required');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/pitch-sultan/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove comment from local state
+        setComments(prev => prev.filter(comment => comment.id !== commentId));
+        // Notify parent about comment count change
+        if (onCommentAdded) {
+          onCommentAdded();
+        }
+      } else {
+        alert(data.error || 'Failed to delete comment');
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      alert('Failed to delete comment');
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -166,6 +207,17 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                     {comment.comment}
                   </p>
                 </div>
+                
+                {/* Sultan Admin Delete Button */}
+                {currentUser && currentUser.isSultanAdmin === true && (
+                  <button
+                    onClick={() => handleDeleteComment(comment.id)}
+                    className="text-gray-500 hover:text-red-400 transition p-1 flex-shrink-0"
+                    title="Delete comment (permanent)"
+                  >
+                    <MdDelete className="text-lg" />
+                  </button>
+                )}
               </div>
             ))
           )}

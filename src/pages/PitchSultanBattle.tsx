@@ -242,7 +242,7 @@ const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTa
     );
 };
 
-const VideoCard = ({ video, onVideoClick }: { video: any, onVideoClick?: (video: any) => void }) => {
+const VideoCard = ({ video, onVideoClick, currentUser }: { video: any, onVideoClick?: (video: any) => void, currentUser?: any }) => {
     const videoSource = video.url;
     const uploaderName = video.secUser?.name || video.uploader || 'Unknown';
     const uploaderAvatar = video.secUser?.name
@@ -271,8 +271,6 @@ const VideoCard = ({ video, onVideoClick }: { video: any, onVideoClick?: (video:
         return uploaded.toLocaleDateString();
     };
 
-
-
     const handleVideoClick = () => {
         if (onVideoClick) {
             onVideoClick(video);
@@ -287,6 +285,18 @@ const VideoCard = ({ video, onVideoClick }: { video: any, onVideoClick?: (video:
                     alt={video.title || video.fileName || 'Video thumbnail'}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                 />
+                
+                {/* Sultan Admin Status Banner */}
+                {currentUser && currentUser.isSultanAdmin === true && (
+                    <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${
+                        video.isActive === false 
+                            ? 'bg-red-600 text-white' 
+                            : 'bg-green-600 text-white'
+                    }`}>
+                        {video.isActive === false ? 'INACTIVE' : 'ACTIVE'}
+                    </div>
+                )}
+                
                 {/* Play overlay */}
                 <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
@@ -906,7 +916,17 @@ export const PitchSultanBattle = () => {
         try {
             setLoading(true);
             console.log('📡 Fetching videos from:', `${API_BASE_URL}/pitch-sultan/videos`);
-            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?limit=50&_t=${new Date().getTime()}`);
+            
+            // Include authorization header for sultan admin
+            const token = localStorage.getItem('token');
+            const headers: any = {};
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
+            
+            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?limit=50&_t=${new Date().getTime()}`, {
+                headers
+            });
             const data = await response.json();
             if (data.success) {
                 setVideos(data.data);
@@ -1192,6 +1212,7 @@ export const PitchSultanBattle = () => {
                                         video={video}
                                         onVideoClick={handleVideoClick}
                                         showMenu={true}
+                                        currentUser={currentUser}
                                     />
                                 ))}
                             </div>

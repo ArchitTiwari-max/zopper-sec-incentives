@@ -4477,7 +4477,22 @@ app.get('/api/pitch-sultan/videos', async (req, res) => {
     const skip = parseInt(req.query.skip as string) || 0
     const secUserId = req.query.secUserId as string
 
-    const where: any = { isActive: true }
+    // Check if user is sultan admin
+    let isSultanAdminUser = false
+    const authHeader = req.headers.authorization
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1]
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as any
+        isSultanAdminUser = decoded.isSultanAdmin === true
+      } catch (e) {
+        // Token invalid, continue as regular user
+      }
+    }
+
+    // For sultan admin, show all videos (active + inactive)
+    // For regular users, show only active videos
+    const where: any = isSultanAdminUser ? {} : { isActive: true }
     if (secUserId) {
       where.secUserId = secUserId
     }
@@ -4498,6 +4513,7 @@ app.get('/api/pitch-sultan/videos', async (req, res) => {
         ratingCount: true,
         commentsCount: true,
         uploadedAt: true,
+        isActive: true, // Add isActive field for sultan admin
         secUserId: true,
         secUser: {
           select: {
@@ -4661,6 +4677,64 @@ app.delete('/api/pitch-sultan/videos/:id', async (req, res) => {
   } catch (error) {
     console.error("Error deleting video:", error)
     res.status(500).json({ success: false, error: "Failed to delete video" })
+  }
+})
+
+/**
+ * PATCH /api/pitch-sultan/videos/:id/toggle-active
+ * Toggle video active/inactive status (Sultan Admin only)
+ */
+app.patch('/api/pitch-sultan/videos/:id/toggle-active', async (req, res) => {
+  try {
+    // Verify sultan admin
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'Authorization required' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (e) {
+      return res.status(401).json({ success: false, error: 'Invalid or expired token' })
+    }
+
+    // Check if user is sultan admin
+    if (!decoded.isSultanAdmin) {
+      return res.status(403).json({ success: false, error: 'Sultan admin access required' })
+    }
+
+    const { id } = req.params
+
+    // Get current video status
+    const currentVideo = await prisma.pitchSultanVideo.findUnique({
+      where: { id },
+      select: { isActive: true }
+    })
+
+    if (!currentVideo) {
+      return res.status(404).json({ success: false, error: 'Video not found' })
+    }
+
+    // Toggle the active status
+    const newActiveStatus = !currentVideo.isActive
+    const updatedVideo = await prisma.pitchSultanVideo.update({
+      where: { id },
+      data: { isActive: newActiveStatus }
+    })
+
+    console.log(`✅ Video ${id} ${newActiveStatus ? 'activated' : 'deactivated'} by sultan admin`)
+    
+    res.json({
+      success: true,
+      message: `Video ${newActiveStatus ? 'activated' : 'deactivated'} successfully`,
+      data: { isActive: newActiveStatus }
+    })
+
+  } catch (error) {
+    console.error("Error toggling video status:", error)
+    res.status(500).json({ success: false, error: "Failed to toggle video status" })
   }
 })
 
@@ -4863,6 +4937,71 @@ app.get('/api/pitch-sultan/videos/:id/comments', async (req, res) => {
   } catch (error) {
     console.error("Error fetching comments:", error)
     res.status(500).json({ success: false, error: "Failed to fetch comments" })
+  }
+})
+
+/**
+ * DELETE /api/pitch-sultan/comments/:id
+ * Delete a comment (Sultan Admin only - permanent delete)
+ */
+app.delete('/api/pitch-sultan/comments/:id', async (req, res) => {
+  try {
+    // Verify sultan admin
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'Authorization required' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (e) {
+      return res.status(401).json({ success: false, error: 'Invalid or expired token' })
+    }
+
+    // Check if user is sultan admin
+    if (!decoded.isSultanAdmin) {
+      return res.status(403).json({ success: false, error: 'Sultan admin access required' })
+    }
+
+    const { id: commentId } = req.params
+
+    // Check if comment exists
+    const comment = await prisma.videoComment.findUnique({
+      where: { id: commentId },
+      include: { video: true }
+    })
+
+    if (!comment) {
+      return res.status(404).json({ success: false, error: 'Comment not found' })
+    }
+
+    // Permanently delete the comment
+    await prisma.videoComment.delete({
+      where: { id: commentId }
+    })
+
+    // Update video's comment count
+    await prisma.pitchSultanVideo.update({
+      where: { id: comment.videoId },
+      data: {
+        commentsCount: {
+          decrement: 1
+        }
+      }
+    })
+
+    console.log(`✅ Comment ${commentId} permanently deleted by sultan admin`)
+    
+    res.json({
+      success: true,
+      message: 'Comment deleted successfully'
+    })
+
+  } catch (error) {
+    console.error("Error deleting comment:", error)
+    res.status(500).json({ success: false, error: "Failed to delete comment" })
   }
 })
 
