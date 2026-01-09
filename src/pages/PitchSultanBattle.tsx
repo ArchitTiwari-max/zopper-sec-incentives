@@ -879,7 +879,6 @@ export const PitchSultanBattle = () => {
             console.log('📡 Fetching videos from:', `${API_BASE_URL}/pitch-sultan/videos`);
             const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?limit=50`);
             const data = await response.json();
-
             if (data.success) {
                 setVideos(data.data);
                 setFilteredVideos(data.data); // Initialize filtered videos

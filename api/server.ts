@@ -4472,6 +4472,7 @@ app.get('/api/pitch-sultan/videos', async (req, res) => {
         fileName: true,
         url: true,
         thumbnailUrl: true,
+        description: true,
         views: true,
         likes: true,
         rating: true,

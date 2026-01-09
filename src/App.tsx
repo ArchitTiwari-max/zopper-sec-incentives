@@ -36,6 +36,7 @@ import { PitchSultanRules } from './pages/PitchSultanRules'
 import { PitchSultanRewards } from './pages/PitchSultanRewards'
 import { AdminPitchSultanRequests } from './pages/AdminPitchSultanRequests'
 import { SecLanding } from './pages/SecLanding'
+import { ComingSoon } from './pages/ComingSoon'
 
 export default function App() {
   const location = useLocation()
@@ -58,27 +59,27 @@ export default function App() {
           } />
           <Route path="/pitchsultan" element={
             <SECRoute>
-              <PitchSultan />
+              {import.meta.env.DEV ? <PitchSultan /> : <ComingSoon />}
             </SECRoute>
           } />
           <Route path="/pitchsultan/setup" element={
             <SECRoute>
-              <PitchSultanSetup />
+              {import.meta.env.DEV ? <PitchSultanSetup /> : <ComingSoon />}
             </SECRoute>
           } />
           <Route path="/pitchsultan/battle" element={
             <SECRoute>
-              <PitchSultanBattle />
+              {import.meta.env.DEV ? <PitchSultanBattle /> : <ComingSoon />}
             </SECRoute>
           } />
           <Route path="/pitchsultan/rules" element={
             <SECRoute>
-              <PitchSultanRules />
+              {import.meta.env.DEV ? <PitchSultanRules /> : <ComingSoon />}
             </SECRoute>
           } />
           <Route path="/pitchsultan/rewards" element={
             <SECRoute>
-              <PitchSultanRewards />
+              {import.meta.env.DEV ? <PitchSultanRewards /> : <ComingSoon />}
             </SECRoute>
           } />
           <Route path="/welcome" element={
