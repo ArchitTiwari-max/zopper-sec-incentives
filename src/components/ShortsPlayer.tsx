@@ -70,6 +70,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
     const viewTimers = useRef<Map<string, NodeJS.Timeout>>(new Map()); // Track view timers
+    const programmaticScrollVideoId = useRef<string | null>(null); // Track which video was programmatically scrolled to
 
     // Fetch videos if not provided as props
     useEffect(() => {
@@ -150,9 +151,12 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
             console.log('🎯 Looking for video ID:', startingVideoId, 'Found at index:', startIndex);
 
             if (startIndex !== -1) {
+                console.log('🎯 Setting up programmatic scroll to index:', startIndex, 'for video ID:', startingVideoId);
                 hasScrolledRef.current = true;
                 setCurrentIndex(startIndex);
                 setIsProgrammaticScroll(true);
+                programmaticScrollVideoId.current = startingVideoId; // Track which video we're scrolling to
+                console.log('🔧 isProgrammaticScroll set to TRUE for video:', startingVideoId);
 
                 // Clear all view timers during programmatic scroll to prevent false views
                 viewTimers.current.forEach(timer => clearTimeout(timer));
@@ -169,6 +173,13 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                 block: 'start'
                             });
                             console.log('📍 Scrolled to video element:', startIndex);
+                            
+                            // Reset programmatic scroll flag when scroll animation completes
+                            // Use a longer timeout to ensure all intersection observer events complete
+                            setTimeout(() => {
+                                console.log('🔧 isProgrammaticScroll set to FALSE (scroll complete)');
+                                setIsProgrammaticScroll(false);
+                            }, 3000); // Increased to 3 seconds
                         } else {
                             // Fallback to manual scroll calculation
                             const scrollTop = startIndex * containerRef.current.clientHeight;
@@ -177,12 +188,13 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                 behavior: 'smooth'
                             });
                             console.log('📍 Fallback scroll to position:', scrollTop);
+                            
+                            // Reset programmatic scroll flag when scroll animation completes
+                            setTimeout(() => {
+                                console.log('🔧 isProgrammaticScroll set to FALSE (fallback complete)');
+                                setIsProgrammaticScroll(false);
+                            }, 3000); // Increased to 3 seconds
                         }
-
-                        // Reset programmatic scroll flag after scroll completes
-                        setTimeout(() => {
-                            setIsProgrammaticScroll(false);
-                        }, 1000);
                     }
                 }, 200); // Increased delay to ensure DOM is fully ready
             }
@@ -268,19 +280,35 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                     const video = videos[videoIndex];
 
                     if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+                        console.log('🎯 Video intersecting:', videoIndex, 'videoId:', video.id, 'isProgrammaticScroll:', isProgrammaticScroll, 'programmaticScrollVideoId:', programmaticScrollVideoId.current, 'currentTime:', videoElement.currentTime);
+                        
                         // Video is more than 50% visible - play it
                         // Don't update currentIndex if we're doing programmatic scrolling
                         if (!isProgrammaticScroll) {
                             setCurrentIndex(videoIndex);
                         }
 
-                        // Reset video to start from beginning
-                        videoElement.currentTime = 0;
-                        // Reset progress
-                        setVideoProgress(prev => ({
-                            ...prev,
-                            [video.id]: 0
-                        }));
+                        // Check if this is the video we programmatically scrolled to
+                        const isTargetVideo = programmaticScrollVideoId.current === video.id;
+                        
+                        // Only reset video to beginning if not during programmatic scroll OR not the target video
+                        if (!isProgrammaticScroll && !isTargetVideo) {
+                            console.log('🔄 Resetting video to 0 (normal scroll)');
+                            // Reset video to start from beginning
+                            videoElement.currentTime = 0;
+                            // Reset progress
+                            setVideoProgress(prev => ({
+                                ...prev,
+                                [video.id]: 0
+                            }));
+                        } else {
+                            console.log('⏭️ Skipping reset (programmatic scroll or target video)');
+                            // If this is the target video and we're done with programmatic scroll, clear the ref
+                            if (isTargetVideo && !isProgrammaticScroll) {
+                                programmaticScrollVideoId.current = null;
+                                console.log('🧹 Cleared programmaticScrollVideoId');
+                            }
+                        }
                         
                         // Ensure mute state is properly applied
                         videoElement.muted = muted;
@@ -298,28 +326,40 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                         videoRefs.current.forEach((otherVideo, index) => {
                             if (otherVideo && index !== videoIndex && !otherVideo.paused) {
                                 otherVideo.pause();
-                                otherVideo.currentTime = 0; // Reset to beginning
+                                // Only reset to beginning if not during programmatic scroll
+                                if (!isProgrammaticScroll) {
+                                    otherVideo.currentTime = 0; // Reset to beginning
+                                }
                                 const otherVideoData = videos[index];
                                 if (otherVideoData) {
-                                    // Reset progress
-                                    setVideoProgress(prev => ({
-                                        ...prev,
-                                        [otherVideoData.id]: 0
-                                    }));
+                                    // Reset progress only if not programmatic scroll
+                                    if (!isProgrammaticScroll) {
+                                        setVideoProgress(prev => ({
+                                            ...prev,
+                                            [otherVideoData.id]: 0
+                                        }));
+                                    }
                                     stopViewTimer(otherVideoData.id);
                                 }
                             }
                         });
                     } else if (!entry.isIntersecting) {
-                        // Video is not visible - pause it, reset to beginning, and stop view timer
+                        // Video is not visible - pause it and reset to beginning (but not during programmatic scroll)
                         videoElement.pause();
-                        videoElement.currentTime = 0; // Reset to beginning when leaving
+                        
+                        // Only reset to beginning when not doing programmatic scroll
+                        if (!isProgrammaticScroll) {
+                            videoElement.currentTime = 0; // Reset to beginning when leaving
+                            if (video) {
+                                // Reset progress
+                                setVideoProgress(prev => ({
+                                    ...prev,
+                                    [video.id]: 0
+                                }));
+                            }
+                        }
+                        
                         if (video) {
-                            // Reset progress
-                            setVideoProgress(prev => ({
-                                ...prev,
-                                [video.id]: 0
-                            }));
                             stopViewTimer(video.id);
                         }
                     }
