@@ -32,13 +32,15 @@ import { AdminAnswerDetails } from './pages/AdminAnswerDetails'
 import { PitchSultan } from './pages/PitchSultan'
 import { PitchSultanSetup } from './pages/PitchSultanSetup'
 import { PitchSultanBattle } from './pages/PitchSultanBattle'
+import { PitchSultanRules } from './pages/PitchSultanRules'
+import { PitchSultanRewards } from './pages/PitchSultanRewards'
 import { AdminPitchSultanRequests } from './pages/AdminPitchSultanRequests'
 import { SecLanding } from './pages/SecLanding'
 
 export default function App() {
   const location = useLocation()
   const showFooter = location.pathname !== '/' && location.pathname !== '/leaderboard' && location.pathname !== '/admin/leaderboard' && location.pathname !== '/welcome'
-  const isFullScreenPage = location.pathname === '/leaderboard' || location.pathname === '/admin/leaderboard' || location.pathname === '/pitchsultan' || location.pathname === '/pitchsultan/setup' || location.pathname === '/pitchsultan/battle' || location.pathname === '/welcome'
+  const isFullScreenPage = location.pathname === '/leaderboard' || location.pathname === '/admin/leaderboard' || location.pathname === '/pitchsultan' || location.pathname === '/pitchsultan/setup' || location.pathname === '/pitchsultan/battle' || location.pathname === '/pitchsultan/rules' || location.pathname === '/pitchsultan/rewards' || location.pathname === '/welcome'
 
   return (
     <AuthProvider>
@@ -67,6 +69,16 @@ export default function App() {
           <Route path="/pitchsultan/battle" element={
             <SECRoute>
               <PitchSultanBattle />
+            </SECRoute>
+          } />
+          <Route path="/pitchsultan/rules" element={
+            <SECRoute>
+              <PitchSultanRules />
+            </SECRoute>
+          } />
+          <Route path="/pitchsultan/rewards" element={
+            <SECRoute>
+              <PitchSultanRewards />
             </SECRoute>
           } />
           <Route path="/welcome" element={
