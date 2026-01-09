@@ -8,6 +8,7 @@ interface VideoPreviewProps {
     title?: string;
     fileName: string;
     url: string;
+    serialNumber?: number;
     thumbnailUrl?: string;
     views: number;
     likes: number;
@@ -115,17 +116,22 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
             <MdPlayArrow className="text-black text-3xl ml-1" />
           </div>
         </div>
-
-
       </div>
 
       <div className="flex gap-3 mt-3 px-3 md:px-0">
         <img src={uploaderAvatar} alt="" className="w-9 h-9 rounded-full mt-1 flex-shrink-0" />
         <div className="flex flex-col flex-1">
           <div className="flex items-start justify-between">
-            <h3 className="text-white text-sm md:text-base font-semibold line-clamp-2 leading-tight flex-1">
-              {video.title || video.fileName || 'Untitled Video'}
-            </h3>
+            <div className="flex-1">
+              {video.serialNumber && (
+                <div className="text-sm font-bold text-gray-400 mb-0.5">
+                  #{video.serialNumber}
+                </div>
+              )}
+              <h3 className="text-white text-sm md:text-base font-semibold line-clamp-2 leading-tight">
+                {video.title || video.fileName || 'Untitled Video'}
+              </h3>
+            </div>
 
             {showMenu && (
               <div className="relative ml-2">

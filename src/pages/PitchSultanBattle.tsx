@@ -28,7 +28,6 @@ import { API_BASE_URL } from '@/lib/config';
 
 const HELP_TOPICS = [
     { id: 1, icon: MdQuestionAnswer, title: "How to Upload a Video", description: "Learn how to share your pitch with the community" },
-    { id: 2, icon: MdQuestionAnswer, title: "Creating Shorts", description: "Quick tips on making engaging short videos" },
     { id: 3, icon: MdQuestionAnswer, title: "Contest Rules", description: "Understand the Pitch Sultan competition guidelines" },
     { id: 6, icon: MdLeaderboard, title: "Rewards & Prizes", description: "See what you can win!" },
     { id: 5, icon: MdQuestionAnswer, title: "Technical Issues", description: "Troubleshooting common problems" },
@@ -411,12 +410,13 @@ const HelpSupportView = () => {
                                                         </ul>
                                                     </div>
                                                 ) : topic.id === 3 ? (
-                                                    <div className="mt-2 rounded-lg overflow-hidden border border-gray-700">
-                                                        <img
-                                                            src={contestRulesImg}
-                                                            alt="Contest Rules"
-                                                            className="w-full h-auto object-contain bg-[#1a1a1a]"
-                                                        />
+                                                    <div className="pl-9 text-sm text-gray-400 space-y-2">
+                                                        <ul className="list-disc pl-4 space-y-2">
+                                                            <li>Record your <strong>40secs to 2mins</strong> video pitching any one PROTECMAX plan.</li>
+                                                            <li>You are supposed to explain the plan in the same way you explain it to the customers. (Basically we want to see your dealing skills with your customers)</li>
+                                                            <li>Language can be of your choice.</li>
+                                                            <li>Your phone camera is enough to record yourself and make you a star! We don't need high quality videos, we just want to see your pitching talent.</li>
+                                                        </ul>
                                                     </div>
                                                 ) : topic.id === 6 ? (
                                                     <div className="pl-9 text-sm text-gray-400 space-y-3">
@@ -447,6 +447,24 @@ const HelpSupportView = () => {
                                                             </p>
                                                         </div>
                                                     </div>
+                                                ) : topic.id === 5 ? (
+                                                    <div className="pl-9 text-sm text-gray-400 space-y-3">
+                                                        <p className="mb-2">For any technical issues, feel free to contact:</p>
+                                                        <div className="grid gap-2 sm:grid-cols-2">
+                                                            <div className="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                                                                <p className="font-semibold text-white">Archit Tiwari</p>
+                                                                <a href="mailto:archit.tiwari@zopper.com" className="text-blue-400 text-xs hover:underline">archit.tiwari@zopper.com</a>
+                                                            </div>
+                                                            <div className="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                                                                <p className="font-semibold text-white">Vishal Shukla</p>
+                                                                <a href="mailto:vishal.shukla@zopper.com" className="text-blue-400 text-xs hover:underline">vishal.shukla@zopper.com</a>
+                                                            </div>
+                                                            <div className="bg-gray-800 p-3 rounded-lg border border-gray-700 sm:col-span-2">
+                                                                <p className="font-semibold text-white">Harshdeep Singh</p>
+                                                                <a href="mailto:harshdeep.singh@zopper.com" className="text-blue-400 text-xs hover:underline">harshdeep.singh@zopper.com</a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 ) : (
                                                     <p className="text-sm text-gray-400 pl-9">
                                                         Detailed information about {topic.title.toLowerCase()} will be available here.
@@ -469,18 +487,25 @@ const HelpSupportView = () => {
                             <div className="w-10 h-10 bg-blue-600/20 rounded-full flex items-center justify-center">
                                 <MdEmail className="text-xl text-blue-400" />
                             </div>
-                            <div>
+                            <div className="flex-1">
                                 <p className="text-sm text-gray-400">Email Support</p>
-                                <p className="font-medium">support@pitchsultan.com</p>
+                                <div className="flex flex-col gap-0.5 text-sm font-medium mt-0.5">
+                                    <a href="mailto:archit.tiwari@zopper.com" className="hover:text-blue-400 text-xs sm:text-sm transition-colors">archit.tiwari@zopper.com</a>
+                                    <a href="mailto:vishal.shukla@zopper.com" className="hover:text-blue-400 text-xs sm:text-sm transition-colors">vishal.shukla@zopper.com</a>
+                                    <a href="mailto:harshdeep.singh@zopper.com" className="hover:text-blue-400 text-xs sm:text-sm transition-colors">harshdeep.singh@zopper.com</a>
+                                </div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3 text-gray-300">
-                            <div className="w-10 h-10 bg-green-600/20 rounded-full flex items-center justify-center">
+                        <div className="flex items-start gap-3 text-gray-300">
+                            <div className="w-10 h-10 bg-green-600/20 rounded-full flex items-center justify-center flex-shrink-0">
                                 <MdPhone className="text-xl text-green-400" />
                             </div>
                             <div>
                                 <p className="text-sm text-gray-400">Phone Support</p>
-                                <p className="font-medium">1800-123-4567</p>
+                                <div className="flex flex-col gap-0.5 text-sm font-medium mt-0.5">
+                                    <a href="tel:9569310917" className="hover:text-green-400 transition-colors">9569310917</a>
+                                    <a href="tel:7408108617" className="hover:text-green-400 transition-colors">7408108617</a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -877,7 +902,7 @@ export const PitchSultanBattle = () => {
         try {
             setLoading(true);
             console.log('📡 Fetching videos from:', `${API_BASE_URL}/pitch-sultan/videos`);
-            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?limit=50`);
+            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?limit=50&_t=${new Date().getTime()}`);
             const data = await response.json();
             if (data.success) {
                 setVideos(data.data);

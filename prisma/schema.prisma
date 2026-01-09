@@ -293,6 +293,7 @@ model PitchSultanVideo {
   secUser      SECUser           @relation(fields: [secUserId], references: [id])
   title        String? // Optional video title
   description  String? // Optional video description
+  serialNumber Int?    // Sequential serial number starting from 1001
   fileId       String // ImageKit file ID
   url          String // ImageKit video URL
   thumbnailUrl String? // ImageKit thumbnail URL

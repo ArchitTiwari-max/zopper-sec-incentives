@@ -12,6 +12,7 @@ import { StarRating } from './StarRating';
 interface Video {
     id: string;
     title?: string;
+    serialNumber?: number;
     fileName: string;
     url: string;
     thumbnailUrl?: string;
@@ -653,6 +654,13 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                             preload="metadata"
                             onClick={() => togglePlayPause(index)}
                         />
+
+                        {/* Serial Number Overlay */}
+                        {video.serialNumber && (
+                            <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-md text-xs font-bold text-yellow-500 border border-yellow-500/40 z-[60] shadow-lg pointer-events-none">
+                                #{video.serialNumber}
+                            </div>
+                        )}
 
                         {/* Progress Bar - positioned with bottom margin to stay visible */}
                         <div className="absolute bottom-4 left-0 right-0 h-1 bg-black/50 rounded-none z-50">

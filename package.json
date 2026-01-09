@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "dev:api": "tsx api/server.ts",
+    "dev:api": "tsx watch api/server.ts",
     "dev:full": "concurrently \"npm run dev\" \"npm run dev:api\"",
     "build": "prisma generate && tsc -b && vite build",
     "preview": "vite preview",

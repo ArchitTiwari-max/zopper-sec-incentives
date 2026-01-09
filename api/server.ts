@@ -4415,6 +4415,13 @@ app.post('/api/pitch-sultan/videos', async (req, res) => {
       })
     }
 
+    // Generate serial number
+    const lastVideo = await prisma.pitchSultanVideo.findFirst({
+      orderBy: { serialNumber: 'desc' },
+      select: { serialNumber: true }
+    })
+    const nextSerialNumber = (lastVideo?.serialNumber || 1000) + 1
+
     const video = await prisma.pitchSultanVideo.create({
       data: {
         secUserId,
@@ -4426,7 +4433,8 @@ app.post('/api/pitch-sultan/videos', async (req, res) => {
         thumbnailUrl: thumbnailUrl || null,
         fileSize: fileSize || null,
         duration: duration || null,
-        tags: tags || []
+        tags: tags || [],
+        serialNumber: nextSerialNumber
       },
       include: {
         secUser: {
@@ -4470,6 +4478,7 @@ app.get('/api/pitch-sultan/videos', async (req, res) => {
         id: true,
         title: true,
         fileName: true,
+        serialNumber: true,
         url: true,
         thumbnailUrl: true,
         description: true,
@@ -4604,18 +4613,39 @@ app.put('/api/pitch-sultan/videos/:id', async (req, res) => {
 
 /**
  * DELETE /api/pitch-sultan/videos/:id
- * Soft delete a video (set isActive to false)
+ * Soft delete a video (set isActive to false) and reorder serial numbers
  */
 app.delete('/api/pitch-sultan/videos/:id', async (req, res) => {
   try {
     const { id } = req.params
 
+    // 1. Soft delete the video
     const video = await prisma.pitchSultanVideo.update({
       where: { id },
       data: {
-        isActive: false
+        isActive: false,
+        serialNumber: null // Remove serial number from deleted video
       }
     })
+
+    // 2. Re-assign serial numbers for ALL active videos
+    // Fetch all active videos ordered by creation time
+    const activeVideos = await prisma.pitchSultanVideo.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'asc' }
+    })
+
+    // 3. Update serial numbers sequentially starting from 1001
+    let nextSerial = 1001
+    for (const v of activeVideos) {
+      if (v.serialNumber !== nextSerial) {
+        await prisma.pitchSultanVideo.update({
+          where: { id: v.id },
+          data: { serialNumber: nextSerial }
+        })
+      }
+      nextSerial++
+    }
 
     res.json({ success: true, data: video })
   } catch (error) {
