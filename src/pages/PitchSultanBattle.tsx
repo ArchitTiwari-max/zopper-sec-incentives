@@ -17,6 +17,8 @@ import { BiLike, BiDislike, BiCommentDetail, BiShare } from "react-icons/bi";
 import { VideoUploadModal } from '../components/VideoUploadModal';
 import { VideoRecorder } from '../components/VideoRecorder';
 import { ShortsPlayer } from '../components/ShortsPlayer';
+import { VideoStats } from '../components/VideoStats';
+import { VideoPreview } from '../components/VideoPreview';
 import contestRulesImg from '../assets/contest-rules.jpg';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/lib/config';
@@ -64,7 +66,7 @@ const SHORTS_FEED = [
 
 // --- Components ---
 
-const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick }: { 
+const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick }: {
     currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string },
     onSearch?: (query: string) => void,
     onNotificationClick?: () => void,
@@ -101,7 +103,7 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick }: {
             {!isSearchActive ? (
                 <>
                     {/* Logo */}
-                    <div 
+                    <div
                         className="flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={onLogoClick}
                     >
@@ -113,33 +115,33 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick }: {
 
                     {/* Right Icons */}
                     <div className="flex items-center gap-4 text-white">
-                        <MdNotificationsNone 
-                            className="text-xl cursor-pointer hover:text-gray-300" 
+                        <MdNotificationsNone
+                            className="text-xl cursor-pointer hover:text-gray-300"
                             onClick={onNotificationClick}
                         />
-                        <MdSearch 
-                            className="text-xl cursor-pointer hover:text-gray-300" 
+                        <MdSearch
+                            className="text-xl cursor-pointer hover:text-gray-300"
                             onClick={() => setIsSearchActive(true)}
                         />
-                        
+
                         {/* Profile Menu */}
                         <div className="relative">
-                            <img 
-                                src={currentUser.avatar} 
-                                alt="Profile" 
-                                className="w-6 h-6 rounded-full cursor-pointer hover:ring-2 hover:ring-gray-600 transition-all" 
+                            <img
+                                src={currentUser.avatar}
+                                alt="Profile"
+                                className="w-6 h-6 rounded-full cursor-pointer hover:ring-2 hover:ring-gray-600 transition-all"
                                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                             />
-                            
+
                             {/* Dropdown Menu */}
                             {showProfileMenu && (
                                 <>
                                     {/* Backdrop to close menu */}
-                                    <div 
-                                        className="fixed inset-0 z-10" 
+                                    <div
+                                        className="fixed inset-0 z-10"
                                         onClick={() => setShowProfileMenu(false)}
                                     />
-                                    
+
                                     {/* Menu */}
                                     <div className="absolute right-0 top-8 mt-2 w-48 bg-[#282828] rounded-lg shadow-lg border border-gray-700 z-20 animate-in fade-in duration-200">
                                         <div className="py-2">
@@ -149,7 +151,7 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick }: {
                                                 <p className="text-gray-400 text-xs">{currentUser.handle}</p>
                                                 <p className="text-gray-500 text-xs">{currentUser.role}</p>
                                             </div>
-                                            
+
                                             {/* Logout Button */}
                                             <button
                                                 onClick={handleLogout}
@@ -287,20 +289,29 @@ const VideoCard = ({ video, onVideoClick }: { video: any, onVideoClick?: (video:
                         {video.title || video.fileName || 'Untitled Video'}
                     </h3>
                     <div className="text-gray-400 text-xs mt-1">
-                        {uploaderName} • {formatViews(video.views || 0)} views • {formatTimeAgo(video.uploadedAt)}
+                        {uploaderName} • {formatTimeAgo(video.uploadedAt)}
                     </div>
+                    <VideoStats
+                        views={video.views || 0}
+                        likes={video.likes || 0}
+                        comments={video.commentsCount || 0}
+                        rating={video.rating}
+                        ratingCount={video.ratingCount}
+                        className="mt-2"
+                    />
                 </div>
             </div>
         </div>
     );
 };
 
-const ShortsView = ({ videos, startingVideoId, onVideoStatsUpdate }: { 
-    videos: any[], 
+const ShortsView = ({ videos, startingVideoId, onVideoStatsUpdate, currentUserId }: {
+    videos: any[],
     startingVideoId?: string | null,
-    onVideoStatsUpdate?: (videoId: string, updates: { views?: number, likes?: number }) => void
+    onVideoStatsUpdate?: (videoId: string, updates: { views?: number, likes?: number }) => void,
+    currentUserId?: string
 }) => {
-    return <ShortsPlayer videos={videos} startingVideoId={startingVideoId || undefined} onVideoStatsUpdate={onVideoStatsUpdate} />;
+    return <ShortsPlayer videos={videos} startingVideoId={startingVideoId || undefined} onVideoStatsUpdate={onVideoStatsUpdate} currentUserId={currentUserId} />;
 };
 
 const CreateView = ({ onUploadClick, onRecordClick }: { onUploadClick: () => void, onRecordClick: () => void }) => (
@@ -437,8 +448,8 @@ const HelpSupportView = () => {
     );
 };
 
-const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideoDelete }: { 
-    currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string }, 
+const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideoDelete }: {
+    currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string },
     videos: any[],
     onVideoClick?: (video: any) => void,
     onVideoUpdate?: (videoId: string, updates: { title?: string, description?: string }) => void,
@@ -448,25 +459,25 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
     const [editingVideo, setEditingVideo] = useState<any>(null);
     const [newTitle, setNewTitle] = useState('');
     const [newDescription, setNewDescription] = useState('');
-    
+
     // Filter videos by current user (if we have user ID)
-    const userVideos = videos.filter(video => 
-        video.secUser?.name === currentUser.name || 
+    const userVideos = videos.filter(video =>
+        video.secUser?.name === currentUser.name ||
         video.secUser?.phone === currentUser.handle.replace('@', '')
     );
 
     const handleDeleteVideo = async (videoId: string) => {
         if (!confirm('Are you sure you want to delete this video?')) return;
-        
+
         try {
-            const API_URL = window.location.hostname === 'localhost' 
-                ? 'http://localhost:3001' 
+            const API_URL = window.location.hostname === 'localhost'
+                ? 'http://localhost:3001'
                 : `${window.location.protocol}//${window.location.hostname}:3001`;
-                
+
             const response = await fetch(`${API_URL}/api/pitch-sultan/videos/${videoId}`, {
                 method: 'DELETE'
             });
-            
+
             if (response.ok) {
                 // Update parent component's state
                 if (onVideoDelete) {
@@ -486,11 +497,11 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
     const handleUpdateDescription = async (videoId: string, title: string, description: string) => {
         try {
             console.log('🔄 Updating video:', { videoId, title, description });
-            
-            const API_URL = window.location.hostname === 'localhost' 
-                ? 'http://localhost:3001' 
+
+            const API_URL = window.location.hostname === 'localhost'
+                ? 'http://localhost:3001'
                 : `${window.location.protocol}//${window.location.hostname}:3001`;
-                
+
             const response = await fetch(`${API_URL}/api/pitch-sultan/videos/${videoId}`, {
                 method: 'PUT',
                 headers: {
@@ -498,16 +509,16 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
                 },
                 body: JSON.stringify({ title, description })
             });
-            
+
             const data = await response.json();
             console.log('📝 Update response:', data);
-            
+
             if (response.ok && data.success) {
                 // Update parent component's state
                 if (onVideoUpdate) {
                     onVideoUpdate(videoId, { title, description });
                 }
-                
+
                 setEditingVideo(null);
                 setNewTitle('');
                 setNewDescription('');
@@ -541,13 +552,13 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
 
             {/* Content Tabs */}
             <div className="flex border-b border-gray-800 text-white text-sm font-medium sticky top-14 bg-[#0f0f0f]">
-                <div 
+                <div
                     className={`flex-1 py-3 text-center cursor-pointer ${profileTab === 'analytics' ? 'border-b-2 border-white' : 'text-gray-500'}`}
                     onClick={() => setProfileTab('analytics')}
                 >
                     Analytics
                 </div>
-                <div 
+                <div
                     className={`flex-1 py-3 text-center cursor-pointer ${profileTab === 'manage' ? 'border-b-2 border-white' : 'text-gray-500'}`}
                     onClick={() => setProfileTab('manage')}
                 >
@@ -559,7 +570,7 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
             {profileTab === 'analytics' && (
                 <div className="p-4 text-white">
                     <h3 className="text-xl font-bold mb-6">Video Analytics</h3>
-                    
+
                     {userVideos.length > 0 ? (
                         <div className="space-y-6">
                             {/* Overview Stats */}
@@ -597,8 +608,8 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
                                     {userVideos.map(video => (
                                         <div key={video.id} className="bg-gray-800 p-3 rounded-lg">
                                             <div className="flex items-start gap-3">
-                                                <video 
-                                                    src={video.url} 
+                                                <video
+                                                    src={video.url}
                                                     className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded flex-shrink-0"
                                                     preload="metadata"
                                                 />
@@ -606,14 +617,16 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
                                                     <h5 className="font-medium text-white text-sm sm:text-base leading-tight mb-2 break-words">
                                                         {video.title || video.fileName}
                                                     </h5>
-                                                    <div className="text-xs sm:text-sm text-gray-400 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                                                        <span>{video.views || 0} views</span>
-                                                        <span className="hidden sm:inline">•</span>
-                                                        <span>{video.likes || 0} likes</span>
-                                                        <span className="hidden sm:inline">•</span>
-                                                        <span className="text-gray-500">
-                                                            {new Date(video.uploadedAt).toLocaleDateString()}
-                                                        </span>
+                                                    <VideoStats
+                                                        views={video.views || 0}
+                                                        likes={video.likes || 0}
+                                                        comments={video.commentsCount || 0}
+                                                        rating={video.rating}
+                                                        ratingCount={video.ratingCount}
+                                                        className="mb-2"
+                                                    />
+                                                    <div className="text-gray-500 text-xs">
+                                                        {new Date(video.uploadedAt).toLocaleDateString()}
                                                     </div>
                                                 </div>
                                             </div>
@@ -635,14 +648,14 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
             {profileTab === 'manage' && (
                 <div className="p-4 text-white">
                     <h3 className="text-xl font-bold mb-6">Manage Videos</h3>
-                    
+
                     {userVideos.length > 0 ? (
                         <div className="space-y-4">
                             {userVideos.map(video => (
                                 <div key={video.id} className="bg-gray-800 p-3 sm:p-4 rounded-lg">
                                     <div className="flex items-start gap-3 sm:gap-4">
-                                        <video 
-                                            src={video.url} 
+                                        <video
+                                            src={video.url}
                                             className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded flex-shrink-0"
                                             preload="metadata"
                                         />
@@ -650,7 +663,7 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
                                             <h5 className="font-medium text-white mb-2 text-sm sm:text-base break-words">
                                                 {video.title || video.fileName}
                                             </h5>
-                                            
+
                                             {editingVideo?.id === video.id ? (
                                                 <div className="space-y-3">
                                                     <div>
@@ -815,7 +828,7 @@ export const PitchSultanBattle = () => {
         try {
             setLoading(true);
             console.log('📡 Fetching videos from:', `${API_BASE_URL}/pitch-sultan/videos`);
-            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?status=APPROVED&limit=50`);
+            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?limit=50`);
             const data = await response.json();
 
             if (data.success) {
@@ -908,8 +921,8 @@ export const PitchSultanBattle = () => {
     const handleVideoUpdate = (videoId: string, updates: { title?: string, description?: string }) => {
         // Update local videos state immediately
         setVideos(prevVideos => {
-            const updatedVideos = prevVideos.map(video => 
-                video.id === videoId 
+            const updatedVideos = prevVideos.map(video =>
+                video.id === videoId
                     ? { ...video, ...updates }
                     : video
             );
@@ -931,7 +944,7 @@ export const PitchSultanBattle = () => {
 
     const applyFilter = (filter: string, videosToFilter: any[] = videos, searchTerm: string = searchQuery) => {
         let filtered = [...videosToFilter];
-        
+
         // Apply search filter first if there's a search term
         if (searchTerm.trim()) {
             filtered = filtered.filter(video => {
@@ -939,7 +952,7 @@ export const PitchSultanBattle = () => {
                 return title.includes(searchTerm.toLowerCase());
             });
         }
-        
+
         // Then apply category filter
         switch (filter) {
             case 'All':
@@ -947,7 +960,7 @@ export const PitchSultanBattle = () => {
                 break;
             case 'Recently Uploaded':
                 // Sort by upload date, most recent first
-                filtered = filtered.sort((a, b) => 
+                filtered = filtered.sort((a, b) =>
                     new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
                 );
                 break;
@@ -955,7 +968,7 @@ export const PitchSultanBattle = () => {
                 // Already filtered by search if applicable
                 break;
         }
-        
+
         setFilteredVideos(filtered);
     };
 
@@ -979,9 +992,9 @@ export const PitchSultanBattle = () => {
 
     const handleVideoStatsUpdate = (videoId: string, updates: { views?: number, likes?: number }) => {
         // Update local videos state with new stats
-        setVideos(prevVideos => 
-            prevVideos.map(video => 
-                video.id === videoId 
+        setVideos(prevVideos =>
+            prevVideos.map(video =>
+                video.id === videoId
                     ? { ...video, ...updates }
                     : video
             )
@@ -1035,7 +1048,7 @@ export const PitchSultanBattle = () => {
                                 <span className="whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white flex items-center gap-2">
                                     <MdSearch className="text-sm" />
                                     "{searchQuery}"
-                                    <button 
+                                    <button
                                         onClick={() => handleSearch('')}
                                         className="hover:bg-blue-700 rounded-full p-0.5"
                                     >
@@ -1043,17 +1056,16 @@ export const PitchSultanBattle = () => {
                                     </button>
                                 </span>
                             )}
-                            
+
                             {/* Filter chips */}
                             {['All', 'Recently Uploaded'].map((chip, i) => (
-                                <span 
-                                    key={i} 
+                                <span
+                                    key={i}
                                     onClick={() => handleFilterChange(chip)}
-                                    className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
-                                        activeFilter === chip 
-                                            ? 'bg-white text-black' 
+                                    className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition-colors ${activeFilter === chip
+                                            ? 'bg-white text-black'
                                             : 'bg-gray-800 text-white hover:bg-gray-700'
-                                    }`}
+                                        }`}
                                 >
                                     {chip}
                                 </span>
@@ -1075,7 +1087,7 @@ export const PitchSultanBattle = () => {
                                     {searchQuery ? 'No videos found' : 'No videos found'}
                                 </p>
                                 <p className="text-sm">
-                                    {searchQuery 
+                                    {searchQuery
                                         ? `No videos match "${searchQuery}". Try a different search term.`
                                         : 'Try a different filter or upload new content'
                                     }
@@ -1096,10 +1108,11 @@ export const PitchSultanBattle = () => {
                         {!loading && filteredVideos.length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-4">
                                 {filteredVideos.map(video => (
-                                    <VideoCard 
-                                        key={video.id} 
-                                        video={video} 
+                                    <VideoPreview
+                                        key={video.id}
+                                        video={video}
                                         onVideoClick={handleVideoClick}
+                                        showMenu={true}
                                     />
                                 ))}
                             </div>
@@ -1108,7 +1121,7 @@ export const PitchSultanBattle = () => {
                 </div>
 
                 <div className={`${activeTab === 'shorts' ? 'block' : 'hidden'} bg-black`}>
-                    <ShortsView videos={videos} startingVideoId={selectedVideoId} onVideoStatsUpdate={handleVideoStatsUpdate} />
+                    <ShortsView videos={videos} startingVideoId={selectedVideoId} onVideoStatsUpdate={handleVideoStatsUpdate} currentUserId={secUser?.id} />
                 </div>
 
                 <div className={`${activeTab === 'create' ? 'block' : 'hidden'}`}>

@@ -22,10 +22,10 @@ enum PlanType {
 }
 
 model Store {
-  id          String        @id @map("_id")
-  storeName   String
-  city        String
-  secUsers    SECUser[]     // One store can have multiple SECs (backward compatibility)
+  id           String        @id @map("_id")
+  storeName    String
+  city         String
+  secUsers     SECUser[] // One store can have multiple SECs (backward compatibility)
   salesReports SalesReport[] // Store sales reports
   helpRequests HelpRequest[] // Help requests from this store
 }
@@ -56,48 +56,50 @@ enum UserRole {
 }
 
 model User {
-  id           String        @id @default(auto()) @map("_id") @db.ObjectId
-  username     String        @unique
-  password     String        // bcrypt hashed
-  phone        String        @unique
-  name         String
-  role         UserRole
-  storeIds     String[]      // Array of store IDs for roles that need multiple stores
-  isActive     Boolean       @default(true)
-  lastLoginAt  DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  username    String    @unique
+  password    String // bcrypt hashed
+  phone       String    @unique
+  name        String
+  role        UserRole
+  storeIds    String[] // Array of store IDs for roles that need multiple stores
+  isActive    Boolean   @default(true)
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // Keep SECUser for backward compatibility with existing SEC functionality
 model SECUser {
-  id           String        @id @default(auto()) @map("_id") @db.ObjectId
-  phone        String        @unique
-  secId        String?       // Optional - SEC provides their own ID (removed @unique)
-  name         String?
-  storeId      String?
-  store        Store?        @relation(fields: [storeId], references: [id])
-  region       String?       // Optional - Region for Pitch Sultan (north/south/east/west)
-  isActive     Boolean       @default(true)
-  lastLoginAt  DateTime?
-  salesReports SalesReport[] // SEC sales reports
-  deductions   IncentiveDeduction[] // Deductions applied to this SEC
-  videos       PitchSultanVideo[]   // Videos uploaded by this SEC
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id              String               @id @default(auto()) @map("_id") @db.ObjectId
+  phone           String               @unique
+  secId           String? // Optional - SEC provides their own ID (removed @unique)
+  name            String?
+  storeId         String?
+  store           Store?               @relation(fields: [storeId], references: [id])
+  region          String? // Optional - Region for Pitch Sultan (north/south/east/west)
+  isActive        Boolean              @default(true)
+  lastLoginAt     DateTime?
+  salesReports    SalesReport[] // SEC sales reports
+  deductions      IncentiveDeduction[] // Deductions applied to this SEC
+  videos          PitchSultanVideo[] // Videos uploaded by this SEC
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  UserVideoRating UserVideoRating[]
+  UserVideoLike   UserVideoLike[]
+  VideoComment    VideoComment[]
 }
 
 model AdminUser {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   username  String   @unique
-  password  String   // This will be bcrypt hashed
+  password  String // This will be bcrypt hashed
   email     String?  @unique
   name      String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-
 
 model OTPSession {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -109,46 +111,46 @@ model OTPSession {
 }
 
 model SalesReport {
-  id            String     @id @default(auto()) @map("_id") @db.ObjectId
-  secUserId     String     @db.ObjectId
-  secUser       SECUser    @relation(fields: [secUserId], references: [id])
-  storeId       String
-  store         Store      @relation(fields: [storeId], references: [id])
-  samsungSKUId  String     @db.ObjectId
-  samsungSKU    SamsungSKU @relation(fields: [samsungSKUId], references: [id])
-  planId        String     @db.ObjectId
-  plan          Plan       @relation(fields: [planId], references: [id])
-  imei          String
-  planPrice     Int
-  incentiveEarned Int      // Calculated incentive amount
-  voucherCode   String?    // Optional voucher code for incentive redemption
-  isPaid        Boolean    @default(false)
-  paidAt        DateTime?
-  submittedAt   DateTime   @default(now())
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  deductions    IncentiveDeduction[] // Deductions related to this report
+  id              String               @id @default(auto()) @map("_id") @db.ObjectId
+  secUserId       String               @db.ObjectId
+  secUser         SECUser              @relation(fields: [secUserId], references: [id])
+  storeId         String
+  store           Store                @relation(fields: [storeId], references: [id])
+  samsungSKUId    String               @db.ObjectId
+  samsungSKU      SamsungSKU           @relation(fields: [samsungSKUId], references: [id])
+  planId          String               @db.ObjectId
+  plan            Plan                 @relation(fields: [planId], references: [id])
+  imei            String
+  planPrice       Int
+  incentiveEarned Int // Calculated incentive amount
+  voucherCode     String? // Optional voucher code for incentive redemption
+  isPaid          Boolean              @default(false)
+  paidAt          DateTime?
+  submittedAt     DateTime             @default(now())
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  deductions      IncentiveDeduction[] // Deductions related to this report
 
+  @@unique([imei])
   @@index([secUserId])
   @@index([storeId])
   @@index([submittedAt])
-  @@unique([imei])
 }
 
 model IncentiveDeduction {
-  id            String      @id @default(auto()) @map("_id") @db.ObjectId
-  secUserId     String      @db.ObjectId
-  secUser       SECUser     @relation(fields: [secUserId], references: [id])
-  salesReportId String      @db.ObjectId
-  salesReport   SalesReport @relation(fields: [salesReportId], references: [id])
-  imei          String      // The invalid IMEI
-  deductionAmount Int       // Amount deducted
-  reason        String      // "Invalid IMEI for gift voucher"
-  processedBy   String      // Admin who processed
-  processedAt   DateTime    @default(now())
-  notificationSent Boolean  @default(false)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id               String      @id @default(auto()) @map("_id") @db.ObjectId
+  secUserId        String      @db.ObjectId
+  secUser          SECUser     @relation(fields: [secUserId], references: [id])
+  salesReportId    String      @db.ObjectId
+  salesReport      SalesReport @relation(fields: [salesReportId], references: [id])
+  imei             String // The invalid IMEI
+  deductionAmount  Int // Amount deducted
+  reason           String // "Invalid IMEI for gift voucher"
+  processedBy      String // Admin who processed
+  processedAt      DateTime    @default(now())
+  notificationSent Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   @@index([secUserId])
   @@index([imei])
@@ -173,13 +175,13 @@ enum ProctoringEventType {
 }
 
 model ProctoringEvent {
-  id            String               @id @default(auto()) @map("_id") @db.ObjectId
-  secId         String
-  phone         String?
-  sessionToken  String?
-  eventType     ProctoringEventType
-  details       String?
-  createdAt     DateTime             @default(now())
+  id           String              @id @default(auto()) @map("_id") @db.ObjectId
+  secId        String
+  phone        String?
+  sessionToken String?
+  eventType    ProctoringEventType
+  details      String?
+  createdAt    DateTime            @default(now())
 
   @@index([secId])
   @@index([phone])
@@ -187,18 +189,18 @@ model ProctoringEvent {
 }
 
 model Referral {
-  id             String          @id @default(auto()) @map("_id") @db.ObjectId
-  referrerPhone  String          // 10-digit string of referrer (SEC)
-  refereePhone   String          // 10-digit string of referee (SEC)
-  status         ReferralStatus  @default(joined)
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  referrerPhone   String // 10-digit string of referrer (SEC)
+  refereePhone    String // 10-digit string of referee (SEC)
+  status          ReferralStatus @default(joined)
   referrerVoucher String?
   refereeVoucher  String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
+  @@unique([referrerPhone, refereePhone])
   @@index([referrerPhone])
   @@index([refereePhone])
-  @@unique([referrerPhone, refereePhone])
 }
 
 enum HelpRequestType {
@@ -213,20 +215,20 @@ enum HelpRequestStatus {
 }
 
 model HelpRequest {
-  id          String             @id @default(auto()) @map("_id") @db.ObjectId
-  secUserId   String             @db.ObjectId
-  secPhone    String             // Store phone for quick reference
-  secName     String?            // Store SEC name for display
-  storeId     String?            // Optional: store ID selected by SEC
-  store       Store?             @relation(fields: [storeId], references: [id])
+  id          String            @id @default(auto()) @map("_id") @db.ObjectId
+  secUserId   String            @db.ObjectId
+  secPhone    String // Store phone for quick reference
+  secName     String? // Store SEC name for display
+  storeId     String? // Optional: store ID selected by SEC
+  store       Store?            @relation(fields: [storeId], references: [id])
   requestType HelpRequestType
   description String
-  status      HelpRequestStatus  @default(pending)
-  adminNotes  String?            // Notes added by admin
-  resolvedBy  String?            // Admin who resolved the request
+  status      HelpRequestStatus @default(pending)
+  adminNotes  String? // Notes added by admin
+  resolvedBy  String? // Admin who resolved the request
   resolvedAt  DateTime?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
   @@index([secUserId])
   @@index([status])
@@ -234,39 +236,39 @@ model HelpRequest {
 }
 
 model TestSubmission {
-  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
-  secId                String
-  phone                String?
-  name                 String?  // User's actual name
-  sessionToken         String
-  responses            Json     // Array of {questionId, selectedAnswer, answeredAt}
-  score                Int
-  totalQuestions       Int
-  completionTime       Int      // in seconds
-  isProctoringFlagged  Boolean  @default(false)
-  screenshotUrls       String[] @default([])  // Array of Cloudinary URLs
-  storeId              String?
-  storeName            String?
-  storeCity            String?
-  submittedAt          DateTime @default(now())
-  createdAt            DateTime @default(now())
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  secId               String
+  phone               String?
+  name                String? // User's actual name
+  sessionToken        String
+  responses           Json // Array of {questionId, selectedAnswer, answeredAt}
+  score               Int
+  totalQuestions      Int
+  completionTime      Int // in seconds
+  isProctoringFlagged Boolean  @default(false)
+  screenshotUrls      String[] @default([]) // Array of Cloudinary URLs
+  storeId             String?
+  storeName           String?
+  storeCity           String?
+  submittedAt         DateTime @default(now())
+  createdAt           DateTime @default(now())
 
   @@index([secId])
   @@index([phone])
   @@index([submittedAt])
-//  @@unique([secId, sessionToken], name: "secId_sessionToken") // Temporarily commented out due to duplicate data
+  //  @@unique([secId, sessionToken], name: "secId_sessionToken") // Temporarily commented out due to duplicate data
   @@index([secId, sessionToken]) // Added non-unique index instead
 }
 
 model Notification {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  secUserId  String   @db.ObjectId
-  type       String   // e.g., "test_result", "incentive", "alert"
-  title      String
-  message    String
-  readAt     DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  secUserId String    @db.ObjectId
+  type      String // e.g., "test_result", "incentive", "alert"
+  title     String
+  message   String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([secUserId])
   @@index([createdAt])
@@ -275,10 +277,10 @@ model Notification {
 model QuestionBank {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   questionId    Int      @unique // Sequential question ID
-  question      String   // Question text
+  question      String // Question text
   options       String[] // Array of options (e.g., ["A) Option1", "B) Option2", ...])
-  correctAnswer String   // Correct answer letter (e.g., "A", "B", "C", "D")
-  category      String?  // Optional category (e.g., "Section A", "Section B")
+  correctAnswer String // Correct answer letter (e.g., "A", "B", "C", "D")
+  category      String? // Optional category (e.g., "Section A", "Section B")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -286,26 +288,76 @@ model QuestionBank {
 }
 
 model PitchSultanVideo {
-  id              String           @id @default(auto()) @map("_id") @db.ObjectId
-  secUserId       String           @db.ObjectId
-  secUser         SECUser          @relation(fields: [secUserId], references: [id])
-  title           String?          // Optional video title
-  description     String?          // Optional video description
-  fileId          String           // ImageKit file ID
-  url             String           // ImageKit video URL
-  thumbnailUrl    String?          // ImageKit thumbnail URL
-  fileName        String           // Original file name
-  fileSize        Int?             // File size in bytes
-  duration        Int?             // Video duration in seconds
-  views           Int              @default(0)
-  likes           Int              @default(0)
-  tags            String[]         @default([])
-  isActive        Boolean          @default(true)
-  uploadedAt      DateTime         @default(now())
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id           String            @id @default(auto()) @map("_id") @db.ObjectId
+  secUserId    String            @db.ObjectId
+  secUser      SECUser           @relation(fields: [secUserId], references: [id])
+  title        String? // Optional video title
+  description  String? // Optional video description
+  fileId       String // ImageKit file ID
+  url          String // ImageKit video URL
+  thumbnailUrl String? // ImageKit thumbnail URL
+  fileName     String // Original file name
+  fileSize     Int? // File size in bytes
+  duration     Int? // Video duration in seconds
+  views        Int               @default(0)
+  likes        Int               @default(0)
+  rating       Float             @default(0.0) // Average rating (0.0 to 5.0)
+  ratingCount  Int               @default(0) // Number of ratings
+  tags         String[]          @default([])
+  isActive     Boolean           @default(true)
+  uploadedAt   DateTime          @default(now())
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  ratings      UserVideoRating[] // Individual user ratings
+  likesList    UserVideoLike[]
+  comments     VideoComment[]
+  commentsCount Int              @default(0)
 
   @@index([secUserId])
   @@index([uploadedAt])
   @@index([isActive])
+  @@index([rating])
+}
+
+model UserVideoRating {
+  id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  videoId   String           @db.ObjectId
+  video     PitchSultanVideo @relation(fields: [videoId], references: [id])
+  userId    String           @db.ObjectId
+  user      SECUser          @relation(fields: [userId], references: [id])
+  rating    Int // Rating from 1 to 5
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([videoId, userId]) // One rating per user per video
+  @@index([videoId])
+  @@index([userId])
+}
+
+model UserVideoLike {
+  id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  videoId   String           @db.ObjectId
+  video     PitchSultanVideo @relation(fields: [videoId], references: [id])
+  userId    String           @db.ObjectId
+  user      SECUser          @relation(fields: [userId], references: [id])
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([videoId, userId])
+  @@index([videoId])
+  @@index([userId])
+}
+
+model VideoComment {
+  id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  videoId   String           @db.ObjectId
+  video     PitchSultanVideo @relation(fields: [videoId], references: [id])
+  userId    String           @db.ObjectId
+  user      SECUser          @relation(fields: [userId], references: [id])
+  comment   String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([videoId])
+  @@index([userId])
 }

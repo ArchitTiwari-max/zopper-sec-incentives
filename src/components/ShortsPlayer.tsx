@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     MdThumbUp, MdThumbDown, MdComment, MdShare, MdMoreVert,
-    MdVolumeOff, MdVolumeUp, MdPause, MdPlayArrow
+    MdVolumeOff, MdVolumeUp, MdPause, MdPlayArrow, MdStar
 } from 'react-icons/md';
 import { API_BASE_URL } from '@/lib/config';
+import { CommentsModal } from './CommentsModal';
+import { RatingModal } from './RatingModal';
+import { StarRating } from './StarRating';
 
 interface Video {
     id: string;
@@ -13,6 +16,9 @@ interface Video {
     thumbnailUrl?: string;
     views: number;
     likes: number;
+    rating?: number;
+    ratingCount?: number;
+    commentsCount?: number;
     uploadedAt: string;
     secUser: {
         id: string;
@@ -31,13 +37,15 @@ interface ShortsPlayerProps {
     onVideoChange?: (video: Video) => void;
     startingVideoId?: string; // Add this to start from a specific video
     onVideoStatsUpdate?: (videoId: string, updates: { views?: number, likes?: number }) => void;
+    currentUserId?: string; // Add current user ID for interactions
 }
 
-export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({ 
-    videos: propVideos, 
+export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
+    videos: propVideos,
     onVideoChange,
     startingVideoId,
-    onVideoStatsUpdate
+    onVideoStatsUpdate,
+    currentUserId
 }) => {
     const [videos, setVideos] = useState<Video[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -46,7 +54,11 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     const [playing, setPlaying] = useState(true);
     const [isProgrammaticScroll, setIsProgrammaticScroll] = useState(false);
     const [viewedVideos, setViewedVideos] = useState<Set<string>>(new Set()); // Track which videos have been viewed
-    const [videoProgress, setVideoProgress] = useState<{[key: string]: number}>({}); // Track progress for each video
+    const [videoProgress, setVideoProgress] = useState<{ [key: string]: number }>({}); // Track progress for each video
+    const [userInteractions, setUserInteractions] = useState<{ [key: string]: { hasLiked: boolean, userRating: number | null } }>({}); // Track user interactions
+    const [showCommentsModal, setShowCommentsModal] = useState(false);
+    const [showRatingModal, setShowRatingModal] = useState(false);
+    const [selectedVideoForModal, setSelectedVideoForModal] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
     const viewTimers = useRef<Map<string, NodeJS.Timeout>>(new Map()); // Track view timers
@@ -88,24 +100,24 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         if (videos.length > 0 && startingVideoId) {
             const startIndex = videos.findIndex(video => video.id === startingVideoId);
             console.log('🎯 Looking for video ID:', startingVideoId, 'Found at index:', startIndex);
-            
+
             if (startIndex !== -1) {
                 setCurrentIndex(startIndex);
                 setIsProgrammaticScroll(true);
-                
+
                 // Clear all view timers during programmatic scroll to prevent false views
                 viewTimers.current.forEach(timer => clearTimeout(timer));
                 viewTimers.current.clear();
-                
+
                 // Scroll to the specific video after a short delay to ensure DOM is ready
                 setTimeout(() => {
                     if (containerRef.current) {
                         // Use scrollIntoView for more reliable scrolling
                         const targetVideo = containerRef.current.children[startIndex] as HTMLElement;
                         if (targetVideo) {
-                            targetVideo.scrollIntoView({ 
-                                behavior: 'smooth', 
-                                block: 'start' 
+                            targetVideo.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
                             });
                             console.log('📍 Scrolled to video element:', startIndex);
                         } else {
@@ -117,7 +129,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                             });
                             console.log('📍 Fallback scroll to position:', scrollTop);
                         }
-                        
+
                         // Reset programmatic scroll flag after scroll completes
                         setTimeout(() => {
                             setIsProgrammaticScroll(false);
@@ -138,12 +150,12 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     // Initialize video refs array when videos change
     useEffect(() => {
         videoRefs.current = videoRefs.current.slice(0, videos.length);
-        
+
         // Add progress tracking to all videos
         videoRefs.current.forEach((video, index) => {
             if (video && videos[index]) {
                 const videoId = videos[index].id;
-                
+
                 // Remove existing listeners to avoid duplicates
                 if ((video as any).progressHandler) {
                     video.removeEventListener('timeupdate', (video as any).progressHandler);
@@ -151,7 +163,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                 if ((video as any).metadataHandler) {
                     video.removeEventListener('loadedmetadata', (video as any).metadataHandler);
                 }
-                
+
                 // Add progress tracking
                 const progressHandler = () => {
                     if (video.duration) {
@@ -162,7 +174,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                         }));
                     }
                 };
-                
+
                 // Reset progress when video metadata loads
                 const metadataHandler = () => {
                     setVideoProgress(prev => ({
@@ -170,16 +182,16 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                         [videoId]: 0
                     }));
                 };
-                
+
                 // Store handlers on video element for cleanup
                 (video as any).progressHandler = progressHandler;
                 (video as any).metadataHandler = metadataHandler;
-                
+
                 video.addEventListener('timeupdate', progressHandler);
                 video.addEventListener('loadedmetadata', metadataHandler);
             }
         });
-        
+
         // Cleanup function
         return () => {
             videoRefs.current.forEach(video => {
@@ -205,14 +217,14 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                     const videoElement = entry.target as HTMLVideoElement;
                     const videoIndex = videoRefs.current.findIndex(ref => ref === videoElement);
                     const video = videos[videoIndex];
-                    
+
                     if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
                         // Video is more than 50% visible - play it
                         // Don't update currentIndex if we're doing programmatic scrolling
                         if (!isProgrammaticScroll) {
                             setCurrentIndex(videoIndex);
                         }
-                        
+
                         // Reset video to start from beginning
                         videoElement.currentTime = 0;
                         // Reset progress
@@ -227,7 +239,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                 startViewTimer(video.id);
                             }
                         }).catch(console.error);
-                        
+
                         // Pause all other videos, reset them to beginning, and stop their view timers
                         videoRefs.current.forEach((otherVideo, index) => {
                             if (otherVideo && index !== videoIndex && !otherVideo.paused) {
@@ -348,21 +360,123 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     };
 
     const handleLike = async (videoId: string) => {
+        if (!currentUserId) {
+            alert('Please log in to like videos');
+            return;
+        }
+
         try {
-            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos/${videoId}/like`, {
-                method: 'PUT'
+            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos/${videoId}/toggle-like`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId: currentUserId })
             });
             const data = await response.json();
-            
+
             if (data.success) {
-                // Only update parent component state, not local state
+                // Update local user interactions state
+                setUserInteractions(prev => ({
+                    ...prev,
+                    [videoId]: {
+                        ...prev[videoId],
+                        hasLiked: data.data.hasLiked
+                    }
+                }));
+
+                // Update parent component state
                 if (onVideoStatsUpdate) {
-                    onVideoStatsUpdate(videoId, { likes: data.data.likes });
+                    onVideoStatsUpdate(videoId, { likes: data.data.totalLikes });
                 }
             }
         } catch (error) {
-            console.error('❌ Error liking video:', error);
+            console.error('❌ Error toggling like:', error);
         }
+    };
+
+    const handleComment = (videoId: string) => {
+        if (!currentUserId) {
+            alert('Please log in to comment on videos');
+            return;
+        }
+        setSelectedVideoForModal(videoId);
+        setShowCommentsModal(true);
+    };
+
+    const handleRating = (videoId: string) => {
+        if (!currentUserId) {
+            alert('Please log in to rate videos');
+            return;
+        }
+        setSelectedVideoForModal(videoId);
+        setShowRatingModal(true);
+    };
+
+    const handleShare = async (video: Video) => {
+        try {
+            if (navigator.share) {
+                await navigator.share({
+                    title: video.title || video.fileName,
+                    text: `Check out this video on Pitch Sultan!`,
+                    url: window.location.href
+                });
+            } else {
+                // Fallback: copy to clipboard
+                await navigator.clipboard.writeText(window.location.href);
+                alert('Link copied to clipboard!');
+            }
+        } catch (error) {
+            console.error('Error sharing:', error);
+            // Fallback: copy to clipboard
+            try {
+                await navigator.clipboard.writeText(window.location.href);
+                alert('Link copied to clipboard!');
+            } catch (clipboardError) {
+                console.error('Clipboard error:', clipboardError);
+            }
+        }
+    };
+
+    // Fetch user interactions for current user
+    const fetchUserInteractions = async (videoId: string) => {
+        if (!currentUserId) return;
+
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/pitch-sultan/videos/${videoId}/user-interactions?userId=${currentUserId}`
+            );
+            const data = await response.json();
+
+            if (data.success) {
+                setUserInteractions(prev => ({
+                    ...prev,
+                    [videoId]: data.data
+                }));
+            }
+        } catch (error) {
+            console.error('Error fetching user interactions:', error);
+        }
+    };
+
+    // Load user interactions when videos change
+    useEffect(() => {
+        if (currentUserId && videos.length > 0) {
+            videos.forEach(video => {
+                if (!userInteractions[video.id]) {
+                    fetchUserInteractions(video.id);
+                }
+            });
+        }
+    }, [currentUserId, videos]);
+
+    const handleRatingUpdate = (videoId: string, newRating: number, ratingCount: number) => {
+        // Update local videos state
+        setVideos(prev => prev.map(video =>
+            video.id === videoId
+                ? { ...video, rating: newRating, ratingCount }
+                : video
+        ));
     };
 
     const handleView = async (videoId: string) => {
@@ -373,12 +487,12 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                     method: 'PUT'
                 });
                 const data = await response.json();
-                
+
                 if (data.success) {
                     // Mark video as viewed
                     setViewedVideos(prev => new Set([...prev, videoId]));
                     console.log('📊 View counted for video:', videoId);
-                    
+
                     // Only update parent component state, not local state
                     if (onVideoStatsUpdate) {
                         onVideoStatsUpdate(videoId, { views: data.data.views });
@@ -462,14 +576,14 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     return (
         <div className="h-[calc(100vh-100px)] w-full bg-black flex items-center justify-center overflow-hidden">
             {/* Vertical scrollable container */}
-            <div 
+            <div
                 ref={containerRef}
                 className="relative w-full max-w-[400px] h-full bg-black overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
                 {/* Render all videos */}
                 {videos.map((video, index) => (
-                    <div 
+                    <div
                         key={video.id}
                         className="relative w-full h-full flex-shrink-0 snap-start"
                         style={{ aspectRatio: '9/16' }}
@@ -490,17 +604,17 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 
                         {/* Progress Bar - positioned with bottom margin to stay visible */}
                         <div className="absolute bottom-4 left-0 right-0 h-1 bg-black/50 rounded-none z-50">
-                            <div 
+                            <div
                                 className="h-full bg-white rounded-none transition-all duration-100 ease-linear"
-                                style={{ 
-                                    width: `${videoProgress[video.id] || 0}%` 
+                                style={{
+                                    width: `${videoProgress[video.id] || 0}%`
                                 }}
                             />
                         </div>
 
                         {/* Overlay Controls */}
                         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60 flex flex-col justify-between p-4 pb-12">
-                            
+
                             {/* Top Controls */}
                             <div className="flex justify-between items-start">
                                 <div className="text-white text-sm font-medium">
@@ -552,11 +666,11 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                             Follow
                                         </button>
                                     </div>
-                                    
+
                                     <p className="text-white text-sm line-clamp-2 mb-2">
                                         {video.title || video.fileName || 'Untitled Video'}
                                     </p>
-                                    
+
                                     <div className="text-white/80 text-xs flex items-center gap-4">
                                         <span>{formatCount(video.views)} views</span>
                                         {video.secUser?.store && (
@@ -571,33 +685,59 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                         onClick={() => handleLike(video.id)}
                                         className="flex flex-col items-center"
                                     >
-                                        <div className="p-3 bg-black/30 rounded-full backdrop-blur-sm hover:bg-black/50 transition">
-                                            <MdThumbUp className="text-2xl text-white" />
+                                        <div className={`p-3 rounded-full backdrop-blur-sm hover:bg-black/50 transition ${userInteractions[video.id]?.hasLiked
+                                            ? 'bg-red-600/80'
+                                            : 'bg-black/30'
+                                            }`}>
+                                            <MdThumbUp className={`text-2xl ${userInteractions[video.id]?.hasLiked
+                                                ? 'text-white'
+                                                : 'text-white'
+                                                }`} />
                                         </div>
                                         <span className="text-white text-xs font-semibold mt-1">
                                             {formatCount(video.likes)}
                                         </span>
                                     </button>
 
-                                    <button className="flex flex-col items-center">
-                                        <div className="p-3 bg-black/30 rounded-full backdrop-blur-sm hover:bg-black/50 transition">
-                                            <MdThumbDown className="text-2xl text-white" />
-                                        </div>
-                                        <span className="text-white text-xs font-semibold mt-1">
-                                            Dislike
-                                        </span>
-                                    </button>
-
-                                    <button className="flex flex-col items-center">
+                                    <button
+                                        onClick={() => handleComment(video.id)}
+                                        className="flex flex-col items-center"
+                                    >
                                         <div className="p-3 bg-black/30 rounded-full backdrop-blur-sm hover:bg-black/50 transition">
                                             <MdComment className="text-2xl text-white" />
                                         </div>
                                         <span className="text-white text-xs font-semibold mt-1">
-                                            Comment
+                                            {formatCount(video.commentsCount || 0)}
                                         </span>
                                     </button>
 
-                                    <button className="flex flex-col items-center">
+                                    <button
+                                        onClick={() => handleRating(video.id)}
+                                        className="flex flex-col items-center"
+                                    >
+                                        <div className={`p-3 rounded-full backdrop-blur-sm hover:bg-black/50 transition ${userInteractions[video.id]?.userRating
+                                            ? 'bg-yellow-600/80'
+                                            : 'bg-black/30'
+                                            }`}>
+                                            <MdStar className={`text-2xl ${userInteractions[video.id]?.userRating
+                                                ? 'text-yellow-400'
+                                                : 'text-white'
+                                                }`} />
+                                        </div>
+                                        <span className="text-white text-xs font-semibold mt-1">
+                                            {video.rating && video.rating > 0
+                                                ? `${video.rating.toFixed(1)}★ (${formatCount(video.ratingCount || 0)})`
+                                                : video.ratingCount && video.ratingCount > 0
+                                                    ? formatCount(video.ratingCount)
+                                                    : 'Rate'
+                                            }
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleShare(video)}
+                                        className="flex flex-col items-center"
+                                    >
                                         <div className="p-3 bg-black/30 rounded-full backdrop-blur-sm hover:bg-black/50 transition">
                                             <MdShare className="text-2xl text-white" />
                                         </div>
@@ -609,21 +749,38 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                             </div>
                         </div>
 
-                        {/* Video indicator */}
-                        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/50 text-xs">
-                            <div className="flex flex-col items-center gap-2">
-                                <div className="w-1 h-8 bg-white/20 rounded-full">
-                                    <div 
-                                        className="w-full bg-white rounded-full transition-all duration-300"
-                                        style={{ height: `${((index + 1) / videos.length) * 100}%` }}
-                                    />
-                                </div>
-                                <span>{index + 1}/{videos.length}</span>
-                            </div>
-                        </div>
+
                     </div>
                 ))}
             </div>
+
+            {/* Comments Modal */}
+            <CommentsModal
+                isOpen={showCommentsModal}
+                onClose={() => {
+                    setShowCommentsModal(false);
+                    setSelectedVideoForModal(null);
+                }}
+                videoId={selectedVideoForModal || ''}
+                currentUserId={currentUserId}
+            />
+
+            {/* Rating Modal */}
+            <RatingModal
+                isOpen={showRatingModal}
+                onClose={() => {
+                    setShowRatingModal(false);
+                    setSelectedVideoForModal(null);
+                }}
+                videoId={selectedVideoForModal || ''}
+                currentUserId={currentUserId}
+                videoTitle={selectedVideoForModal ? videos.find(v => v.id === selectedVideoForModal)?.title || videos.find(v => v.id === selectedVideoForModal)?.fileName : undefined}
+                onRatingUpdate={(newRating, ratingCount) => {
+                    if (selectedVideoForModal) {
+                        handleRatingUpdate(selectedVideoForModal, newRating, ratingCount);
+                    }
+                }}
+            />
 
             {/* Custom scrollbar styles */}
             <style>{`

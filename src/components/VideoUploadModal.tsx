@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MdClose, MdUpload, MdCheckCircle, MdError } from 'react-icons/md';
 // @ts-ignore
 import ImageKit from 'imagekit-javascript';
@@ -20,7 +20,8 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [videoTitle, setVideoTitle] = useState(''); // Add title state
   const [videoDescription, setVideoDescription] = useState(''); // Add description state
-  const [validationErrors, setValidationErrors] = useState<{title?: string, description?: string}>({}); // Add validation errors
+  const titleRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -82,7 +83,8 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
           // Clear title and description when file is rejected
           setVideoTitle('');
           setVideoDescription('');
-          setValidationErrors({});
+          if (titleRef.current) titleRef.current.value = '';
+          if (descriptionRef.current) descriptionRef.current.value = '';
           
           // Clear the file input
           if (e.target) {
@@ -128,7 +130,8 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
         // Clear title and description when new file is selected
         setVideoTitle('');
         setVideoDescription('');
-        setValidationErrors({});
+        if (titleRef.current) titleRef.current.value = '';
+        if (descriptionRef.current) descriptionRef.current.value = '';
         
         URL.revokeObjectURL(video.src);
       };
@@ -141,28 +144,12 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
     }
   };
 
-  // Validation function
-  const validateFields = () => {
-    const errors: {title?: string, description?: string} = {};
-    
-    if (!videoTitle.trim()) {
-      errors.title = 'Title is required';
-    }
-    
-    if (!videoDescription.trim()) {
-      errors.description = 'Description is required';
-    }
-    
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
   const handleUpload = async () => {
     if (!selectedFile || !imagekit) return;
 
-    // Validate required fields
-    if (!validateFields()) {
-      setError('Please fill in all required fields');
+    // Simple validation - just check if fields have content
+    if (!videoTitle.trim() || !videoDescription.trim()) {
+      setError('Please fill in both title and description');
       return;
     }
 
@@ -337,7 +324,9 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
       setUploadSuccess(false);
       setVideoTitle(''); // Reset title
       setVideoDescription(''); // Reset description
-      setValidationErrors({}); // Reset validation errors
+      // Clear the input refs
+      if (titleRef.current) titleRef.current.value = '';
+      if (descriptionRef.current) descriptionRef.current.value = '';
       onClose();
     }
   };
@@ -500,70 +489,74 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
             {/* Video Title */}
             <div className="mb-4">
               <label className="block mb-2 text-sm font-medium text-gray-300">
-                Video Title <span className="text-red-400">*</span>
+                Video Title *
               </label>
-              <input
-                type="text"
-                value={videoTitle}
-                onChange={(e) => {
-                  setVideoTitle(e.target.value);
-                  // Clear validation error when user starts typing
-                  if (validationErrors.title) {
-                    setValidationErrors(prev => ({ ...prev, title: undefined }));
-                  }
+              <div 
+                contentEditable
+                suppressContentEditableWarning={true}
+                onInput={(e) => {
+                  const text = (e.target as HTMLElement).innerText;
+                  setVideoTitle(text);
                 }}
-                placeholder="Enter a catchy title for your video..."
-                disabled={uploading}
-                required
-                className={`block w-full p-3 text-sm text-white bg-gray-700 border rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  validationErrors.title ? 'border-red-500' : 'border-gray-600'
-                }`}
-                maxLength={100}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  color: 'white',
+                  backgroundColor: '#374151',
+                  border: '1px solid #4B5563',
+                  borderRadius: '4px',
+                  minHeight: '20px',
+                  outline: 'none',
+                  fontFamily: 'monospace',
+                  fontSize: '14px',
+                  whiteSpace: 'pre-wrap',
+                  wordSpacing: '8px'
+                }}
+                placeholder="Enter video title"
               />
-              <div className="flex justify-between items-center mt-1">
-                <div className="text-xs text-gray-500">
-                  {videoTitle.length}/100 characters (Required)
-                </div>
-                {validationErrors.title && (
-                  <div className="text-xs text-red-400">
-                    {validationErrors.title}
-                  </div>
-                )}
+              <div className="text-xs text-gray-400 mt-1">
+                Debug: "{videoTitle}" ({videoTitle.length} chars)
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {videoTitle.length}/100 characters
               </div>
             </div>
 
             {/* Video Description */}
             <div className="mb-6">
               <label className="block mb-2 text-sm font-medium text-gray-300">
-                Video Description <span className="text-red-400">*</span>
+                Video Description *
               </label>
               <textarea
-                value={videoDescription}
-                onChange={(e) => {
-                  setVideoDescription(e.target.value);
-                  // Clear validation error when user starts typing
-                  if (validationErrors.description) {
-                    setValidationErrors(prev => ({ ...prev, description: undefined }));
-                  }
+                ref={descriptionRef}
+                defaultValue=""
+                onInput={(e) => {
+                  const target = e.target as HTMLTextAreaElement;
+                  setVideoDescription(target.value);
                 }}
-                placeholder="Add a description for your video..."
-                disabled={uploading}
-                required
-                className={`block w-full p-3 text-sm text-white bg-gray-700 border rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed ${
-                  validationErrors.description ? 'border-red-500' : 'border-gray-600'
-                }`}
+                placeholder="Enter video description"
                 rows={3}
                 maxLength={500}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  color: 'white',
+                  backgroundColor: '#374151',
+                  border: '1px solid #4B5563',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  fontFamily: 'Arial, sans-serif',
+                  resize: 'none',
+                  whiteSpace: 'normal',
+                  letterSpacing: 'normal',
+                  wordSpacing: 'normal',
+                  textTransform: 'none',
+                  fontWeight: 'normal',
+                  lineHeight: 'normal'
+                }}
               />
-              <div className="flex justify-between items-center mt-1">
-                <div className="text-xs text-gray-500">
-                  {videoDescription.length}/500 characters (Required)
-                </div>
-                {validationErrors.description && (
-                  <div className="text-xs text-red-400">
-                    {validationErrors.description}
-                  </div>
-                )}
+              <div className="text-xs text-gray-500 mt-1">
+                {videoDescription.length}/500 characters
               </div>
             </div>
           </>

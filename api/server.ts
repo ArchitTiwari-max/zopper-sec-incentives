@@ -4694,6 +4694,328 @@ app.get('/api/imagekit-auth', (req, res) => {
   })
 })
 
+/**
+ * POST /api/pitch-sultan/videos/:id/comments
+ * Add a comment to a video
+ */
+app.post('/api/pitch-sultan/videos/:id/comments', async (req, res) => {
+  try {
+    const { id: videoId } = req.params
+    const { userId, comment } = req.body
+
+    if (!userId || !comment?.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing required fields: userId, comment" 
+      })
+    }
+
+    // Verify video exists
+    const video = await prisma.pitchSultanVideo.findUnique({
+      where: { id: videoId, isActive: true }
+    })
+
+    if (!video) {
+      return res.status(404).json({ success: false, error: "Video not found" })
+    }
+
+    // Create comment
+    const newComment = await prisma.videoComment.create({
+      data: {
+        videoId,
+        userId,
+        comment: comment.trim()
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            phone: true
+          }
+        }
+      }
+    })
+
+    // Update video comments count
+    await prisma.pitchSultanVideo.update({
+      where: { id: videoId },
+      data: {
+        commentsCount: {
+          increment: 1
+        }
+      }
+    })
+
+    res.json({ success: true, data: newComment })
+  } catch (error) {
+    console.error("Error adding comment:", error)
+    res.status(500).json({ success: false, error: "Failed to add comment" })
+  }
+})
+
+/**
+ * GET /api/pitch-sultan/videos/:id/comments
+ * Get comments for a video
+ */
+app.get('/api/pitch-sultan/videos/:id/comments', async (req, res) => {
+  try {
+    const { id: videoId } = req.params
+    const limit = parseInt(req.query.limit as string) || 20
+    const skip = parseInt(req.query.skip as string) || 0
+
+    const comments = await prisma.videoComment.findMany({
+      where: { videoId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            phone: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: limit,
+      skip
+    })
+
+    const total = await prisma.videoComment.count({ where: { videoId } })
+
+    res.json({ 
+      success: true, 
+      data: comments,
+      pagination: {
+        total,
+        limit,
+        skip,
+        hasMore: skip + comments.length < total
+      }
+    })
+  } catch (error) {
+    console.error("Error fetching comments:", error)
+    res.status(500).json({ success: false, error: "Failed to fetch comments" })
+  }
+})
+
+/**
+ * POST /api/pitch-sultan/videos/:id/rating
+ * Add or update a rating for a video
+ */
+app.post('/api/pitch-sultan/videos/:id/rating', async (req, res) => {
+  try {
+    const { id: videoId } = req.params
+    const { userId, rating } = req.body
+
+    if (!userId || !rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing required fields: userId, rating (1-5)" 
+      })
+    }
+
+    // Verify video exists
+    const video = await prisma.pitchSultanVideo.findUnique({
+      where: { id: videoId, isActive: true }
+    })
+
+    if (!video) {
+      return res.status(404).json({ success: false, error: "Video not found" })
+    }
+
+    // Check if user already rated this video
+    const existingRating = await prisma.userVideoRating.findUnique({
+      where: {
+        videoId_userId: {
+          videoId,
+          userId
+        }
+      }
+    })
+
+    let userRating
+    if (existingRating) {
+      // Update existing rating
+      userRating = await prisma.userVideoRating.update({
+        where: { id: existingRating.id },
+        data: { rating }
+      })
+    } else {
+      // Create new rating
+      userRating = await prisma.userVideoRating.create({
+        data: {
+          videoId,
+          userId,
+          rating
+        }
+      })
+    }
+
+    // Recalculate video average rating
+    const ratings = await prisma.userVideoRating.findMany({
+      where: { videoId },
+      select: { rating: true }
+    })
+
+    const avgRating = ratings.length > 0 
+      ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length 
+      : 0
+
+    // Update video rating stats
+    const updatedVideo = await prisma.pitchSultanVideo.update({
+      where: { id: videoId },
+      data: {
+        rating: avgRating,
+        ratingCount: ratings.length
+      }
+    })
+
+    res.json({ 
+      success: true, 
+      data: { 
+        userRating, 
+        videoRating: {
+          rating: updatedVideo.rating,
+          ratingCount: updatedVideo.ratingCount
+        }
+      }
+    })
+  } catch (error) {
+    console.error("Error adding/updating rating:", error)
+    res.status(500).json({ success: false, error: "Failed to add rating" })
+  }
+})
+
+/**
+ * GET /api/pitch-sultan/videos/:id/user-interactions
+ * Get user's interactions with a video (like status, rating, etc.)
+ */
+app.get('/api/pitch-sultan/videos/:id/user-interactions', async (req, res) => {
+  try {
+    const { id: videoId } = req.params
+    const { userId } = req.query
+
+    if (!userId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing userId parameter" 
+      })
+    }
+
+    const [userLike, userRating] = await Promise.all([
+      prisma.userVideoLike.findUnique({
+        where: {
+          videoId_userId: {
+            videoId,
+            userId: userId as string
+          }
+        }
+      }),
+      prisma.userVideoRating.findUnique({
+        where: {
+          videoId_userId: {
+            videoId,
+            userId: userId as string
+          }
+        }
+      })
+    ])
+
+    res.json({ 
+      success: true, 
+      data: {
+        hasLiked: !!userLike,
+        userRating: userRating?.rating || null
+      }
+    })
+  } catch (error) {
+    console.error("Error fetching user interactions:", error)
+    res.status(500).json({ success: false, error: "Failed to fetch user interactions" })
+  }
+})
+
+/**
+ * POST /api/pitch-sultan/videos/:id/toggle-like
+ * Toggle like status for a video (like/unlike)
+ */
+app.post('/api/pitch-sultan/videos/:id/toggle-like', async (req, res) => {
+  try {
+    const { id: videoId } = req.params
+    const { userId } = req.body
+
+    if (!userId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing required field: userId" 
+      })
+    }
+
+    // Verify video exists
+    const video = await prisma.pitchSultanVideo.findUnique({
+      where: { id: videoId, isActive: true }
+    })
+
+    if (!video) {
+      return res.status(404).json({ success: false, error: "Video not found" })
+    }
+
+    // Check if user already liked this video
+    const existingLike = await prisma.userVideoLike.findUnique({
+      where: {
+        videoId_userId: {
+          videoId,
+          userId
+        }
+      }
+    })
+
+    let hasLiked: boolean
+    let likesChange: number
+
+    if (existingLike) {
+      // Unlike - remove the like
+      await prisma.userVideoLike.delete({
+        where: { id: existingLike.id }
+      })
+      hasLiked = false
+      likesChange = -1
+    } else {
+      // Like - add the like
+      await prisma.userVideoLike.create({
+        data: {
+          videoId,
+          userId
+        }
+      })
+      hasLiked = true
+      likesChange = 1
+    }
+
+    // Update video likes count
+    const updatedVideo = await prisma.pitchSultanVideo.update({
+      where: { id: videoId },
+      data: {
+        likes: {
+          increment: likesChange
+        }
+      }
+    })
+
+    res.json({ 
+      success: true, 
+      data: {
+        hasLiked,
+        totalLikes: updatedVideo.likes
+      }
+    })
+  } catch (error) {
+    console.error("Error toggling like:", error)
+    res.status(500).json({ success: false, error: "Failed to toggle like" })
+  }
+})
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
