@@ -4466,10 +4466,31 @@ app.get('/api/pitch-sultan/videos', async (req, res) => {
 
     const videos = await prisma.pitchSultanVideo.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        title: true,
+        fileName: true,
+        url: true,
+        thumbnailUrl: true,
+        views: true,
+        likes: true,
+        rating: true,
+        ratingCount: true,
+        commentsCount: true,
+        uploadedAt: true,
+        secUserId: true,
         secUser: {
-          include: {
-            store: true
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            region: true,
+            store: {
+              select: {
+                storeName: true,
+                city: true
+              }
+            }
           }
         }
       },
@@ -4747,7 +4768,11 @@ app.post('/api/pitch-sultan/videos/:id/comments', async (req, res) => {
       }
     })
 
-    res.json({ success: true, data: newComment })
+    res.json({
+      success: true,
+      data: newComment,
+      commentsCount: updatedVideo.commentsCount
+    })
   } catch (error) {
     console.error("Error adding comment:", error)
     res.status(500).json({ success: false, error: "Failed to add comment" })

@@ -46,13 +46,11 @@ export const VideoStats: React.FC<VideoStatsProps> = ({
       </div>
 
       {/* Rating */}
-      {(rating || 0) > 0 && (
-        <div className="flex items-center gap-1">
-          <MdStar className="text-base text-yellow-500" />
-          <span>{rating!.toFixed(1)}</span>
-          {ratingCount && ratingCount > 0 && <span>({formatCount(ratingCount)})</span>}
-        </div>
-      )}
+      <div className="flex items-center gap-1">
+        <MdStar className={`text-base ${(rating || 0) > 0 ? 'text-yellow-500' : 'text-gray-400'}`} />
+        <span>{(rating || 0) > 0 ? rating!.toFixed(1) : 'No rating'}</span>
+        {(rating || 0) > 0 && ratingCount && ratingCount > 0 && <span>({formatCount(ratingCount)})</span>}
+      </div>
     </div>
   );
 };

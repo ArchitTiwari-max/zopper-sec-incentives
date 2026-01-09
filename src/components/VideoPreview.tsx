@@ -91,7 +91,7 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
           preload="metadata"
         />
-        
+
         {/* Play overlay */}
         <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
@@ -99,12 +99,7 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
           </div>
         </div>
 
-        {/* Duration badge (if available) */}
-        {video.duration && (
-          <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
-            {Math.floor(video.duration / 60)}:{(video.duration % 60).toString().padStart(2, '0')}
-          </div>
-        )}
+
       </div>
 
       <div className="flex gap-3 mt-3 px-3 md:px-0">
@@ -114,7 +109,7 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
             <h3 className="text-white text-sm md:text-base font-semibold line-clamp-2 leading-tight flex-1">
               {video.title || video.fileName || 'Untitled Video'}
             </h3>
-            
+
             {showMenu && (
               <div className="relative ml-2">
                 <button
@@ -130,11 +125,11 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
                 {showOptionsMenu && (
                   <>
                     {/* Backdrop */}
-                    <div 
-                      className="fixed inset-0 z-10" 
+                    <div
+                      className="fixed inset-0 z-10"
                       onClick={() => setShowOptionsMenu(false)}
                     />
-                    
+
                     {/* Menu */}
                     <div className="absolute right-0 top-8 mt-2 w-48 bg-[#282828] rounded-lg shadow-lg border border-gray-700 z-20">
                       <div className="py-2">

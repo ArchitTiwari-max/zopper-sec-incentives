@@ -18,13 +18,15 @@ interface CommentsModalProps {
   onClose: () => void;
   videoId: string;
   currentUserId?: string;
+  onCommentAdded?: (newCount?: number) => void;
 }
 
 export const CommentsModal: React.FC<CommentsModalProps> = ({
   isOpen,
   onClose,
   videoId,
-  currentUserId
+  currentUserId,
+  onCommentAdded
 }) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');

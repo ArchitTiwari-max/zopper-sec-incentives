@@ -37,7 +37,7 @@ interface ShortsPlayerProps {
     videos?: Video[];
     onVideoChange?: (video: Video) => void;
     startingVideoId?: string; // Add this to start from a specific video
-    onVideoStatsUpdate?: (videoId: string, updates: { views?: number, likes?: number }) => void;
+    onVideoStatsUpdate?: (videoId: string, updates: { views?: number, likes?: number, commentsCount?: number }) => void;
     currentUserId?: string; // Add current user ID for interactions
 }
 
@@ -298,7 +298,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
             viewTimers.current.forEach(timer => clearTimeout(timer));
             viewTimers.current.clear();
         };
-    }, [videos.length, muted, isProgrammaticScroll]); // Use videos.length instead of full videos array
+    }, [videos.length, isProgrammaticScroll]); // Use videos.length instead of full videos array
 
     // Handle mute/unmute for all videos
     useEffect(() => {
@@ -362,14 +362,10 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         const video = videoRefs.current[videoIndex];
         if (video) {
             if (video.paused) {
-                // Reset to beginning before playing
-                video.currentTime = 0;
                 video.play().catch(console.error);
                 setPlaying(true);
             } else {
                 video.pause();
-                // Reset to beginning when pausing
-                video.currentTime = 0;
                 setPlaying(false);
             }
         }
@@ -646,10 +642,10 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                         </div>
 
                         {/* Overlay Controls */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60 flex flex-col justify-between p-4 pb-12">
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60 flex flex-col justify-between p-4 pb-12 pointer-events-none">
 
                             {/* Top Controls */}
-                            <div className="flex justify-between items-start">
+                            <div className="flex justify-between items-start pointer-events-auto">
                                 <div className="text-white text-sm font-medium">
                                     Shorts
                                 </div>
@@ -664,15 +660,15 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                             <MdVolumeUp className="text-white text-xl" />
                                         )}
                                     </button>
-                                    <button className="p-2 bg-black/30 rounded-full backdrop-blur-sm">
+                                    {/* <button className="p-2 bg-black/30 rounded-full backdrop-blur-sm">
                                         <MdMoreVert className="text-white text-xl" />
-                                    </button>
+                                    </button> */}
                                 </div>
                             </div>
 
                             {/* Center Play/Pause - only show for current video */}
                             {index === currentIndex && !playing && (
-                                <div className="flex items-center justify-center">
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-auto z-10">
                                     <button
                                         onClick={() => togglePlayPause(index)}
                                         className="p-4 bg-black/50 rounded-full backdrop-blur-sm"
@@ -695,7 +691,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                         <span className="text-white font-semibold text-sm">
                                             {getUploaderHandle(video)}
                                         </span>
-                                        <button className="bg-white text-black text-xs font-bold px-3 py-1 rounded-full">
+                                        <button className="bg-white text-black text-xs font-bold px-3 py-1 rounded-full pointer-events-auto">
                                             Follow
                                         </button>
                                     </div>
@@ -713,12 +709,12 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="flex flex-col items-center gap-4">
+                                <div className="flex flex-col items-center gap-4 pointer-events-auto">
                                     <button
                                         onClick={() => handleLike(video.id)}
                                         className="flex flex-col items-center"
                                     >
-                                        <div className="p-3 rounded-full backdrop-blur-sm transition hover:bg-black/30">
+                                        <div className="p-3 bg-black/30 rounded-full backdrop-blur-sm hover:bg-black/50 transition">
                                             {userInteractions[video.id]?.hasLiked ? (
                                                 <MdThumbUp className="text-2xl text-white" />
                                             ) : (
@@ -746,7 +742,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                         onClick={() => handleRating(video.id)}
                                         className="flex flex-col items-center"
                                     >
-                                        <div className="p-3 rounded-full backdrop-blur-sm transition hover:bg-black/30">
+                                        <div className="p-3 bg-black/30 rounded-full backdrop-blur-sm hover:bg-black/50 transition">
                                             {userInteractions[video.id]?.userRating ? (
                                                 <MdStar className="text-2xl text-yellow-400" />
                                             ) : (

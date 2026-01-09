@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { MdClose, MdUpload, MdCheckCircle, MdError } from 'react-icons/md';
 // @ts-ignore
 import ImageKit from 'imagekit-javascript';
+import { API_BASE_URL } from '@/lib/config';
 
 interface VideoUploadModalProps {
   isOpen: boolean;
@@ -26,13 +27,8 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
   useEffect(() => {
     if (!isOpen) return;
 
-    // Initialize ImageKit
-    const API_URL = window.location.hostname === 'localhost' 
-      ? 'http://localhost:3001' 
-      : `${window.location.protocol}//${window.location.hostname}:3001`;
-
     // Fetch ImageKit config
-    fetch(`${API_URL}/api/imagekit-config`)
+    fetch(`${API_BASE_URL}/imagekit-config`)
       .then(res => res.json())
       .then(data => {
         const ik = new ImageKit({
@@ -55,23 +51,23 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
       size: file?.size,
       sizeMB: file ? (file.size / 1024 / 1024).toFixed(2) : 'N/A'
     });
-    
+
     if (file && file.type.startsWith('video/')) {
       const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-      
+
       // Create video element to check dimensions
       const video = document.createElement('video');
       video.preload = 'metadata';
-      
+
       video.onloadedmetadata = () => {
         const width = video.videoWidth;
         const height = video.videoHeight;
         const aspectRatio = width / height;
         const idealRatio = 9 / 16; // 0.5625
         const tolerance = 0.1; // Allow some tolerance
-        
+
         console.log('📐 Video dimensions:', { width, height, aspectRatio, idealRatio });
-        
+
         // Reject landscape videos (aspect ratio > 1)
         if (aspectRatio > 1) {
           console.log('❌ Landscape video rejected');
@@ -79,23 +75,23 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
           setStatusMessage('');
           setSelectedFile(null);
           setUploadSuccess(false);
-          
+
           // Clear title and description when file is rejected
           setVideoTitle('');
           setVideoDescription('');
           if (titleRef.current) titleRef.current.value = '';
           if (descriptionRef.current) descriptionRef.current.value = '';
-          
+
           // Clear the file input
           if (e.target) {
             e.target.value = '';
           }
-          
+
           // Clean up
           URL.revokeObjectURL(video.src);
           return;
         }
-        
+
         // Check if aspect ratio is close to 9:16 (ideal)
         if (Math.abs(aspectRatio - idealRatio) <= tolerance) {
           setStatusMessage(`✅ Perfect! ${file.name} (${sizeMB}MB) - Great for shorts!`);
@@ -107,35 +103,34 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
           setError(null);
           console.log('✅ Portrait video accepted (not perfect ratio)');
         }
-        
+
         setSelectedFile(file);
         setUploadSuccess(false);
-        
+
         // Clear title and description when new file is selected
         setVideoTitle('');
         setVideoDescription('');
-        setValidationErrors({});
-        
+
         // Clean up
         URL.revokeObjectURL(video.src);
       };
-      
+
       video.onerror = () => {
         console.log('❌ Could not analyze video dimensions - accepting file');
         setStatusMessage(`Selected: ${file.name} (${sizeMB}MB) - Could not verify format`);
         setSelectedFile(file);
         setError(null);
         setUploadSuccess(false);
-        
+
         // Clear title and description when new file is selected
         setVideoTitle('');
         setVideoDescription('');
         if (titleRef.current) titleRef.current.value = '';
         if (descriptionRef.current) descriptionRef.current.value = '';
-        
+
         URL.revokeObjectURL(video.src);
       };
-      
+
       video.src = URL.createObjectURL(file);
     } else {
       console.log('❌ Invalid file type or no file selected');
@@ -167,17 +162,13 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
     setStatusMessage('Getting authentication...');
 
     try {
-      const API_URL = window.location.hostname === 'localhost' 
-        ? 'http://localhost:3001' 
-        : `${window.location.protocol}//${window.location.hostname}:3001`;
-
-      console.log('🔐 Fetching ImageKit auth from:', `${API_URL}/api/imagekit-auth`);
-      const authResponse = await fetch(`${API_URL}/api/imagekit-auth`);
+      console.log('🔐 Fetching ImageKit auth from:', `${API_BASE_URL}/imagekit-auth`);
+      const authResponse = await fetch(`${API_BASE_URL}/imagekit-auth`);
       const authData = await authResponse.json();
-      console.log('✅ Auth data received:', { 
-        hasToken: !!authData.token, 
+      console.log('✅ Auth data received:', {
+        hasToken: !!authData.token,
         hasSignature: !!authData.signature,
-        expire: authData.expire 
+        expire: authData.expire
       });
 
       setStatusMessage('Uploading to ImageKit...');
@@ -221,10 +212,6 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
           // Save to database
           try {
             setStatusMessage('Saving to database...');
-            
-            const API_URL = window.location.hostname === 'localhost' 
-              ? 'http://localhost:3001' 
-              : `${window.location.protocol}//${window.location.hostname}:3001`;
 
             // Check if we have a user ID
             if (!currentUserId) {
@@ -252,7 +239,7 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
             }
 
             console.log('💾 Saving to database for user:', currentUserId);
-            const saveResponse = await fetch(`${API_URL}/api/pitch-sultan/videos`, {
+            const saveResponse = await fetch(`${API_BASE_URL}/pitch-sultan/videos`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
@@ -354,125 +341,124 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
             <p className="text-gray-400 text-sm">Share your pitch with the Pitch Sultan community</p>
           </div>
 
-        {/* Visual Guidelines for 9:16 Ratio */}
-        <div className="mb-6 p-4 bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded-lg border border-blue-800/30">
-          <div className="flex items-center gap-4">
-            {/* Phone Orientation Visual */}
-            <div className="flex-shrink-0">
-              <div className="relative">
-                {/* Phone Frame */}
-                <div className="w-12 h-20 bg-gray-800 rounded-lg border-2 border-gray-600 flex items-center justify-center relative">
-                  {/* Screen */}
-                  <div className="w-8 h-16 bg-blue-500 rounded-sm flex items-center justify-center">
-                    <div className="w-2 h-4 bg-white rounded-sm opacity-80"></div>
+          {/* Visual Guidelines for 9:16 Ratio */}
+          <div className="mb-6 p-4 bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded-lg border border-blue-800/30">
+            <div className="flex items-center gap-4">
+              {/* Phone Orientation Visual */}
+              <div className="flex-shrink-0">
+                <div className="relative">
+                  {/* Phone Frame */}
+                  <div className="w-12 h-20 bg-gray-800 rounded-lg border-2 border-gray-600 flex items-center justify-center relative">
+                    {/* Screen */}
+                    <div className="w-8 h-16 bg-blue-500 rounded-sm flex items-center justify-center">
+                      <div className="w-2 h-4 bg-white rounded-sm opacity-80"></div>
+                    </div>
+                    {/* Home button */}
+                    <div className="absolute bottom-1 w-3 h-1 bg-gray-600 rounded-full"></div>
                   </div>
-                  {/* Home button */}
-                  <div className="absolute bottom-1 w-3 h-1 bg-gray-600 rounded-full"></div>
-                </div>
-                {/* Checkmark */}
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs">✓</span>
+                  {/* Checkmark */}
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs">✓</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Guidelines Text */}
-            <div className="flex-1">
-              <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-                📱 Required Format
-              </h3>
-              <div className="space-y-1 text-sm">
-                <div className="flex items-center gap-2 text-green-400">
-                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                  <span>Hold phone vertically (9:16 ratio)</span>
-                </div>
-                <div className="flex items-center gap-2 text-blue-400">
-                  <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
-                  <span>Portrait mode only</span>
-                </div>
-                <div className="flex items-center gap-2 text-red-400">
-                  <span className="w-2 h-2 bg-red-400 rounded-full"></span>
-                  <span>Landscape videos rejected</span>
+              {/* Guidelines Text */}
+              <div className="flex-1">
+                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  📱 Required Format
+                </h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-center gap-2 text-green-400">
+                    <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                    <span>Hold phone vertically (9:16 ratio)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-blue-400">
+                    <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                    <span>Portrait mode only</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-red-400">
+                    <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+                    <span>Landscape videos rejected</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* 9:16 Aspect Ratio Visual */}
-            <div className="flex-shrink-0 text-center">
-              <div className="w-16 h-28 bg-gradient-to-b from-blue-500 to-purple-600 rounded-lg border-2 border-white/20 flex items-center justify-center mb-2">
-                <div className="text-white text-xs font-bold transform -rotate-90">9:16</div>
+              {/* 9:16 Aspect Ratio Visual */}
+              <div className="flex-shrink-0 text-center">
+                <div className="w-16 h-28 bg-gradient-to-b from-blue-500 to-purple-600 rounded-lg border-2 border-white/20 flex items-center justify-center mb-2">
+                  <div className="text-white text-xs font-bold transform -rotate-90">9:16</div>
+                </div>
+                <p className="text-xs text-gray-400">Required</p>
               </div>
-              <p className="text-xs text-gray-400">Required</p>
             </div>
           </div>
-        </div>
 
-        {/* Recording Tips */}
-        <div className="mb-6 p-3 bg-gray-800/50 rounded-lg">
-          <h4 className="text-white text-sm font-semibold mb-2 flex items-center gap-2">
-            💡 Pro Tips for Great Videos
-          </h4>
-          <div className="grid grid-cols-2 gap-2 text-xs text-gray-300">
-            <div className="flex items-center gap-2">
-              <span>🔆</span>
-              <span>Good lighting</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>🎤</span>
-              <span>Clear audio</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>📐</span>
-              <span>Steady hands</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>⏱️</span>
-              <span>Keep it short</span>
+          {/* Recording Tips */}
+          <div className="mb-6 p-3 bg-gray-800/50 rounded-lg">
+            <h4 className="text-white text-sm font-semibold mb-2 flex items-center gap-2">
+              💡 Pro Tips for Great Videos
+            </h4>
+            <div className="grid grid-cols-2 gap-2 text-xs text-gray-300">
+              <div className="flex items-center gap-2">
+                <span>🔆</span>
+                <span>Good lighting</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>🎤</span>
+                <span>Clear audio</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>📐</span>
+                <span>Steady hands</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>⏱️</span>
+                <span>Keep it short</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Status Message */}
-        {statusMessage && (
-          <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
-            uploadSuccess ? 'bg-green-900/30 text-green-400' : 
-            error ? 'bg-red-900/30 text-red-400' : 
-            'bg-blue-900/30 text-blue-400'
-          }`}>
-            {uploadSuccess && <MdCheckCircle className="text-xl" />}
-            {error && <MdError className="text-xl" />}
-            <span className="text-sm">{statusMessage}</span>
-          </div>
-        )}
-
-        {/* Progress Bar */}
-        {progress > 0 && progress < 100 && (
-          <div className="mb-4">
-            <div className="flex justify-between text-sm text-gray-400 mb-2">
-              <span>Uploading to ImageKit...</span>
-              <span>{progress}%</span>
+          {/* Status Message */}
+          {statusMessage && (
+            <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${uploadSuccess ? 'bg-green-900/30 text-green-400' :
+              error ? 'bg-red-900/30 text-red-400' :
+                'bg-blue-900/30 text-blue-400'
+              }`}>
+              {uploadSuccess && <MdCheckCircle className="text-xl" />}
+              {error && <MdError className="text-xl" />}
+              <span className="text-sm">{statusMessage}</span>
             </div>
-            <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-              <div
-                className="bg-blue-500 h-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* File Input */}
-        <div className="mb-6">
-          <label className="block mb-3 text-sm font-medium text-gray-300">
-            Select Video File
-          </label>
-          
-          <input
-            type="file"
-            accept="video/*"
-            onChange={handleFileSelect}
-            disabled={uploading || !imagekit}
-            className="block w-full text-sm text-gray-400
+          {/* Progress Bar */}
+          {progress > 0 && progress < 100 && (
+            <div className="mb-4">
+              <div className="flex justify-between text-sm text-gray-400 mb-2">
+                <span>Uploading to ImageKit...</span>
+                <span>{progress}%</span>
+              </div>
+              <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-blue-500 h-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* File Input */}
+          <div className="mb-6">
+            <label className="block mb-3 text-sm font-medium text-gray-300">
+              Select Video File
+            </label>
+
+            <input
+              type="file"
+              accept="video/*"
+              onChange={handleFileSelect}
+              disabled={uploading || !imagekit}
+              className="block w-full text-sm text-gray-400
               file:mr-4 file:py-2 file:px-4
               file:rounded-full file:border-0
               file:text-sm file:font-semibold
@@ -480,143 +466,143 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
               hover:file:bg-blue-700
               file:cursor-pointer
               disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-        </div>
-
-        {/* Video Title and Description - Only show when file is selected */}
-        {selectedFile && (
-          <>
-            {/* Video Title */}
-            <div className="mb-4">
-              <label className="block mb-2 text-sm font-medium text-gray-300">
-                Video Title *
-              </label>
-              <div 
-                contentEditable
-                suppressContentEditableWarning={true}
-                onInput={(e) => {
-                  const text = (e.target as HTMLElement).innerText;
-                  setVideoTitle(text);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  color: 'white',
-                  backgroundColor: '#374151',
-                  border: '1px solid #4B5563',
-                  borderRadius: '4px',
-                  minHeight: '20px',
-                  outline: 'none',
-                  fontFamily: 'monospace',
-                  fontSize: '14px',
-                  whiteSpace: 'pre-wrap',
-                  wordSpacing: '8px'
-                }}
-                placeholder="Enter video title"
-              />
-              <div className="text-xs text-gray-400 mt-1">
-                Debug: "{videoTitle}" ({videoTitle.length} chars)
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {videoTitle.length}/100 characters
-              </div>
-            </div>
-
-            {/* Video Description */}
-            <div className="mb-6">
-              <label className="block mb-2 text-sm font-medium text-gray-300">
-                Video Description *
-              </label>
-              <textarea
-                ref={descriptionRef}
-                defaultValue=""
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement;
-                  setVideoDescription(target.value);
-                }}
-                placeholder="Enter video description"
-                rows={3}
-                maxLength={500}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  color: 'white',
-                  backgroundColor: '#374151',
-                  border: '1px solid #4B5563',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  fontFamily: 'Arial, sans-serif',
-                  resize: 'none',
-                  whiteSpace: 'normal',
-                  letterSpacing: 'normal',
-                  wordSpacing: 'normal',
-                  textTransform: 'none',
-                  fontWeight: 'normal',
-                  lineHeight: 'normal'
-                }}
-              />
-              <div className="text-xs text-gray-500 mt-1">
-                {videoDescription.length}/500 characters
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* File Info */}
-        {selectedFile && (
-          <div className="mb-6 p-4 bg-gray-800 rounded-lg">
-            <div className="flex items-start gap-3">
-              {/* File icon based on aspect ratio */}
-              <div className="flex-shrink-0 mt-1">
-                {error && error.includes('landscape') ? (
-                  // Landscape icon (not ideal)
-                  <div className="w-8 h-5 bg-yellow-600 rounded border flex items-center justify-center">
-                    <span className="text-white text-xs">16:9</span>
-                  </div>
-                ) : (
-                  // Portrait icon (good)
-                  <div className="w-5 h-8 bg-green-600 rounded border flex items-center justify-center">
-                    <span className="text-white text-xs transform -rotate-90">9:16</span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex-1">
-                <p className="text-white text-sm mb-1">
-                  <span className="font-semibold">File:</span> {selectedFile.name}
-                </p>
-                <p className="text-gray-400 text-sm mb-2">
-                  <span className="font-semibold">Size:</span> {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                </p>
-                
-                {/* Aspect ratio feedback */}
-                {error && error.includes('landscape') ? (
-                  <div className="flex items-center gap-2 text-yellow-400 text-xs">
-                    <span>⚠️</span>
-                    <span>Landscape format - consider recording vertically next time</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-green-400 text-xs">
-                    <span>✅</span>
-                    <span>Great format for shorts!</span>
-                  </div>
-                )}
-                
-                <p className="text-gray-500 text-xs mt-2">
-                  Direct upload to ImageKit (no server processing)
-                </p>
-              </div>
-            </div>
+            />
           </div>
-        )}
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-900/30 text-red-400 rounded-lg text-sm flex items-start gap-2">
-            <MdError className="text-xl flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
-          </div>
-        )}
+          {/* Video Title and Description - Only show when file is selected */}
+          {selectedFile && (
+            <>
+              {/* Video Title */}
+              <div className="mb-4">
+                <label className="block mb-2 text-sm font-medium text-gray-300">
+                  Video Title *
+                </label>
+                <div
+                  contentEditable
+                  suppressContentEditableWarning={true}
+                  onInput={(e) => {
+                    const text = (e.target as HTMLElement).innerText;
+                    setVideoTitle(text);
+                  }}
+                  data-placeholder="Enter video title"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    color: 'white',
+                    backgroundColor: '#374151',
+                    border: '1px solid #4B5563',
+                    borderRadius: '4px',
+                    minHeight: '20px',
+                    outline: 'none',
+                    fontFamily: 'monospace',
+                    fontSize: '14px',
+                    whiteSpace: 'pre-wrap',
+                    wordSpacing: '8px'
+                  }}
+                />
+                <div className="text-xs text-gray-400 mt-1">
+                  Debug: "{videoTitle}" ({videoTitle.length} chars)
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {videoTitle.length}/100 characters
+                </div>
+              </div>
+
+              {/* Video Description */}
+              <div className="mb-6">
+                <label className="block mb-2 text-sm font-medium text-gray-300">
+                  Video Description *
+                </label>
+                <textarea
+                  ref={descriptionRef}
+                  defaultValue=""
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    setVideoDescription(target.value);
+                  }}
+                  placeholder="Enter video description"
+                  rows={3}
+                  maxLength={500}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    color: 'white',
+                    backgroundColor: '#374151',
+                    border: '1px solid #4B5563',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    fontFamily: 'Arial, sans-serif',
+                    resize: 'none',
+                    whiteSpace: 'normal',
+                    letterSpacing: 'normal',
+                    wordSpacing: 'normal',
+                    textTransform: 'none',
+                    fontWeight: 'normal',
+                    lineHeight: 'normal'
+                  }}
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  {videoDescription.length}/500 characters
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* File Info */}
+          {selectedFile && (
+            <div className="mb-6 p-4 bg-gray-800 rounded-lg">
+              <div className="flex items-start gap-3">
+                {/* File icon based on aspect ratio */}
+                <div className="flex-shrink-0 mt-1">
+                  {error && error.includes('landscape') ? (
+                    // Landscape icon (not ideal)
+                    <div className="w-8 h-5 bg-yellow-600 rounded border flex items-center justify-center">
+                      <span className="text-white text-xs">16:9</span>
+                    </div>
+                  ) : (
+                    // Portrait icon (good)
+                    <div className="w-5 h-8 bg-green-600 rounded border flex items-center justify-center">
+                      <span className="text-white text-xs transform -rotate-90">9:16</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <p className="text-white text-sm mb-1">
+                    <span className="font-semibold">File:</span> {selectedFile.name}
+                  </p>
+                  <p className="text-gray-400 text-sm mb-2">
+                    <span className="font-semibold">Size:</span> {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+
+                  {/* Aspect ratio feedback */}
+                  {error && error.includes('landscape') ? (
+                    <div className="flex items-center gap-2 text-yellow-400 text-xs">
+                      <span>⚠️</span>
+                      <span>Landscape format - consider recording vertically next time</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-green-400 text-xs">
+                      <span>✅</span>
+                      <span>Great format for shorts!</span>
+                    </div>
+                  )}
+
+                  <p className="text-gray-500 text-xs mt-2">
+                    Direct upload to ImageKit (no server processing)
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-900/30 text-red-400 rounded-lg text-sm flex items-start gap-2">
+              <MdError className="text-xl flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-3">
