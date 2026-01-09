@@ -156,7 +156,7 @@ export function AdminPitchSultanRequests() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {videos.map(video => (
+                        {videos.map((video, index) => (
                             <div key={video.id} className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-md transition-shadow">
                                 {/* Video Thumbnail / Player Placeholder */}
                                 <div className="aspect-video bg-gray-900 relative group">
@@ -172,10 +172,10 @@ export function AdminPitchSultanRequests() {
                                 </div>
 
                                 <div className="p-4">
+                                    <div className="text-xs font-mono text-gray-400 mb-1">#{1001 + index}</div>
                                     <h3 className="font-semibold text-gray-900 line-clamp-1 mb-1" title={video.title}>{video.title}</h3>
                                     <div className="text-sm text-gray-500 mb-3 flex flex-col gap-0.5">
-                                        <span>By: <span className="font-medium text-gray-700">{video.uploaderName}</span></span>
-                                        <span>Store: {video.storeName}</span>
+                                        <span className="font-medium text-gray-700">{video.uploaderName}, {video.storeName}</span>
                                         <span className="text-xs">{video.uploaderPhone}</span>
                                     </div>
 

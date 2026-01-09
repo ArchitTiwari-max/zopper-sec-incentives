@@ -30,13 +30,61 @@ export const PitchSultan = () => {
         } catch (e) {
             console.error("Failed to check user status:", e);
         }
-        
+
         // If no user found or error, go to setup
         setTimeout(() => navigate('/pitchsultan/setup'), 150);
     };
 
     return (
-        <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-0 overflow-hidden">
+        <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-0 overflow-hidden">
+            {/* Navigation Buttons - positioned above the image */}
+            <div className="w-full bg-black/90 z-30">
+                <div className="flex items-center justify-between px-[30px] py-3">
+                    <button
+                        onClick={() => navigate('/pitchsultan/battle')}
+                        className="text-white hover:text-gray-300 transition-colors"
+                        style={{
+                            fontFamily: 'Anton, sans-serif',
+                            fontWeight: 400,
+                            fontSize: '11px',
+                            lineHeight: '100%',
+                            letterSpacing: '0.1em',
+                            color: '#FFFFFF'
+                        }}
+                    >
+                        HOME
+                    </button>
+                    <button
+                        onClick={() => navigate('/pitchsultan/rules')}
+                        className="text-white hover:text-gray-300 transition-colors"
+                        style={{
+                            fontFamily: 'Anton, sans-serif',
+                            fontWeight: 400,
+                            fontSize: '11px',
+                            lineHeight: '100%',
+                            letterSpacing: '0.1em',
+                            color: '#FFFFFF'
+                        }}
+                    >
+                        HOW TO PLAY
+                    </button>
+                    <button
+                        onClick={() => navigate('/pitchsultan/rewards')}
+                        className="text-white hover:text-gray-300 transition-colors"
+                        style={{
+                            fontFamily: 'Anton, sans-serif',
+                            fontWeight: 400,
+                            fontSize: '11px',
+                            lineHeight: '100%',
+                            letterSpacing: '0.1em',
+                            color: '#FFFFFF'
+                        }}
+                    >
+                        REWARDS
+                    </button>
+                </div>
+            </div>
+
             <div className="relative w-full lg:h-screen">
                 {/* Mobile/Tablet Poster */}
                 <img

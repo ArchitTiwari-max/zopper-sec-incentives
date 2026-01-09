@@ -322,6 +322,16 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         };
 
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't handle keyboard shortcuts when typing in input/textarea
+            const activeElement = document.activeElement;
+            const isTyping = activeElement?.tagName === 'INPUT' ||
+                activeElement?.tagName === 'TEXTAREA' ||
+                activeElement?.getAttribute('contenteditable') === 'true';
+
+            if (isTyping) {
+                return; // Allow normal typing in input fields
+            }
+
             if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 goToPrevious();
@@ -750,12 +760,12 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                         </div>
 
 
-                    </div>
+                    </div >
                 ))}
-            </div>
+            </div >
 
             {/* Comments Modal */}
-            <CommentsModal
+            < CommentsModal
                 isOpen={showCommentsModal}
                 onClose={() => {
                     setShowCommentsModal(false);
@@ -766,7 +776,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
             />
 
             {/* Rating Modal */}
-            <RatingModal
+            < RatingModal
                 isOpen={showRatingModal}
                 onClose={() => {
                     setShowRatingModal(false);
@@ -792,6 +802,6 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                     display: none;
                 }
             `}</style>
-        </div>
+        </div >
     );
 };

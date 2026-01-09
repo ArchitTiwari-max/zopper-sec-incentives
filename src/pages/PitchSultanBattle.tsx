@@ -30,7 +30,7 @@ const HELP_TOPICS = [
     { id: 1, icon: MdQuestionAnswer, title: "How to Upload a Video", description: "Learn how to share your pitch with the community" },
     { id: 2, icon: MdQuestionAnswer, title: "Creating Shorts", description: "Quick tips on making engaging short videos" },
     { id: 3, icon: MdQuestionAnswer, title: "Contest Rules", description: "Understand the Pitch Sultan competition guidelines" },
-    { id: 4, icon: MdQuestionAnswer, title: "Scoring System", description: "How your pitches are evaluated and ranked" },
+    { id: 6, icon: MdLeaderboard, title: "Rewards & Prizes", description: "See what you can win!" },
     { id: 5, icon: MdQuestionAnswer, title: "Technical Issues", description: "Troubleshooting common problems" },
 ];
 
@@ -394,13 +394,51 @@ const HelpSupportView = () => {
                                     <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                                         <div className="overflow-hidden">
                                             <div className="px-4 pb-4 pt-0">
-                                                {topic.id === 3 ? (
+                                                {topic.id === 1 ? (
+                                                    <div className="pl-9 text-sm text-gray-400 space-y-2">
+                                                        <p className="font-semibold text-white">Required Format:</p>
+                                                        <ul className="list-disc pl-4 space-y-1">
+                                                            <li>Hold phone vertically (9:16 ratio)</li>
+                                                            <li>Portrait mode only</li>
+                                                            <li className="text-red-400">Landscape videos rejected</li>
+                                                        </ul>
+                                                    </div>
+                                                ) : topic.id === 3 ? (
                                                     <div className="mt-2 rounded-lg overflow-hidden border border-gray-700">
                                                         <img
                                                             src={contestRulesImg}
                                                             alt="Contest Rules"
                                                             className="w-full h-auto object-contain bg-[#1a1a1a]"
                                                         />
+                                                    </div>
+                                                ) : topic.id === 6 ? (
+                                                    <div className="pl-9 text-sm text-gray-400 space-y-3">
+                                                        <div className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 p-3 rounded-lg border border-amber-500/20">
+                                                            <h5 className="text-amber-400 font-bold mb-1 flex items-center gap-2">
+                                                                🚀 Early Bird Reward
+                                                            </h5>
+                                                            <p className="text-gray-300">The first 5 competitors who will submit their videos are going to get <span className="text-white font-bold">500/- Rs</span> Amazon vouchers!</p>
+                                                        </div>
+
+                                                        <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 p-3 rounded-lg border border-blue-500/20">
+                                                            <h5 className="text-blue-400 font-bold mb-1 flex items-center gap-2">
+                                                                🏆 Top Performers
+                                                            </h5>
+                                                            <p className="text-gray-300">Top 9 winners will get <span className="text-white font-bold">1000/- Rs</span> Amazon vouchers!</p>
+                                                        </div>
+
+                                                        <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 p-3 rounded-lg border border-purple-500/20">
+                                                            <h5 className="text-purple-400 font-bold mb-1 flex items-center gap-2">
+                                                                👑 The ULTIMATE SULTAN
+                                                            </h5>
+                                                            <p className="text-gray-300">The ULTIMATE SULTAN will receive <span className="text-white font-bold">5000/- Rs</span> Amazon voucher!</p>
+                                                        </div>
+
+                                                        <div className="mt-4 p-3 bg-gray-800 rounded-lg">
+                                                            <p className="text-gray-400 text-xs italic">
+                                                                Note: The best videos will be used for training purposes all over India along with credits.
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 ) : (
                                                     <p className="text-sm text-gray-400 pl-9">
@@ -1063,8 +1101,8 @@ export const PitchSultanBattle = () => {
                                     key={i}
                                     onClick={() => handleFilterChange(chip)}
                                     className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition-colors ${activeFilter === chip
-                                            ? 'bg-white text-black'
-                                            : 'bg-gray-800 text-white hover:bg-gray-700'
+                                        ? 'bg-white text-black'
+                                        : 'bg-gray-800 text-white hover:bg-gray-700'
                                         }`}
                                 >
                                     {chip}
