@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     MdThumbUp, MdThumbDown, MdComment, MdShare, MdMoreVert,
-    MdVolumeOff, MdVolumeUp, MdPause, MdPlayArrow, MdStar
+    MdVolumeOff, MdVolumeUp, MdPause, MdPlayArrow, MdStar,
+    MdOutlineThumbUp, MdStarOutline
 } from 'react-icons/md';
 import { API_BASE_URL } from '@/lib/config';
 import { CommentsModal } from './CommentsModal';
@@ -423,6 +424,19 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         setShowCommentsModal(true);
     };
 
+    const handleCommentAdded = (newCount?: number) => {
+        // Update the comment count for the selected video
+        if (selectedVideoForModal) {
+            setVideos(prevVideos =>
+                prevVideos.map(video =>
+                    video.id === selectedVideoForModal
+                        ? { ...video, commentsCount: newCount ?? ((video.commentsCount || 0) + 1) }
+                        : video
+                )
+            );
+        }
+    };
+
     const handleRating = (videoId: string) => {
         if (!currentUserId) {
             alert('Please log in to rate videos');
@@ -704,14 +718,12 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                         onClick={() => handleLike(video.id)}
                                         className="flex flex-col items-center"
                                     >
-                                        <div className={`p-3 rounded-full backdrop-blur-sm hover:bg-black/50 transition ${userInteractions[video.id]?.hasLiked
-                                            ? 'bg-red-600/80'
-                                            : 'bg-black/30'
-                                            }`}>
-                                            <MdThumbUp className={`text-2xl ${userInteractions[video.id]?.hasLiked
-                                                ? 'text-white'
-                                                : 'text-white'
-                                                }`} />
+                                        <div className="p-3 rounded-full backdrop-blur-sm transition hover:bg-black/30">
+                                            {userInteractions[video.id]?.hasLiked ? (
+                                                <MdThumbUp className="text-2xl text-white" />
+                                            ) : (
+                                                <MdOutlineThumbUp className="text-2xl text-white/80" />
+                                            )}
                                         </div>
                                         <span className="text-white text-xs font-semibold mt-1">
                                             {formatCount(video.likes)}
@@ -734,14 +746,12 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                         onClick={() => handleRating(video.id)}
                                         className="flex flex-col items-center"
                                     >
-                                        <div className={`p-3 rounded-full backdrop-blur-sm hover:bg-black/50 transition ${userInteractions[video.id]?.userRating
-                                            ? 'bg-yellow-600/80'
-                                            : 'bg-black/30'
-                                            }`}>
-                                            <MdStar className={`text-2xl ${userInteractions[video.id]?.userRating
-                                                ? 'text-yellow-400'
-                                                : 'text-white'
-                                                }`} />
+                                        <div className="p-3 rounded-full backdrop-blur-sm transition hover:bg-black/30">
+                                            {userInteractions[video.id]?.userRating ? (
+                                                <MdStar className="text-2xl text-yellow-400" />
+                                            ) : (
+                                                <MdStarOutline className="text-2xl text-white/80" />
+                                            )}
                                         </div>
                                         <span className="text-white text-xs font-semibold mt-1">
                                             {video.rating && video.rating > 0
@@ -782,6 +792,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                 }}
                 videoId={selectedVideoForModal || ''}
                 currentUserId={currentUserId}
+                onCommentAdded={handleCommentAdded}
             />
 
             {/* Rating Modal */}

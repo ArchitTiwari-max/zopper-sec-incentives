@@ -320,7 +320,7 @@ const CreateView = ({ onUploadClick, onRecordClick }: { onUploadClick: () => voi
             <MdUpload className="text-5xl text-gray-400" />
         </div>
         <h2 className="text-2xl font-bold mb-2">Create Content</h2>
-        <p className="text-gray-400 text-center mb-8 max-w-xs">Share your sales pitch with the Sultan community. Upload a video or create a Short.</p>
+        <p className="text-gray-400 text-center mb-8 max-w-xs">Share your sales pitch with the Sultan community. Upload a video to get started.</p>
 
         <div className="flex flex-col gap-4 w-full max-w-sm">
             <button
@@ -328,12 +328,6 @@ const CreateView = ({ onUploadClick, onRecordClick }: { onUploadClick: () => voi
                 className="bg-[#3ea6ff] hover:bg-[#3095ef] text-black font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2"
             >
                 <MdUpload className="text-xl" /> Upload Video
-            </button>
-            <button
-                onClick={onRecordClick}
-                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2"
-            >
-                <MdVideocam className="text-xl" /> Create a Short
             </button>
         </div>
     </div>

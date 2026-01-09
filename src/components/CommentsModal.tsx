@@ -42,7 +42,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
       setLoading(true);
       const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos/${videoId}/comments`);
       const data = await response.json();
-      
+
       if (data.success) {
         setComments(data.data);
       }
@@ -55,7 +55,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newComment.trim() || !currentUserId) return;
 
     try {
@@ -72,10 +72,14 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         setComments(prev => [data.data, ...prev]);
         setNewComment('');
+        // Notify parent that a comment was added with the new count
+        if (onCommentAdded) {
+          onCommentAdded(data.commentsCount);
+        }
       } else {
         alert('Failed to add comment');
       }

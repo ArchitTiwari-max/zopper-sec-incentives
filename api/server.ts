@@ -4409,9 +4409,9 @@ app.post('/api/pitch-sultan/videos', async (req, res) => {
     console.log('🔍 secUserId type:', typeof secUserId, 'length:', secUserId?.length);
 
     if (!secUserId || !fileId || !url || !fileName) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Missing required fields: secUserId, fileId, url, fileName" 
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields: secUserId, fileId, url, fileName"
       })
     }
 
@@ -4441,8 +4441,8 @@ app.post('/api/pitch-sultan/videos', async (req, res) => {
   } catch (error) {
     console.error("❌ Error saving video:", error)
     console.error("❌ Error details:", error instanceof Error ? error.message : JSON.stringify(error));
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: "Failed to save video",
       details: error instanceof Error ? error.message : 'Unknown error'
     })
@@ -4482,8 +4482,8 @@ app.get('/api/pitch-sultan/videos', async (req, res) => {
 
     const total = await prisma.pitchSultanVideo.count({ where })
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       data: videos,
       pagination: {
         total,
@@ -4654,9 +4654,9 @@ app.get('/api/imagekit-config', (req, res) => {
   const urlEndpoint = process.env.IMAGEKIT_URL_ENDPOINT
 
   if (!publicKey || !urlEndpoint) {
-    return res.status(500).json({ 
-      success: false, 
-      error: 'ImageKit configuration not found. Please set IMAGEKIT_PUBLIC_KEY and IMAGEKIT_URL_ENDPOINT in .env' 
+    return res.status(500).json({
+      success: false,
+      error: 'ImageKit configuration not found. Please set IMAGEKIT_PUBLIC_KEY and IMAGEKIT_URL_ENDPOINT in .env'
     })
   }
 
@@ -4674,9 +4674,9 @@ app.get('/api/imagekit-auth', (req, res) => {
   const privateKey = process.env.IMAGEKIT_PRIVATE_KEY
 
   if (!privateKey) {
-    return res.status(500).json({ 
-      success: false, 
-      error: 'ImageKit private key not configured' 
+    return res.status(500).json({
+      success: false,
+      error: 'ImageKit private key not configured'
     })
   }
 
@@ -4704,9 +4704,9 @@ app.post('/api/pitch-sultan/videos/:id/comments', async (req, res) => {
     const { userId, comment } = req.body
 
     if (!userId || !comment?.trim()) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Missing required fields: userId, comment" 
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields: userId, comment"
       })
     }
 
@@ -4738,7 +4738,7 @@ app.post('/api/pitch-sultan/videos/:id/comments', async (req, res) => {
     })
 
     // Update video comments count
-    await prisma.pitchSultanVideo.update({
+    const updatedVideo = await prisma.pitchSultanVideo.update({
       where: { id: videoId },
       data: {
         commentsCount: {
@@ -4784,8 +4784,8 @@ app.get('/api/pitch-sultan/videos/:id/comments', async (req, res) => {
 
     const total = await prisma.videoComment.count({ where: { videoId } })
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       data: comments,
       pagination: {
         total,
@@ -4810,9 +4810,9 @@ app.post('/api/pitch-sultan/videos/:id/rating', async (req, res) => {
     const { userId, rating } = req.body
 
     if (!userId || !rating || rating < 1 || rating > 5) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Missing required fields: userId, rating (1-5)" 
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields: userId, rating (1-5)"
       })
     }
 
@@ -4859,8 +4859,8 @@ app.post('/api/pitch-sultan/videos/:id/rating', async (req, res) => {
       select: { rating: true }
     })
 
-    const avgRating = ratings.length > 0 
-      ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length 
+    const avgRating = ratings.length > 0
+      ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
       : 0
 
     // Update video rating stats
@@ -4872,10 +4872,10 @@ app.post('/api/pitch-sultan/videos/:id/rating', async (req, res) => {
       }
     })
 
-    res.json({ 
-      success: true, 
-      data: { 
-        userRating, 
+    res.json({
+      success: true,
+      data: {
+        userRating,
         videoRating: {
           rating: updatedVideo.rating,
           ratingCount: updatedVideo.ratingCount
@@ -4898,9 +4898,9 @@ app.get('/api/pitch-sultan/videos/:id/user-interactions', async (req, res) => {
     const { userId } = req.query
 
     if (!userId) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Missing userId parameter" 
+      return res.status(400).json({
+        success: false,
+        error: "Missing userId parameter"
       })
     }
 
@@ -4923,8 +4923,8 @@ app.get('/api/pitch-sultan/videos/:id/user-interactions', async (req, res) => {
       })
     ])
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       data: {
         hasLiked: !!userLike,
         userRating: userRating?.rating || null
@@ -4946,9 +4946,9 @@ app.post('/api/pitch-sultan/videos/:id/toggle-like', async (req, res) => {
     const { userId } = req.body
 
     if (!userId) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Missing required field: userId" 
+      return res.status(400).json({
+        success: false,
+        error: "Missing required field: userId"
       })
     }
 
@@ -5003,8 +5003,8 @@ app.post('/api/pitch-sultan/videos/:id/toggle-like', async (req, res) => {
       }
     })
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       data: {
         hasLiked,
         totalLikes: updatedVideo.likes
