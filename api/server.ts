@@ -1665,7 +1665,7 @@ app.get('/api/reports/admin', async (req, res) => {
 
     // Fetch all sales reports with related data - LIMIT 50 for debugging
     const reports = await prisma.salesReport.findMany({
-      take: 50,
+      // take: 50, // Limit removed as per user request
       include: {
         secUser: true,
         store: true,
