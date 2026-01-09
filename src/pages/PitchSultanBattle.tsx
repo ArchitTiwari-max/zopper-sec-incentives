@@ -233,10 +233,10 @@ const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTa
 const VideoCard = ({ video, onVideoClick }: { video: any, onVideoClick?: (video: any) => void }) => {
     const videoSource = video.url;
     const uploaderName = video.secUser?.name || video.uploader || 'Unknown';
-    const uploaderAvatar = video.secUser?.name 
+    const uploaderAvatar = video.secUser?.name
         ? `https://ui-avatars.com/api/?name=${encodeURIComponent(video.secUser.name)}&background=ffd700&color=000`
         : 'https://ui-avatars.com/api/?name=Unknown&background=random';
-    
+
     // Format views
     const formatViews = (views: number) => {
         if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
@@ -268,8 +268,8 @@ const VideoCard = ({ video, onVideoClick }: { video: any, onVideoClick?: (video:
     return (
         <div className="flex flex-col mb-6 cursor-pointer group" onClick={handleVideoClick}>
             <div className="relative w-full aspect-video bg-gray-800 overflow-hidden">
-                <video 
-                    src={videoSource} 
+                <video
+                    src={videoSource}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                     preload="metadata"
                 />
@@ -312,13 +312,13 @@ const CreateView = ({ onUploadClick, onRecordClick }: { onUploadClick: () => voi
         <p className="text-gray-400 text-center mb-8 max-w-xs">Share your sales pitch with the Sultan community. Upload a video or create a Short.</p>
 
         <div className="flex flex-col gap-4 w-full max-w-sm">
-            <button 
+            <button
                 onClick={onUploadClick}
                 className="bg-[#3ea6ff] hover:bg-[#3095ef] text-black font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2"
             >
                 <MdUpload className="text-xl" /> Upload Video
             </button>
-            <button 
+            <button
                 onClick={onRecordClick}
                 className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2"
             >
@@ -746,7 +746,7 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
 export const PitchSultanBattle = () => {
     const navigate = useNavigate();
     const { user, isAuthenticated, isSEC } = useAuth();
-    
+
     // Cast user to SECAuthData since we know it's SEC (isSEC is true)
     const secUser = isSEC && user && 'phone' in user ? user : null;
     const [activeTab, setActiveTab] = useState('home');
@@ -780,12 +780,12 @@ export const PitchSultanBattle = () => {
             // 2. Check if user has completed Pitch Sultan profile
             // All three fields are required: name, storeId, region
             console.log('✅ Using authenticated SEC user:', user);
-            console.log('🔍 Checking profile completion:', { 
-                name: user.name, 
-                storeId: 'storeId' in user ? user.storeId : null, 
-                region: 'region' in user ? user.region : null 
+            console.log('🔍 Checking profile completion:', {
+                name: user.name,
+                storeId: 'storeId' in user ? user.storeId : null,
+                region: 'region' in user ? user.region : null
             });
-            
+
             if (!user.name || !('storeId' in user) || !user.storeId || !('region' in user) || !user.region) {
                 // User needs to complete profile setup
                 console.log('⚠️ User profile incomplete, redirecting to setup');
@@ -815,7 +815,7 @@ export const PitchSultanBattle = () => {
         try {
             setLoading(true);
             console.log('📡 Fetching videos from:', `${API_BASE_URL}/pitch-sultan/videos`);
-            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?limit=50`);
+            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?status=APPROVED&limit=50`);
             const data = await response.json();
 
             if (data.success) {
@@ -851,18 +851,18 @@ export const PitchSultanBattle = () => {
         // Same user validation as upload
         const authData = localStorage.getItem('spot_incentive_auth');
         let userId = secUser?.id;
-        
+
         if (!userId && authData) {
             const parsed = JSON.parse(authData);
             userId = parsed.user?.id;
         }
-        
+
         if (!userId) {
             console.error('❌ No user ID found');
             alert('Please log in to record videos');
             return;
         }
-        
+
         console.log('🎬 Opening video recorder for user:', userId);
         setIsRecorderOpen(true);
     };
@@ -872,11 +872,11 @@ export const PitchSultanBattle = () => {
         const videoFile = new File([videoBlob], `recorded-short-${Date.now()}.webm`, {
             type: 'video/webm'
         });
-        
+
         // You can either:
         // 1. Auto-upload the recorded video
         // 2. Or pass it to the upload modal for review
-        
+
         // For now, let's auto-upload it
         uploadRecordedVideo(videoFile);
     };
@@ -885,12 +885,12 @@ export const PitchSultanBattle = () => {
         // This is a simplified version - you might want to show progress
         try {
             console.log('🚀 Auto-uploading recorded video:', videoFile.name);
-            
+
             // You can implement the upload logic here
             // or open the upload modal with the pre-selected file
             setIsUploadModalOpen(true);
             // Note: You'd need to modify VideoUploadModal to accept a pre-selected file
-            
+
         } catch (error) {
             console.error('❌ Error uploading recorded video:', error);
             alert('Failed to upload recorded video');
@@ -999,24 +999,24 @@ export const PitchSultanBattle = () => {
         // Direct check from localStorage
         const authData = localStorage.getItem('spot_incentive_auth');
         console.log('🔍 Raw localStorage:', authData);
-        
+
         let userId = secUser?.id;
-        
+
         if (!userId && authData) {
             const parsed = JSON.parse(authData);
             userId = parsed.user?.id;
             console.log('🔍 Got ID from localStorage:', userId);
         }
-        
+
         console.log('🔍 Final userId:', userId);
         console.log('🔍 secUser:', secUser);
-        
+
         if (!userId) {
             console.error('❌ No user ID found');
             alert('Please log in to upload videos');
             return;
         }
-        
+
         console.log('✅ Opening modal with ID:', userId);
         setIsUploadModalOpen(true);
     };

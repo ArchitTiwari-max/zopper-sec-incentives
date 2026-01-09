@@ -32,6 +32,7 @@ import { AdminAnswerDetails } from './pages/AdminAnswerDetails'
 import { PitchSultan } from './pages/PitchSultan'
 import { PitchSultanSetup } from './pages/PitchSultanSetup'
 import { PitchSultanBattle } from './pages/PitchSultanBattle'
+import { AdminPitchSultanRequests } from './pages/AdminPitchSultanRequests'
 import { SecLanding } from './pages/SecLanding'
 
 export default function App() {
@@ -202,6 +203,11 @@ export default function App() {
               <Route path="/admin/answer-details" element={
                 <AdminRoute>
                   <AdminAnswerDetails />
+                </AdminRoute>
+              } />
+              <Route path="/admin/pitch-sultan-requests" element={
+                <AdminRoute>
+                  <AdminPitchSultanRequests />
                 </AdminRoute>
               } />
 
