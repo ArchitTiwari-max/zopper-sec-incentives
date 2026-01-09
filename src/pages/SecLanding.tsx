@@ -66,9 +66,20 @@ export function SecLanding() {
                         <img src={pitchSultanImg} alt="Pitch Sultan" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
 
                         {/* New Badge */}
-                        <div className="absolute top-0 left-0 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-br-lg shadow-md z-20">
+                        <motion.div
+                            animate={{
+                                scale: [1, 1.1, 1],
+                                rotate: [0, -5, 5, 0]
+                            }}
+                            transition={{
+                                duration: 1.5,
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                            }}
+                            className="absolute top-0 left-0 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-br-lg shadow-md z-20"
+                        >
                             NEW
-                        </div>
+                        </motion.div>
 
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-5">
                             <span className="text-white font-bold text-xl mb-1">Pitch Sultan</span>
