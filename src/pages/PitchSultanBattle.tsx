@@ -409,6 +409,24 @@ export const PitchSultanBattle = () => {
         region: ""
     });
 
+    const [videos, setVideos] = useState<any[]>(VIDEO_FEED); // Default to mock for now
+
+    // FETCH VIDEOS (Uncomment when API is ready)
+    // useEffect(() => {
+    //     const loadVideos = async () => {
+    //         try {
+    //             const res = await fetch(`${API_BASE_URL}/pitch-sultan/videos?status=APPROVED`);
+    //             const data = await res.json();
+    //             if (data.success) {
+    //                 setVideos(data.data);
+    //             }
+    //         } catch (e) {
+    //             console.error("Failed to load videos", e);
+    //         }
+    //     };
+    //     loadVideos();
+    // }, []);
+
     // Load user info from localStorage
     useEffect(() => {
         const userDataStr = localStorage.getItem('pitchSultanUser');
@@ -453,16 +471,14 @@ export const PitchSultanBattle = () => {
 
                         {/* Feed */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-4">
-                            {VIDEO_FEED.map(video => (
+                            {videos.map(video => (
                                 <VideoCard key={video.id} video={video} />
-                            ))}
-                            {VIDEO_FEED.map(video => (
-                                <VideoCard key={`dup-${video.id}`} video={{ ...video, id: `dup-${video.id}` }} />
                             ))}
                         </div>
                     </div>
                 )}
 
+                {/* Shorts Tab - Keep mock for now or fetch similarly */}
                 {activeTab === 'shorts' && (
                     <div className="bg-black">
                         <ShortsPlayer />
