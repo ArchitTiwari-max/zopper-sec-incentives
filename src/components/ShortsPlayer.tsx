@@ -96,12 +96,21 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     };
 
     // Set starting video index based on startingVideoId and scroll to it
+    const hasScrolledRef = useRef(false);
+
+    // Reset scroll ref when startingVideoId changes
     useEffect(() => {
-        if (videos.length > 0 && startingVideoId) {
+        hasScrolledRef.current = false;
+    }, [startingVideoId]);
+
+    // Set starting video index based on startingVideoId and scroll to it
+    useEffect(() => {
+        if (videos.length > 0 && startingVideoId && !hasScrolledRef.current) {
             const startIndex = videos.findIndex(video => video.id === startingVideoId);
             console.log('🎯 Looking for video ID:', startingVideoId, 'Found at index:', startIndex);
 
             if (startIndex !== -1) {
+                hasScrolledRef.current = true;
                 setCurrentIndex(startIndex);
                 setIsProgrammaticScroll(true);
 
