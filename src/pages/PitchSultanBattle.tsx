@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     MdHome, MdHomeFilled,
     MdOutlineSlowMotionVideo, MdSlowMotionVideo,
@@ -9,13 +10,19 @@ import {
     MdThumbUp, MdThumbDown,
     MdComment, MdShare, MdMoreVert,
     MdClose, MdUpload, MdRemoveRedEye,
-    MdHelpOutline, MdHelp, MdEmail, MdPhone, MdQuestionAnswer, MdKeyboardArrowDown
+    MdHelpOutline, MdHelp, MdEmail, MdPhone, MdQuestionAnswer, MdKeyboardArrowDown,
+    MdPlayArrow, MdVideocam
 } from 'react-icons/md';
 import { BiLike, BiDislike, BiCommentDetail, BiShare } from "react-icons/bi";
+import { VideoUploadModal } from '../components/VideoUploadModal';
+import { VideoRecorder } from '../components/VideoRecorder';
+import { ShortsPlayer } from '../components/ShortsPlayer';
 import contestRulesImg from '../assets/contest-rules.jpg';
+import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/lib/config';
 
 
-// --- Mock Data ---
+// --- Mock Data (REMOVED - Now using database) ---
 
 const HELP_TOPICS = [
     { id: 1, icon: MdQuestionAnswer, title: "How to Upload a Video", description: "Learn how to share your pitch with the community" },
@@ -23,49 +30,6 @@ const HELP_TOPICS = [
     { id: 3, icon: MdQuestionAnswer, title: "Contest Rules", description: "Understand the Pitch Sultan competition guidelines" },
     { id: 4, icon: MdQuestionAnswer, title: "Scoring System", description: "How your pitches are evaluated and ranked" },
     { id: 5, icon: MdQuestionAnswer, title: "Technical Issues", description: "Troubleshooting common problems" },
-];
-
-const VIDEO_FEED = [
-    {
-        id: 1,
-        title: "How to Sell Godrej ACs like a Pro! ❄️",
-        thumbnail: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=1000&auto=format&fit=crop",
-        duration: "4:20",
-        uploader: "Amit Sharma",
-        avatar: "https://ui-avatars.com/api/?name=Amit+Sharma&background=random",
-        views: "1.5K",
-        time: "2 hours ago"
-    },
-    {
-        id: 2,
-        title: "Pitching the New Warranty Plan 🛡️",
-        thumbnail: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1000&auto=format&fit=crop",
-        duration: "8:15",
-        uploader: "Priya Singh",
-        avatar: "https://ui-avatars.com/api/?name=Priya+Singh&background=random",
-        views: "3.2K",
-        time: "5 hours ago"
-    },
-    {
-        id: 3,
-        title: "Handling Customer Objections - Live Demo",
-        thumbnail: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?q=80&w=1000&auto=format&fit=crop",
-        duration: "12:00",
-        uploader: "Rahul Verma",
-        avatar: "https://ui-avatars.com/api/?name=Rahul+Verma&background=random",
-        views: "890",
-        time: "1 day ago"
-    },
-    {
-        id: 4,
-        title: "Morning Routine of a Top Performer ☀️",
-        thumbnail: "https://images.unsplash.com/photo-1493612276216-ee3925520721?q=80&w=1000&auto=format&fit=crop",
-        duration: "3:45",
-        uploader: "Sneha Gupta",
-        avatar: "https://ui-avatars.com/api/?name=Sneha+Gupta&background=random",
-        views: "10K",
-        time: "2 days ago"
-    }
 ];
 
 const SHORTS_FEED = [
@@ -155,96 +119,77 @@ const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTa
     );
 };
 
-const VideoCard = ({ video }: { video: any }) => (
-    <div className="flex flex-col mb-6 cursor-pointer group">
-        <div className="relative w-full aspect-video bg-gray-800 overflow-hidden">
-            <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
-            <span className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1 rounded font-medium">
-                {video.duration}
-            </span>
-        </div>
-        <div className="flex gap-3 mt-3 px-3 md:px-0">
-            <img src={video.avatar} alt="" className="w-9 h-9 rounded-full mt-1 flex-shrink-0" />
-            <div className="flex flex-col">
-                <h3 className="text-white text-sm md:text-base font-semibold line-clamp-2 leading-tight">
-                    {video.title}
-                </h3>
-                <div className="text-gray-400 text-xs mt-1">
-                    {video.uploader} • {video.views} views • {video.time}
-                </div>
-            </div>
-            <MdMoreVert className="text-white ml-auto flex-shrink-0 mt-1" />
-        </div>
-    </div>
-);
+const VideoCard = ({ video, onVideoClick }: { video: any, onVideoClick?: (video: any) => void }) => {
+    const videoSource = video.url;
+    const uploaderName = video.secUser?.name || video.uploader || 'Unknown';
+    const uploaderAvatar = video.secUser?.name
+        ? `https://ui-avatars.com/api/?name=${encodeURIComponent(video.secUser.name)}&background=ffd700&color=000`
+        : 'https://ui-avatars.com/api/?name=Unknown&background=random';
 
-const ShortsPlayer = () => {
-    const [currentShortIndex, setCurrentShortIndex] = useState(0);
+    // Format views
+    const formatViews = (views: number) => {
+        if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
+        if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
+        return views.toString();
+    };
 
-    const nextShort = () => setCurrentShortIndex(prev => (prev + 1) % SHORTS_FEED.length);
-    const short = SHORTS_FEED[currentShortIndex];
+    // Format time ago
+    const formatTimeAgo = (date: string) => {
+        const now = new Date();
+        const uploaded = new Date(date);
+        const diffMs = now.getTime() - uploaded.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffMins < 60) return `${diffMins} minutes ago`;
+        if (diffHours < 24) return `${diffHours} hours ago`;
+        if (diffDays < 7) return `${diffDays} days ago`;
+        return uploaded.toLocaleDateString();
+    };
+
+    const handleVideoClick = () => {
+        if (onVideoClick) {
+            onVideoClick(video);
+        }
+    };
 
     return (
-        <div className="h-[calc(100vh-100px)] w-full flex items-center justify-center relative bg-black" onClick={nextShort}>
-            <div className={`w-full h-full md:w-[350px] md:h-full relative ${short.color} flex items-center justify-center`}>
-                <h2 className="text-4xl font-bold text-white opacity-20 rotate-[-15deg]">PITCH SULTAN SHORTS</h2>
-
-                {/* Overlay UI */}
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80 flex flex-col justify-end p-4">
-                    <div className="flex items-end justify-between w-full mb-12">
-                        <div className="flex-1 pr-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                                <span className="text-white font-semibold text-sm">@{short.uploader.replace(' ', '').toLowerCase()}</span>
-                                <button className="bg-white text-black text-xs font-bold px-3 py-1 rounded-full">Subscribe</button>
-                            </div>
-                            <p className="text-white text-sm line-clamp-2">{short.title} #Sales #PitchSultan</p>
-                            <div className="text-white mt-2 text-sm flex items-center gap-1">
-                                <MdRemoveRedEye className="inline" /> {short.views} views
-                            </div>
-                        </div>
-
-                        {/* Right Actions */}
-                        <div className="flex flex-col items-center gap-6" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex flex-col items-center">
-                                <div className="p-3 bg-gray-800/40 rounded-full hover:bg-gray-700/50 backdrop-blur-sm cursor-pointer transition">
-                                    <MdThumbUp className="text-2xl text-white" />
-                                </div>
-                                <span className="text-white text-xs font-semibold mt-1">{short.likes}</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <div className="p-3 bg-gray-800/40 rounded-full hover:bg-gray-700/50 backdrop-blur-sm cursor-pointer transition">
-                                    <MdThumbDown className="text-2xl text-white" />
-                                </div>
-                                <span className="text-white text-xs font-semibold mt-1">Dislike</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <div className="p-3 bg-gray-800/40 rounded-full hover:bg-gray-700/50 backdrop-blur-sm cursor-pointer transition">
-                                    <MdRemoveRedEye className="text-2xl text-white" />
-                                </div>
-                                <span className="text-white text-xs font-semibold mt-1">{short.views}</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <div className="p-3 bg-gray-800/40 rounded-full hover:bg-gray-700/50 backdrop-blur-sm cursor-pointer transition">
-                                    <MdComment className="text-2xl text-white" />
-                                </div>
-                                <span className="text-white text-xs font-semibold mt-1">{short.comments}</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <div className="p-3 bg-gray-800/40 rounded-full hover:bg-gray-700/50 backdrop-blur-sm cursor-pointer transition">
-                                    <MdShare className="text-2xl text-white" />
-                                </div>
-                                <span className="text-white text-xs font-semibold mt-1">Share</span>
-                            </div>
-                        </div>
+        <div className="flex flex-col mb-6 cursor-pointer group" onClick={handleVideoClick}>
+            <div className="relative w-full aspect-video bg-gray-800 overflow-hidden">
+                <video
+                    src={videoSource}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    preload="metadata"
+                />
+                {/* Play overlay */}
+                <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
+                        <MdPlayArrow className="text-black text-3xl ml-1" />
                     </div>
                 </div>
+            </div>
+            <div className="flex gap-3 mt-3 px-3 md:px-0">
+                <img src={uploaderAvatar} alt="" className="w-9 h-9 rounded-full mt-1 flex-shrink-0" />
+                <div className="flex flex-col">
+                    <h3 className="text-white text-sm md:text-base font-semibold line-clamp-2 leading-tight">
+                        {video.title || video.fileName || 'Untitled Video'}
+                    </h3>
+                    <div className="text-gray-400 text-xs mt-1">
+                        {uploaderName} • {formatViews(video.views || 0)} views • {formatTimeAgo(video.uploadedAt)}
+                    </div>
+                </div>
+                <MdMoreVert className="text-white ml-auto flex-shrink-0 mt-1" />
             </div>
         </div>
     );
 };
 
-const CreateView = () => (
+const ShortsView = ({ videos, startingVideoId }: { videos: any[], startingVideoId?: string | null }) => {
+    return <ShortsPlayer videos={videos} startingVideoId={startingVideoId || undefined} />;
+};
+
+const CreateView = ({ onUploadClick, onRecordClick }: { onUploadClick: () => void, onRecordClick: () => void }) => (
     <div className="flex flex-col items-center justify-center h-[80vh] text-white p-6">
         <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mb-6 animate-bounce">
             <MdUpload className="text-5xl text-gray-400" />
@@ -253,11 +198,17 @@ const CreateView = () => (
         <p className="text-gray-400 text-center mb-8 max-w-xs">Share your sales pitch with the Sultan community. Upload a video or create a Short.</p>
 
         <div className="flex flex-col gap-4 w-full max-w-sm">
-            <button className="bg-[#3ea6ff] hover:bg-[#3095ef] text-black font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2">
+            <button
+                onClick={onUploadClick}
+                className="bg-[#3ea6ff] hover:bg-[#3095ef] text-black font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2"
+            >
                 <MdUpload className="text-xl" /> Upload Video
             </button>
-            <button className="bg-white hover:bg-gray-200 text-black font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2">
-                <MdOutlineSlowMotionVideo className="text-xl" /> Create a Short
+            <button
+                onClick={onRecordClick}
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2"
+            >
+                <MdVideocam className="text-xl" /> Create a Short
             </button>
         </div>
     </div>
@@ -398,64 +349,191 @@ const ProfileView = ({ currentUser }: { currentUser: { name: string; handle: str
 // --- Main Page Component ---
 
 export const PitchSultanBattle = () => {
+    const navigate = useNavigate();
+    const { user, isAuthenticated, isSEC } = useAuth();
+
+    // Cast user to SECAuthData since we know it's SEC (isSEC is true)
+    const secUser = isSEC && user && 'phone' in user ? user : null;
     const [activeTab, setActiveTab] = useState('home');
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [isRecorderOpen, setIsRecorderOpen] = useState(false); // Add recorder state
+    const [videos, setVideos] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null); // Add this state
     const [currentUser, setCurrentUser] = useState({
-        name: "Zopper Champion",
-        handle: "@zopper_champ",
-        avatar: "https://ui-avatars.com/api/?name=Zopper+Champion&background=ffd700&color=000",
-        subscribers: "1.2K",
-        role: "SEC Master",
+        name: "Loading...",
+        handle: "@loading",
+        avatar: "https://ui-avatars.com/api/?name=Loading&background=ffd700&color=000",
+        subscribers: "0",
+        role: "SEC",
         store: "",
         region: ""
     });
 
-    const [videos, setVideos] = useState<any[]>(VIDEO_FEED); // Default to mock for now
-
-    // FETCH VIDEOS (Uncomment when API is ready)
-    // useEffect(() => {
-    //     const loadVideos = async () => {
-    //         try {
-    //             const res = await fetch(`${API_BASE_URL}/pitch-sultan/videos?status=APPROVED`);
-    //             const data = await res.json();
-    //             if (data.success) {
-    //                 setVideos(data.data);
-    //             }
-    //         } catch (e) {
-    //             console.error("Failed to load videos", e);
-    //         }
-    //     };
-    //     loadVideos();
-    // }, []);
-
-    // Load user info from localStorage
+    // Check authentication and load Pitch Sultan user
     useEffect(() => {
-        const userDataStr = localStorage.getItem('pitchSultanUser');
-        if (userDataStr) {
-            try {
-                const userData = JSON.parse(userDataStr);
-                setCurrentUser({
-                    name: userData.name || "Zopper Champion",
-                    handle: `@${userData.name?.toLowerCase().replace(/\s+/g, '_') || 'zopper_champ'}`,
-                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name || 'Zopper Champion')}&background=ffd700&color=000`,
-                    subscribers: "1.2K",
-                    role: userData.store?.name || "SEC Master",
-                    store: userData.store?.name || "",
-                    region: userData.region || ""
-                });
-            } catch (e) {
-                console.error('Failed to parse user data:', e);
+        const loadPitchSultanUser = async () => {
+            // 1. Check if user is authenticated as SEC
+            if (!isAuthenticated || !isSEC || !user || !('phone' in user)) {
+                navigate('/');
+                return;
             }
-        }
-    }, []);
 
-    // Scroll to top on tab change
+            // 2. Check if user has completed Pitch Sultan profile
+            // All three fields are required: name, storeId, region
+            console.log('✅ Using authenticated SEC user:', user);
+            console.log('🔍 Checking profile completion:', {
+                name: user.name,
+                storeId: 'storeId' in user ? user.storeId : null,
+                region: 'region' in user ? user.region : null
+            });
+
+            if (!user.name || !('storeId' in user) || !user.storeId || !('region' in user) || !user.region) {
+                // User needs to complete profile setup
+                console.log('⚠️ User profile incomplete, redirecting to setup');
+                navigate('/pitchsultan/setup');
+                return;
+            }
+
+            // 3. Set current user for display
+            setCurrentUser({
+                name: user.name || "SEC User",
+                handle: `@${(user.name || 'sec_user').toLowerCase().replace(/\s+/g, '_')}`,
+                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'SEC User')}&background=ffd700&color=000`,
+                subscribers: "1.2K",
+                role: user.store?.storeName || "SEC",
+                store: user.store?.storeName || "",
+                region: user.region || ""
+            });
+
+            // 4. Fetch videos
+            await fetchVideos();
+        };
+
+        loadPitchSultanUser();
+    }, [isAuthenticated, isSEC, user, navigate]);
+
+    const fetchVideos = async () => {
+        try {
+            setLoading(true);
+            console.log('📡 Fetching videos from:', `${API_BASE_URL}/pitch-sultan/videos`);
+            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?status=APPROVED&limit=50`);
+            const data = await response.json();
+
+            if (data.success) {
+                setVideos(data.data);
+            } else {
+                console.error('❌ Failed to fetch videos:', data.error);
+            }
+        } catch (error) {
+            console.error('❌ Error fetching videos:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Scroll to top on tab change and reset selected video
     useEffect(() => {
         window.scrollTo(0, 0);
+        // Reset selected video when switching away from shorts
+        if (activeTab !== 'shorts') {
+            setSelectedVideoId(null);
+        }
     }, [activeTab]);
+
+    const handleVideoClick = (video: any) => {
+        console.log('🎬 Video clicked:', video.id);
+        setSelectedVideoId(video.id);
+        setActiveTab('shorts');
+    };
+
+    const handleRecordClick = () => {
+        // Same user validation as upload
+        const authData = localStorage.getItem('spot_incentive_auth');
+        let userId = secUser?.id;
+
+        if (!userId && authData) {
+            const parsed = JSON.parse(authData);
+            userId = parsed.user?.id;
+        }
+
+        if (!userId) {
+            console.error('❌ No user ID found');
+            alert('Please log in to record videos');
+            return;
+        }
+
+        console.log('🎬 Opening video recorder for user:', userId);
+        setIsRecorderOpen(true);
+    };
+
+    const handleVideoRecorded = (videoBlob: Blob) => {
+        // Convert blob to file and open upload modal
+        const videoFile = new File([videoBlob], `recorded-short-${Date.now()}.webm`, {
+            type: 'video/webm'
+        });
+
+        // You can either:
+        // 1. Auto-upload the recorded video
+        // 2. Or pass it to the upload modal for review
+
+        // For now, let's auto-upload it
+        uploadRecordedVideo(videoFile);
+    };
+
+    const uploadRecordedVideo = async (videoFile: File) => {
+        // This is a simplified version - you might want to show progress
+        try {
+            console.log('🚀 Auto-uploading recorded video:', videoFile.name);
+
+            // You can implement the upload logic here
+            // or open the upload modal with the pre-selected file
+            setIsUploadModalOpen(true);
+            // Note: You'd need to modify VideoUploadModal to accept a pre-selected file
+
+        } catch (error) {
+            console.error('❌ Error uploading recorded video:', error);
+            alert('Failed to upload recorded video');
+        }
+    };
+
+    const handleUploadSuccess = (videoData: any) => {
+        // Refresh videos from database
+        fetchVideos();
+
+        // Show success message
+        alert('Video uploaded successfully! 🎉');
+    };
+
+    const handleUploadClick = () => {
+        // Direct check from localStorage
+        const authData = localStorage.getItem('spot_incentive_auth');
+        console.log('🔍 Raw localStorage:', authData);
+
+        let userId = secUser?.id;
+
+        if (!userId && authData) {
+            const parsed = JSON.parse(authData);
+            userId = parsed.user?.id;
+            console.log('🔍 Got ID from localStorage:', userId);
+        }
+
+        console.log('🔍 Final userId:', userId);
+        console.log('🔍 secUser:', secUser);
+
+        if (!userId) {
+            console.error('❌ No user ID found');
+            alert('Please log in to upload videos');
+            return;
+        }
+
+        console.log('✅ Opening modal with ID:', userId);
+        setIsUploadModalOpen(true);
+    };
 
     return (
         <div className="min-h-screen bg-[#0f0f0f] text-white">
-            <Navbar currentUser={currentUser} />
+            {currentUser && <Navbar currentUser={currentUser} />}
 
             <div className="pt-14 pb-16 md:pl-0">
                 {activeTab === 'home' && (
@@ -469,30 +547,67 @@ export const PitchSultanBattle = () => {
                             ))}
                         </div>
 
-                        {/* Feed */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-4">
-                            {videos.map(video => (
-                                <VideoCard key={video.id} video={video} />
-                            ))}
-                        </div>
+                        {/* Loading State */}
+                        {loading && (
+                            <div className="flex justify-center items-center py-20">
+                                <div className="w-12 h-12 border-4 border-gray-700 border-t-white rounded-full animate-spin"></div>
+                            </div>
+                        )}
+
+                        {/* Empty State */}
+                        {!loading && videos.length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                                <MdOutlineSlowMotionVideo className="text-6xl mb-4" />
+                                <p className="text-lg">No videos yet</p>
+                                <p className="text-sm">Be the first to upload a pitch!</p>
+                            </div>
+                        )}
+
+                        {/* Video Feed */}
+                        {!loading && videos.length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-4">
+                                {videos.map(video => (
+                                    <VideoCard
+                                        key={video.id}
+                                        video={video}
+                                        onVideoClick={handleVideoClick}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {/* Shorts Tab - Keep mock for now or fetch similarly */}
                 {activeTab === 'shorts' && (
                     <div className="bg-black">
-                        <ShortsPlayer />
+                        <ShortsView videos={videos} startingVideoId={selectedVideoId} />
                     </div>
                 )}
 
-                {activeTab === 'create' && <CreateView />}
+                {activeTab === 'create' && <CreateView onUploadClick={handleUploadClick} onRecordClick={handleRecordClick} />}
 
                 {activeTab === 'help' && <HelpSupportView />}
 
-                {activeTab === 'profile' && <ProfileView currentUser={currentUser} />}
+                {activeTab === 'profile' && currentUser && <ProfileView currentUser={currentUser} />}
             </div>
 
             <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+
+            {/* Video Upload Modal */}
+            <VideoUploadModal
+                isOpen={isUploadModalOpen}
+                onClose={() => setIsUploadModalOpen(false)}
+                onUploadSuccess={handleUploadSuccess}
+                currentUserId={secUser?.id}
+            />
+
+            {/* Video Recorder */}
+            <VideoRecorder
+                isOpen={isRecorderOpen}
+                onClose={() => setIsRecorderOpen(false)}
+                onVideoRecorded={handleVideoRecorded}
+            />
         </div>
     );
 };

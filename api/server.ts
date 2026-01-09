@@ -449,11 +449,13 @@ app.post('/api/auth/verify-otp', async (req, res) => {
       message: 'Login successful',
       token,
       user: {
+        id: secUser.id,       // MongoDB ObjectId - needed for video uploads
         secId: secUser.secId, // Can be null
         phone: secUser.phone,
         name: secUser.name,   // Can be null
         storeId: secUser.storeId,
-        store: secUser.store
+        store: secUser.store,
+        region: secUser.region // Can be null
       }
     })
   } catch (error) {
@@ -828,11 +830,13 @@ app.put('/api/auth/update-profile', async (req, res) => {
       success: true,
       message: 'Profile updated successfully',
       user: {
+        id: updatedUser.id,
         secId: updatedUser.secId,
         phone: updatedUser.phone,
         name: updatedUser.name,
         storeId: updatedUser.storeId,
-        store: updatedUser.store
+        store: updatedUser.store,
+        region: updatedUser.region
       }
     })
   } catch (error) {
@@ -4363,39 +4367,204 @@ function shuffleArrayWithSeed<T>(array: T[], seed: string): T[] {
 
 /**
  * POST /api/pitch-sultan/user
- * Create or Update a Pitch Sultan user
+ * Update SEC user with Pitch Sultan profile (name, region, store)
  */
 app.post('/api/pitch-sultan/user', async (req, res) => {
   try {
     const { name, storeId, region, phone } = req.body
 
-    if (!name || !storeId || !region || !phone) {
-      return res.status(400).json({ success: false, error: "Missing required fields" })
+    if (!name || !region || !phone) {
+      return res.status(400).json({ success: false, error: "Missing required fields: name, region, phone" })
     }
 
-    // Upsert logic: Update if exists, otherwise create
-    const user = await prisma.pitchSultanUser.upsert({
+    // Update existing SEC user with Pitch Sultan info
+    const secUser = await prisma.sECUser.update({
       where: { phone },
-      update: {
+      data: {
         name,
-        storeId,
         region,
-      },
-      create: {
-        name,
-        storeId,
-        region,
-        phone,
+        storeId: storeId || undefined
       },
       include: {
         store: true
       }
     })
 
-    res.json({ success: true, data: user })
+    res.json({ success: true, data: secUser })
   } catch (error) {
-    console.error("Error creating/updating Pitch Sultan user:", error)
-    res.status(500).json({ success: false, error: "Failed to process user" })
+    console.error("Error updating SEC user for Pitch Sultan:", error)
+    res.status(500).json({ success: false, error: "Failed to update user" })
+  }
+})
+
+/**
+ * POST /api/pitch-sultan/videos
+ * Save uploaded video metadata to database
+ */
+app.post('/api/pitch-sultan/videos', async (req, res) => {
+  try {
+    const { secUserId, fileId, url, fileName, title, description, thumbnailUrl, fileSize, duration, tags } = req.body
+
+    console.log('🔍 POST /api/pitch-sultan/videos received:', { secUserId, fileId, fileName });
+    console.log('🔍 secUserId type:', typeof secUserId, 'length:', secUserId?.length);
+
+    if (!secUserId || !fileId || !url || !fileName) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing required fields: secUserId, fileId, url, fileName" 
+      })
+    }
+
+    const video = await prisma.pitchSultanVideo.create({
+      data: {
+        secUserId,
+        fileId,
+        url,
+        fileName,
+        title: title || null,
+        description: description || null,
+        thumbnailUrl: thumbnailUrl || null,
+        fileSize: fileSize || null,
+        duration: duration || null,
+        tags: tags || []
+      },
+      include: {
+        secUser: {
+          include: {
+            store: true
+          }
+        }
+      }
+    })
+
+    res.json({ success: true, data: video })
+  } catch (error) {
+    console.error("❌ Error saving video:", error)
+    console.error("❌ Error details:", error instanceof Error ? error.message : JSON.stringify(error));
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to save video",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+/**
+ * GET /api/pitch-sultan/videos
+ * Get all videos (with pagination and filters)
+ */
+app.get('/api/pitch-sultan/videos', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 50
+    const skip = parseInt(req.query.skip as string) || 0
+    const secUserId = req.query.secUserId as string
+
+    const where: any = { isActive: true }
+    if (secUserId) {
+      where.secUserId = secUserId
+    }
+
+    const videos = await prisma.pitchSultanVideo.findMany({
+      where,
+      include: {
+        secUser: {
+          include: {
+            store: true
+          }
+        }
+      },
+      orderBy: {
+        uploadedAt: 'desc'
+      },
+      take: limit,
+      skip
+    })
+
+    const total = await prisma.pitchSultanVideo.count({ where })
+
+    res.json({ 
+      success: true, 
+      data: videos,
+      pagination: {
+        total,
+        limit,
+        skip,
+        hasMore: skip + videos.length < total
+      }
+    })
+  } catch (error) {
+    console.error("Error fetching videos:", error)
+    res.status(500).json({ success: false, error: "Failed to fetch videos" })
+  }
+})
+
+/**
+ * PUT /api/pitch-sultan/videos/:id/view
+ * Increment video view count
+ */
+app.put('/api/pitch-sultan/videos/:id/view', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const video = await prisma.pitchSultanVideo.update({
+      where: { id },
+      data: {
+        views: {
+          increment: 1
+        }
+      }
+    })
+
+    res.json({ success: true, data: video })
+  } catch (error) {
+    console.error("Error incrementing view count:", error)
+    res.status(500).json({ success: false, error: "Failed to update view count" })
+  }
+})
+
+/**
+ * PUT /api/pitch-sultan/videos/:id/like
+ * Increment video like count
+ */
+app.put('/api/pitch-sultan/videos/:id/like', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const video = await prisma.pitchSultanVideo.update({
+      where: { id },
+      data: {
+        likes: {
+          increment: 1
+        }
+      }
+    })
+
+    res.json({ success: true, data: video })
+  } catch (error) {
+    console.error("Error incrementing like count:", error)
+    res.status(500).json({ success: false, error: "Failed to update like count" })
+  }
+})
+
+/**
+ * DELETE /api/pitch-sultan/videos/:id
+ * Soft delete a video (set isActive to false)
+ */
+app.delete('/api/pitch-sultan/videos/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const video = await prisma.pitchSultanVideo.update({
+      where: { id },
+      data: {
+        isActive: false
+      }
+    })
+
+    res.json({ success: true, data: video })
+  } catch (error) {
+    console.error("Error deleting video:", error)
+    res.status(500).json({ success: false, error: "Failed to delete video" })
   }
 })
 
@@ -4408,32 +4577,87 @@ app.get('/api/pitch-sultan/user', async (req, res) => {
     const id = req.query.id as string
     const phone = req.query.phone as string
 
+    console.log('🔍 GET /api/pitch-sultan/user called with:', { id, phone });
+
     if (!id && !phone) {
       return res.status(400).json({ success: false, error: "Missing ID or Phone" })
     }
 
-    let user
+    let secUser
     if (phone) {
-      user = await prisma.pitchSultanUser.findUnique({
+      console.log('🔍 Looking up SEC user by phone:', phone);
+      secUser = await prisma.sECUser.findUnique({
         where: { phone },
         include: { store: true }
       })
     } else {
-      user = await prisma.pitchSultanUser.findUnique({
+      console.log('🔍 Looking up SEC user by id:', id);
+      secUser = await prisma.sECUser.findUnique({
         where: { id },
         include: { store: true }
       })
     }
 
-    if (!user) {
+    if (!secUser) {
+      console.log('❌ SEC user not found');
       return res.status(404).json({ success: false, error: "User not found" })
     }
 
-    res.json({ success: true, data: user })
+    console.log('✅ SEC user found:', { id: secUser.id, phone: secUser.phone, name: secUser.name });
+    res.json({ success: true, data: secUser })
   } catch (error) {
-    console.error("Error fetching Pitch Sultan user:", error)
+    console.error("Error fetching SEC user:", error)
     res.status(500).json({ success: false, error: "Failed to fetch user" })
   }
+})
+
+/**
+ * GET /api/imagekit-config
+ * Get ImageKit public configuration
+ */
+app.get('/api/imagekit-config', (req, res) => {
+  const publicKey = process.env.IMAGEKIT_PUBLIC_KEY
+  const urlEndpoint = process.env.IMAGEKIT_URL_ENDPOINT
+
+  if (!publicKey || !urlEndpoint) {
+    return res.status(500).json({ 
+      success: false, 
+      error: 'ImageKit configuration not found. Please set IMAGEKIT_PUBLIC_KEY and IMAGEKIT_URL_ENDPOINT in .env' 
+    })
+  }
+
+  res.json({
+    publicKey,
+    urlEndpoint
+  })
+})
+
+/**
+ * GET /api/imagekit-auth
+ * Generate ImageKit authentication parameters for client-side upload
+ */
+app.get('/api/imagekit-auth', (req, res) => {
+  const privateKey = process.env.IMAGEKIT_PRIVATE_KEY
+
+  if (!privateKey) {
+    return res.status(500).json({ 
+      success: false, 
+      error: 'ImageKit private key not configured' 
+    })
+  }
+
+  const token = req.query.token || crypto.randomBytes(16).toString('hex')
+  const expire = req.query.expire || (Math.floor(Date.now() / 1000) + 2400).toString() // 40 minutes
+  const signature = crypto
+    .createHmac('sha1', privateKey)
+    .update(token + expire)
+    .digest('hex')
+
+  res.json({
+    token,
+    expire,
+    signature
+  })
 })
 
 // Health check endpoint

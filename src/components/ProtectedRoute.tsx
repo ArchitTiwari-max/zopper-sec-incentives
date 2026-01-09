@@ -66,7 +66,7 @@ export function PublicOnlyRoute({ children }: { children: ReactNode }) {
       return <Navigate to={next} replace />
     }
     if (isAdmin) return <Navigate to="/admin/dashboard" replace />
-    if (isSEC) return <Navigate to="/dashboard" replace />
+    if (isSEC) return <Navigate to="/welcome" replace />
   }
 
   return <>{children}</>

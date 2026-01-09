@@ -14,7 +14,7 @@ const REGIONS = [
 
 export function PitchSultanSetup() {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
     const [stores, setStores] = useState<Store[]>([]);
     const [name, setName] = useState('');
     const [selectedStore, setSelectedStore] = useState('');
@@ -25,25 +25,55 @@ export function PitchSultanSetup() {
     useEffect(() => {
         const checkUserAndLoadStores = async () => {
             try {
-                // 1. Check if user already exists (safeguard)
-                if (user && 'phone' in user) {
-                    try {
-                        const checkRes = await fetch(`${API_BASE_URL}/pitch-sultan/user?phone=${user.phone}`);
-                        const checkData = await checkRes.json();
-                        if (checkData.success && checkData.data) {
-                            // User exists, redirect immediately
-                            localStorage.setItem('pitchSultanUserId', checkData.data.id);
-                            localStorage.setItem('pitchSultanUser', JSON.stringify(checkData.data));
-                            navigate('/pitchsultan/battle');
-                            return;
-                        }
-                    } catch (e) {
-                        // Ignore error and proceed to setup
-                        console.log("User not found, proceeding to setup");
-                    }
+                // 1. Check if user is logged in
+                if (!user || !('phone' in user)) {
+                    setError('Please login as an SEC user first');
+                    setLoading(false);
+                    return;
                 }
 
-                // 2. Load stores
+                // 2. Check if Pitch Sultan user already exists with complete profile
+                try {
+                    const checkRes = await fetch(`${API_BASE_URL}/pitch-sultan/user?phone=${user.phone}`);
+                    const checkData = await checkRes.json();
+                    if (checkData.success && checkData.data) {
+                        // Check if user has completed profile (has name, storeId, AND region)
+                        if (checkData.data.name && checkData.data.storeId && checkData.data.region) {
+                            // User has complete profile, update localStorage and redirect to battle
+                            console.log('✅ User has complete profile, updating localStorage and redirecting to battle');
+                            
+                            // Update auth context with complete data
+                            updateUser({
+                                ...user,
+                                id: checkData.data.id,
+                                secId: checkData.data.secId || user.secId,
+                                name: checkData.data.name,
+                                storeId: checkData.data.storeId,
+                                region: checkData.data.region
+                            });
+                            
+                            navigate('/pitchsultan/battle');
+                            return;
+                        } else {
+                            // User exists but profile incomplete, stay on setup page and pre-fill
+                            console.log('⚠️ User exists but profile incomplete, staying on setup');
+                            if (checkData.data.name) {
+                                setName(checkData.data.name);
+                            }
+                            if (checkData.data.storeId) {
+                                setSelectedStore(checkData.data.storeId);
+                            }
+                            if (checkData.data.region) {
+                                setSelectedRegion(checkData.data.region);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // User not found, proceed to setup
+                    console.log("User not found, proceeding to setup");
+                }
+
+                // 3. Load stores
                 const response = await fetchStores();
                 if (response.success && response.data) {
                     setStores(response.data);
@@ -101,19 +131,7 @@ export function PitchSultanSetup() {
             const data = await response.json();
 
             if (data.success && data.data) {
-                // Store user ID and basic info in localStorage
-                localStorage.setItem('pitchSultanUserId', data.data.id);
-                localStorage.setItem('pitchSultanUser', JSON.stringify({
-                    name: data.data.name,
-                    store: {
-                        id: data.data.store.id,
-                        name: data.data.store.storeName,
-                        city: data.data.store.city
-                    },
-                    region: data.data.region
-                }));
-
-                // Navigate to battle page
+                // Navigate to battle page (user data will be fetched from auth context)
                 navigate('/pitchsultan/battle');
             } else {
                 setError(data.error || 'Failed to create user');

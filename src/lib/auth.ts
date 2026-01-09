@@ -3,10 +3,12 @@ export type Role = 'admin' | 'sec'
 const STORAGE_KEY = 'spot_incentive_auth'
 
 export interface SECAuthData {
-  secId: string
+  id: string        // MongoDB ObjectId
+  secId: string     // SEC's own ID (can be empty initially)
   phone: string
   name?: string
   storeId?: string
+  region?: string   // Optional region for Pitch Sultan
 }
 
 export interface AdminAuthData {
