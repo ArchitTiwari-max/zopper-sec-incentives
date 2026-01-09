@@ -305,7 +305,7 @@ model PitchSultanVideo {
   rating       Float             @default(0.0) // Average rating (0.0 to 5.0)
   ratingCount  Int               @default(0) // Number of ratings
   tags         String[]          @default([])
-  isActive     Boolean           @default(true)
+  isActive     Boolean           @default(false)
   uploadedAt   DateTime          @default(now())
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt

@@ -4645,23 +4645,19 @@ app.delete('/api/pitch-sultan/videos/:id', async (req, res) => {
   try {
     const { id } = req.params
 
-    // 1. Soft delete the video
-    const video = await prisma.pitchSultanVideo.update({
-      where: { id },
-      data: {
-        isActive: false,
-        serialNumber: null // Remove serial number from deleted video
-      }
+    // Hard delete the video from database
+    const video = await prisma.pitchSultanVideo.delete({
+      where: { id }
     })
 
-    // 2. Re-assign serial numbers for ALL active videos
+    // Re-assign serial numbers for ALL remaining active videos
     // Fetch all active videos ordered by creation time
     const activeVideos = await prisma.pitchSultanVideo.findMany({
       where: { isActive: true },
       orderBy: { createdAt: 'asc' }
     })
 
-    // 3. Update serial numbers sequentially starting from 1001
+    // Update serial numbers sequentially starting from 1001
     let nextSerial = 1001
     for (const v of activeVideos) {
       if (v.serialNumber !== nextSerial) {

@@ -551,11 +551,7 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
         if (!confirm('Are you sure you want to delete this video?')) return;
 
         try {
-            const API_URL = window.location.hostname === 'localhost'
-                ? 'http://localhost:3001'
-                : `${window.location.protocol}//${window.location.hostname}:3001`;
-
-            const response = await fetch(`${API_URL}/api/pitch-sultan/videos/${videoId}`, {
+            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos/${videoId}`, {
                 method: 'DELETE'
             });
 
@@ -704,6 +700,14 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
                                                         ratingCount={video.ratingCount}
                                                         className="mb-2"
                                                     />
+                                                    {/* Video Status */}
+                                                    <div className="mb-2">
+                                                        {video.isActive ? (
+                                                            <span className="text-green-400 text-xs">✅ Live</span>
+                                                        ) : (
+                                                            <span className="text-yellow-400 text-xs">⏳ Waiting for admin approval</span>
+                                                        )}
+                                                    </div>
                                                     <div className="text-gray-500 text-xs">
                                                         {new Date(video.uploadedAt).toLocaleDateString()}
                                                     </div>
@@ -796,6 +800,14 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
                                                     </p>
                                                     <div className="text-xs text-gray-500 mb-3">
                                                         {video.views || 0} views • {video.likes || 0} likes • {new Date(video.uploadedAt).toLocaleDateString()}
+                                                    </div>
+                                                    {/* Video Status */}
+                                                    <div className="mb-3">
+                                                        {video.isActive ? (
+                                                            <span className="text-green-400 text-xs">✅ Live</span>
+                                                        ) : (
+                                                            <span className="text-yellow-400 text-xs">⏳ Waiting for admin approval</span>
+                                                        )}
                                                     </div>
                                                     <div className="flex gap-2">
                                                         <button
