@@ -281,8 +281,13 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                             ...prev,
                             [video.id]: 0
                         }));
+                        
+                        // Ensure mute state is properly applied
                         videoElement.muted = muted;
+                        
                         videoElement.play().then(() => {
+                            // Double-check mute state after play starts
+                            videoElement.muted = muted;
                             // Start view timer when video actually starts playing
                             if (video) {
                                 startViewTimer(video.id);
@@ -341,12 +346,21 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 
     // Handle mute/unmute for all videos
     useEffect(() => {
-        videoRefs.current.forEach((video) => {
+        videoRefs.current.forEach((video, index) => {
             if (video) {
                 video.muted = muted;
+                // Force update for the current video to ensure it's properly synced
+                if (index === currentIndex) {
+                    // Small delay to ensure video element is ready
+                    setTimeout(() => {
+                        if (video && !video.paused) {
+                            video.muted = muted;
+                        }
+                    }, 100);
+                }
             }
         });
-    }, [muted]);
+    }, [muted, currentIndex]); // Add currentIndex dependency
 
     // Handle scroll/swipe navigation
     useEffect(() => {
@@ -411,7 +425,14 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     };
 
     const toggleMute = () => {
-        setMuted(!muted);
+        const newMutedState = !muted;
+        setMuted(newMutedState);
+        
+        // Immediately apply to current video to avoid delay
+        const currentVideo = videoRefs.current[currentIndex];
+        if (currentVideo) {
+            currentVideo.muted = newMutedState;
+        }
     };
 
     const handleLike = async (videoId: string) => {
