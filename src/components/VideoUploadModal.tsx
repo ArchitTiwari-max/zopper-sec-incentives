@@ -54,8 +54,26 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
         const width = video.videoWidth;
         const height = video.videoHeight;
         const aspectRatio = width / height;
+        const duration = video.duration; // Get video duration in seconds
 
-        // Reject landscape videos (aspect ratio > 1)
+        // Check duration first (40 seconds to 2 minutes - displayed as 2 min but allows up to 2.5 min)
+        if (duration < 40) {
+          setError('Video is too short. Please upload a video between 40 seconds and 2 minutes.');
+          setSelectedFile(null);
+          if (e.target) e.target.value = '';
+          URL.revokeObjectURL(video.src);
+          return;
+        }
+
+        if (duration > 150) { // 2.5 minutes = 150 seconds (actual limit)
+          setError('Video is too long. Please upload a video between 40 seconds and 2 minutes.');
+          setSelectedFile(null);
+          if (e.target) e.target.value = '';
+          URL.revokeObjectURL(video.src);
+          return;
+        }
+
+        // Check aspect ratio (reject landscape videos)
         if (aspectRatio > 1) {
           setError('Landscape videos are not allowed. Please record in portrait mode (9:16 ratio).');
           setSelectedFile(null);
@@ -64,9 +82,14 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
           return;
         }
 
+        // Video passed all validations
+        const minutes = Math.floor(duration / 60);
+        const seconds = Math.floor(duration % 60);
+        const durationText = minutes > 0 ? `${minutes}:${seconds.toString().padStart(2, '0')}` : `${seconds}s`;
+        
         setSelectedFile(file);
         setError(null);
-        setStatusMessage('');
+        setStatusMessage(`✅ Video accepted: ${durationText} duration, portrait format`);
         URL.revokeObjectURL(video.src);
       };
 
@@ -237,24 +260,24 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
           {/* Pro Tips */}
           <div className="bg-gray-800/50 rounded-xl p-4">
             <h4 className="text-white text-sm font-semibold mb-3 flex items-center gap-2">
-              💡 Pro Tips for Great Videos
+              💡 Video Requirements
             </h4>
-            <div className="grid grid-cols-2 gap-3 text-xs text-gray-300">
+            <div className="grid grid-cols-1 gap-3 text-xs text-gray-300">
               <div className="flex items-center gap-2">
-                <span>☀️</span>
-                <span>Good lighting</span>
+                <span>⏱️</span>
+                <span>Duration: 40 seconds to 2 minutes</span>
               </div>
               <div className="flex items-center gap-2">
-                <span>🎵</span>
-                <span>Clear audio</span>
+                <span>📱</span>
+                <span>Portrait mode only (9:16 ratio)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>☀️</span>
+                <span>Good lighting & clear audio</span>
               </div>
               <div className="flex items-center gap-2">
                 <span>📐</span>
-                <span>Steady hands</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span>⏱️</span>
-                <span>Keep it short</span>
+                <span>Keep camera steady</span>
               </div>
             </div>
           </div>
