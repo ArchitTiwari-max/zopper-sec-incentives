@@ -1237,7 +1237,7 @@ export const PitchSultanBattle = () => {
                     </div>
                 </div>
 
-                <div className={`${activeTab === 'shorts' ? 'block' : 'hidden'} bg-black`}>
+                <div className={`${activeTab === 'shorts' ? 'block' : 'hidden'} fixed inset-0 bg-black z-40`}>
                     <ShortsView videos={videos} startingVideoId={selectedVideoId} onVideoStatsUpdate={handleVideoStatsUpdate} currentUserId={secUser?.id} currentUser={currentUser} />
                 </div>
 

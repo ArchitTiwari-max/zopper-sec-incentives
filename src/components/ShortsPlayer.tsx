@@ -57,7 +57,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [muted, setMuted] = useState(true);
-    const [playing, setPlaying] = useState(true);
+    const [videoPlayingStates, setVideoPlayingStates] = useState<{ [key: string]: boolean }>({}); // Track playing state per video
     const [isProgrammaticScroll, setIsProgrammaticScroll] = useState(false);
     const [viewedVideos, setViewedVideos] = useState<Set<string>>(new Set()); // Track which videos have been viewed
     const [videoProgress, setVideoProgress] = useState<{ [key: string]: number }>({}); // Track progress for each video
@@ -67,6 +67,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     const [selectedVideoForModal, setSelectedVideoForModal] = useState<string | null>(null);
     const [showAdminMenu, setShowAdminMenu] = useState(false);
     const [showUserTooltip, setShowUserTooltip] = useState<string | null>(null); // For user tooltip (changed from hoveredUser)
+    const [isLayoutReady, setIsLayoutReady] = useState(false); // Track layout readiness
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
     const viewTimers = useRef<Map<string, NodeJS.Timeout>>(new Map()); // Track view timers
@@ -81,6 +82,32 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
             fetchVideos();
         }
     }, [propVideos]);
+
+    // Layout readiness check - ensure DOM is stable before positioning
+    useEffect(() => {
+        const checkLayoutReady = () => {
+            // Check if header exists and is in position
+            const header = document.querySelector('[class*="fixed"][class*="top-0"]');
+            const hasHeader = header && header.getBoundingClientRect().top === 0;
+            
+            if (hasHeader) {
+                // Wait for next frame to ensure layout is complete
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        setIsLayoutReady(true);
+                        console.log('🎯 Layout ready - header positioned correctly');
+                    });
+                });
+            } else {
+                // Retry if header not ready
+                setTimeout(checkLayoutReady, 50);
+            }
+        };
+
+        // Small delay to ensure header and other elements are in final position
+        const timer = setTimeout(checkLayoutReady, 100);
+        return () => clearTimeout(timer);
+    }, []);
 
     const fetchVideos = async () => {
         try {
@@ -146,7 +173,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 
     // Set starting video index based on startingVideoId and scroll to it
     useEffect(() => {
-        if (videos.length > 0 && startingVideoId && !hasScrolledRef.current) {
+        if (videos.length > 0 && startingVideoId && !hasScrolledRef.current && isLayoutReady) {
             const startIndex = videos.findIndex(video => video.id === startingVideoId);
             console.log('🎯 Looking for video ID:', startingVideoId, 'Found at index:', startIndex);
 
@@ -162,7 +189,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                 viewTimers.current.forEach(timer => clearTimeout(timer));
                 viewTimers.current.clear();
 
-                // Scroll to the specific video after a short delay to ensure DOM is ready
+                // Wait for layout to be fully stable before scrolling
                 setTimeout(() => {
                     if (containerRef.current) {
                         // Use scrollIntoView for more reliable scrolling
@@ -196,10 +223,10 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                             }, 3000); // Increased to 3 seconds
                         }
                     }
-                }, 200); // Increased delay to ensure DOM is fully ready
+                }, 300); // Increased delay to ensure DOM and layout are fully ready
             }
         }
-    }, [videos, startingVideoId]);
+    }, [videos, startingVideoId, isLayoutReady]);
 
     // Handle video change
     useEffect(() => {
@@ -211,6 +238,13 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     // Initialize video refs array when videos change
     useEffect(() => {
         videoRefs.current = videoRefs.current.slice(0, videos.length);
+
+        // Initialize playing states for all videos (default to true since they auto-play)
+        const initialPlayingStates: { [key: string]: boolean } = {};
+        videos.forEach(video => {
+            initialPlayingStates[video.id] = true; // Default to playing
+        });
+        setVideoPlayingStates(initialPlayingStates);
 
         // Add progress tracking to all videos
         videoRefs.current.forEach((video, index) => {
@@ -248,8 +282,28 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                 (video as any).progressHandler = progressHandler;
                 (video as any).metadataHandler = metadataHandler;
 
+                // Add play/pause event listeners to track actual video state
+                const playHandler = () => {
+                    setVideoPlayingStates(prev => ({
+                        ...prev,
+                        [videoId]: true
+                    }));
+                };
+
+                const pauseHandler = () => {
+                    setVideoPlayingStates(prev => ({
+                        ...prev,
+                        [videoId]: false
+                    }));
+                };
+
+                (video as any).playHandler = playHandler;
+                (video as any).pauseHandler = pauseHandler;
+
                 video.addEventListener('timeupdate', progressHandler);
                 video.addEventListener('loadedmetadata', metadataHandler);
+                video.addEventListener('play', playHandler);
+                video.addEventListener('pause', pauseHandler);
             }
         });
 
@@ -263,6 +317,12 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                     if ((video as any).metadataHandler) {
                         video.removeEventListener('loadedmetadata', (video as any).metadataHandler);
                     }
+                    if ((video as any).playHandler) {
+                        video.removeEventListener('play', (video as any).playHandler);
+                    }
+                    if ((video as any).pauseHandler) {
+                        video.removeEventListener('pause', (video as any).pauseHandler);
+                    }
                 }
             });
         };
@@ -270,7 +330,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 
     // Intersection Observer to auto-play videos when they come into view
     useEffect(() => {
-        if (!containerRef.current || videos.length === 0) return;
+        if (!containerRef.current || videos.length === 0 || !isLayoutReady) return;
 
         const observer = new IntersectionObserver(
             (entries) => {
@@ -316,6 +376,11 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                         videoElement.play().then(() => {
                             // Double-check mute state after play starts
                             videoElement.muted = muted;
+                            // Update playing state for this video
+                            setVideoPlayingStates(prev => ({
+                                ...prev,
+                                [video.id]: true
+                            }));
                             // Start view timer when video actually starts playing
                             if (video) {
                                 startViewTimer(video.id);
@@ -326,11 +391,18 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                         videoRefs.current.forEach((otherVideo, index) => {
                             if (otherVideo && index !== videoIndex && !otherVideo.paused) {
                                 otherVideo.pause();
+                                const otherVideoData = videos[index];
+                                if (otherVideoData) {
+                                    // Update playing state for other videos
+                                    setVideoPlayingStates(prev => ({
+                                        ...prev,
+                                        [otherVideoData.id]: false
+                                    }));
+                                }
                                 // Only reset to beginning if not during programmatic scroll
                                 if (!isProgrammaticScroll) {
                                     otherVideo.currentTime = 0; // Reset to beginning
                                 }
-                                const otherVideoData = videos[index];
                                 if (otherVideoData) {
                                     // Reset progress only if not programmatic scroll
                                     if (!isProgrammaticScroll) {
@@ -346,6 +418,12 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                     } else if (!entry.isIntersecting) {
                         // Video is not visible - pause it and reset to beginning (but not during programmatic scroll)
                         videoElement.pause();
+                        
+                        // Update playing state when video goes out of view
+                        setVideoPlayingStates(prev => ({
+                            ...prev,
+                            [video.id]: false
+                        }));
                         
                         // Only reset to beginning when not doing programmatic scroll
                         if (!isProgrammaticScroll) {
@@ -382,7 +460,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
             viewTimers.current.forEach(timer => clearTimeout(timer));
             viewTimers.current.clear();
         };
-    }, [videos.length, isProgrammaticScroll]); // Use videos.length instead of full videos array
+    }, [videos.length, isProgrammaticScroll, isLayoutReady]); // Add isLayoutReady dependency
 
     // Handle mute/unmute for all videos
     useEffect(() => {
@@ -453,13 +531,20 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 
     const togglePlayPause = (videoIndex: number) => {
         const video = videoRefs.current[videoIndex];
-        if (video) {
+        const videoData = videos[videoIndex];
+        if (video && videoData) {
             if (video.paused) {
                 video.play().catch(console.error);
-                setPlaying(true);
+                setVideoPlayingStates(prev => ({
+                    ...prev,
+                    [videoData.id]: true
+                }));
             } else {
                 video.pause();
-                setPlaying(false);
+                setVideoPlayingStates(prev => ({
+                    ...prev,
+                    [videoData.id]: false
+                }));
             }
         }
     };
@@ -733,9 +818,9 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=ffd700&color=000`;
     };
 
-    if (loading) {
+    if (loading || !isLayoutReady) {
         return (
-            <div className="h-[calc(100dvh-100px)] w-full bg-black flex items-center justify-center">
+            <div className="fixed inset-0 bg-black flex items-center justify-center" style={{ paddingTop: '56px', paddingBottom: '60px' }}>
                 <div className="w-full max-w-[400px] h-full bg-black flex items-center justify-center">
                     <div className="w-12 h-12 border-4 border-gray-700 border-t-white rounded-full animate-spin"></div>
                 </div>
@@ -745,7 +830,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 
     if (videos.length === 0) {
         return (
-            <div className="h-[calc(100dvh-100px)] w-full bg-black flex items-center justify-center">
+            <div className="fixed inset-0 bg-black flex items-center justify-center" style={{ paddingTop: '56px', paddingBottom: '60px' }}>
                 <div className="w-full max-w-[400px] h-full bg-black flex items-center justify-center">
                     <div className="text-center text-white">
                         <div className="text-6xl mb-4">📹</div>
@@ -760,7 +845,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     const currentVideo = videos[currentIndex];
 
     return (
-        <div className="h-[calc(100dvh-100px)] w-full bg-black flex items-center justify-center overflow-hidden">
+        <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden" style={{ paddingTop: '56px', paddingBottom: '60px' }}>
             {/* Vertical scrollable container */}
             <div
                 ref={containerRef}
@@ -796,10 +881,10 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                             </div>
                         )}
 
-                        {/* Progress Bar - positioned with bottom margin to stay visible */}
-                        <div className="absolute bottom-4 left-0 right-0 h-1 bg-black/50 rounded-none z-50">
+                        {/* Progress Bar - positioned at the very bottom */}
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50 z-50">
                             <div
-                                className="h-full bg-white rounded-none transition-all duration-100 ease-linear"
+                                className="h-full bg-white transition-all duration-100 ease-linear"
                                 style={{
                                     width: `${videoProgress[video.id] || 0}%`
                                 }}
@@ -807,7 +892,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                         </div>
 
                         {/* Overlay Controls */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60 flex flex-col justify-between p-4 pb-12 pointer-events-none">
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60 flex flex-col justify-between p-4 pb-1 pointer-events-none">
 
                             {/* Top Controls */}
                             <div className="flex justify-between items-start pointer-events-auto">
@@ -871,7 +956,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                             </div>
 
                             {/* Center Play/Pause - only show for current video */}
-                            {index === currentIndex && !playing && (
+                            {index === currentIndex && videoPlayingStates[video.id] === false && (
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-auto z-10">
                                     <button
                                         onClick={() => togglePlayPause(index)}
@@ -883,7 +968,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                             )}
 
                             {/* Bottom Content */}
-                            <div className="flex items-end justify-between">
+                            <div className="flex items-end justify-between mb-1">
                                 {/* Video Info */}
                                 <div className="flex-1 pr-4">
                                     <div className="flex items-center gap-2 mb-2">

@@ -161,7 +161,12 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
                 });
               }
 
-              setTimeout(() => handleClose(), 2000);
+              // Show approval notification for non-user uploads too
+              setTimeout(() => {
+                alert('🎉 Video uploaded successfully!\n\n📋 Your video will appear on the feed once approved by our admin team.');
+              }, 500);
+
+              setTimeout(() => handleClose(), 3000);
               return;
             }
 
@@ -195,7 +200,13 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
               onUploadSuccess(savedVideo.data);
             }
 
-            setTimeout(() => handleClose(), 2000);
+            // Show approval notification alert
+            setTimeout(() => {
+              alert('🎉 Video uploaded successfully!\n\n📋 Your video is now under review and will appear on the feed once approved by our admin team.\n\n👀 You can check the status in your Profile > Manage tab.');
+            }, 500);
+
+            // Auto close after
+            setTimeout(() => handleClose(), 3000);
           } catch (dbError: any) {
             setError('Video uploaded but failed to save: ' + dbError.message);
             setUploading(false);
