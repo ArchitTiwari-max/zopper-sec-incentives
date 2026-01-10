@@ -19,5 +19,21 @@ export default defineConfig({
                 rewrite: function (path) { return path; },
             },
         },
+        fs: {
+            allow: ['..']
+        }
     },
+    optimizeDeps: {
+        exclude: [
+            '@ffmpeg/ffmpeg',
+            '@ffmpeg/util',
+            '@ffmpeg/core'
+        ]
+    },
+    worker: {
+        format: 'es'
+    },
+    define: {
+        global: 'globalThis',
+    }
 });

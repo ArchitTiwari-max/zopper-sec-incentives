@@ -294,9 +294,9 @@ model PitchSultanVideo {
   title        String? // Optional video title
   description  String? // Optional video description
   serialNumber Int?    // Sequential serial number starting from 1001
-  fileId       String // ImageKit file ID
-  url          String // ImageKit video URL
-  thumbnailUrl String? // ImageKit thumbnail URL
+  fileId       String? // ImageKit file ID (optional for S3 uploads)
+  url          String // Video URL (ImageKit or S3)
+  thumbnailUrl String? // Thumbnail URL (ImageKit or S3)
   fileName     String // Original file name
   fileSize     Int? // File size in bytes
   duration     Int? // Video duration in seconds

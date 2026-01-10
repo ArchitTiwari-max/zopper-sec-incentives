@@ -1,0 +1,26 @@
+[
+    {
+        "AllowedHeaders": [
+            "*"
+        ],
+        "AllowedMethods": [
+            "GET",
+            "PUT",
+            "POST",
+            "DELETE",
+            "HEAD"
+        ],
+        "AllowedOrigins": [
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "https://www.salesdost.com",
+            "*"
+        ],
+        "ExposeHeaders": [
+            "ETag",
+            "x-amz-meta-custom-header",
+            "x-amz-version-id"
+        ],
+        "MaxAgeSeconds": 3000
+    }
+]

@@ -15,45 +15,45 @@ export default function CameraScanner({ onDetected, onClose }: Props) {
 
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
-      try {
-        const s = await getRearCameraStream()
-        if (cancelled) { stopStream(s); return }
-        setStream(s)
-        if (videoRef.current) {
-          videoRef.current.srcObject = s
-          await videoRef.current.play().catch(() => {})
-        }
-        const detector = createBarcodeDetector()
-        if (!detector) {
-          setSupported(false)
-          setError('Barcode detector not supported on this device')
-          return
-        }
-        const handleScan = createScanDeduper((val) => {
-          const parsed = parseImeiFromText(val)
-          vibrate()
-          onDetected(val, parsed)
-        })
-        const loop = async () => {
-          if (!videoRef.current) return
-          try {
-            const barcodes = await detector.detect(videoRef.current)
-            if (barcodes && barcodes.length) {
-              const first = barcodes[0]
-              const value = first.rawValue ?? first?.rawValue ?? ''
-              if (value) handleScan(value)
+      ; (async () => {
+        try {
+          const s = await getRearCameraStream()
+          if (cancelled) { stopStream(s); return }
+          setStream(s)
+          if (videoRef.current) {
+            videoRef.current.srcObject = s
+            await videoRef.current.play().catch(() => { })
+          }
+          const detector = createBarcodeDetector()
+          if (!detector) {
+            setSupported(false)
+            setError('Barcode detector not supported on this device')
+            return
+          }
+          const handleScan = createScanDeduper((val) => {
+            const parsed = parseImeiFromText(val)
+            vibrate()
+            onDetected(val, parsed)
+          })
+          const loop = async () => {
+            if (!videoRef.current) return
+            try {
+              const barcodes = await detector.detect(videoRef.current)
+              if (barcodes && barcodes.length) {
+                const first = barcodes[0]
+                const value = first.rawValue ?? first?.rawValue ?? ''
+                if (value) handleScan(value)
+              }
+            } catch (e) {
+              // Ignore transient detection errors
             }
-          } catch (e) {
-            // Ignore transient detection errors
+            rafRef.current = requestAnimationFrame(loop)
           }
           rafRef.current = requestAnimationFrame(loop)
+        } catch (e: any) {
+          setError(e?.message || 'Failed to access camera')
         }
-        rafRef.current = requestAnimationFrame(loop)
-      } catch (e: any) {
-        setError(e?.message || 'Failed to access camera')
-      }
-    })()
+      })()
 
     return () => {
       cancelled = true

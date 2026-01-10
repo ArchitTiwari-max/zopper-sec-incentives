@@ -76,7 +76,7 @@ export function ProctoringPanel({ secId, phone, sessionToken, onFlag }: Proctori
         documentHidden: document.hidden,
         videoWidth: videoRef.current?.videoWidth
       })
-      
+
       if (!videoRef.current || !videoRef.current.srcObject) {
         console.debug('📸 Skip snapshot: video not ready or no stream')
         return scheduleNextSnapshot()
@@ -97,7 +97,7 @@ export function ProctoringPanel({ secId, phone, sessionToken, onFlag }: Proctori
 
       const cld = config.cloudinary
       console.debug('📸 Cloudinary config:', { cloudName: cld?.cloudName, uploadPreset: cld?.uploadPreset, signed: cld?.signed, folder: cld?.folder })
-      
+
       if (!cld?.cloudName || !(cld.uploadPreset || cld.signed)) {
         console.warn('📸 No Cloudinary config; skipping upload')
         return scheduleNextSnapshot()
@@ -134,7 +134,7 @@ export function ProctoringPanel({ secId, phone, sessionToken, onFlag }: Proctori
       }
 
       console.debug('📸 Upload result:', result)
-      
+
       await logProctoringEvent({
         secId,
         phone,
@@ -228,7 +228,7 @@ export function ProctoringPanel({ secId, phone, sessionToken, onFlag }: Proctori
       // Start random snapshot uploads to Cloudinary
       console.log('📸 Proctoring started, config:', config.cloudinary)
       startRandomSnapshots()
-      
+
       // Test snapshot after everything is set up
       setTimeout(() => {
         console.log('📸 Testing immediate snapshot after setup...')
@@ -274,7 +274,7 @@ export function ProctoringPanel({ secId, phone, sessionToken, onFlag }: Proctori
               } else if (faces > 1) {
                 flag('multi_face', `faces=${faces}`)
               }
-            } catch {}
+            } catch { }
             setTimeout(faceLoop, 1200)
           }
           faceLoop()
@@ -292,7 +292,7 @@ export function ProctoringPanel({ secId, phone, sessionToken, onFlag }: Proctori
     setMinimized(false)
     stopRandomSnapshots()
     if (videoRef.current && videoRef.current.srcObject) {
-      ;(videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop())
+      ; (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop())
       videoRef.current.srcObject = null
     }
   }

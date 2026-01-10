@@ -65,12 +65,27 @@ const SHORTS_FEED = [
 
 // --- Helper Functions ---
 
-// Helper for ImageKit thumbnails (Shared)
-const getThumbnailUrl = (url: string) => {
+// Helper for video thumbnails (Shared)
+const getThumbnailUrl = (url: string, thumbnailUrl?: string) => {
     if (!url) return '';
+    
+    // If we have a specific thumbnail URL, use it
+    if (thumbnailUrl && thumbnailUrl !== url) {
+        // Handle both S3 and ImageKit thumbnail URLs
+        if (thumbnailUrl.includes('ik.imagekit.io')) {
+            // ImageKit thumbnail - use as is during migration
+            return `${thumbnailUrl}/ik-thumbnail.jpg`;
+        }
+        // S3 thumbnail URL - use directly
+        return thumbnailUrl;
+    }
+
+    // Handle ImageKit URLs (for backward compatibility during migration)
     if (url.includes('ik.imagekit.io')) {
         return `${url}/ik-thumbnail.jpg`;
     }
+
+    // For S3 URLs, use the video itself as poster
     return url;
 };
 
@@ -330,7 +345,7 @@ const VideoCard = ({ video, onVideoClick, currentUser }: { video: any, onVideoCl
 const ShortsView = ({ videos, startingVideoId, onVideoStatsUpdate, currentUserId, currentUser }: {
     videos: any[],
     startingVideoId?: string | null,
-    onVideoStatsUpdate?: (videoId: string, updates: { views?: number, likes?: number, commentsCount?: number }) => void,
+    onVideoStatsUpdate?: (videoId: string, updates: { views?: number, likes?: number, commentsCount?: number, rating?: number, ratingCount?: number }) => void,
     currentUserId?: string,
     currentUser?: any
 }) => {

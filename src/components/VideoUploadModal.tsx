@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { MdClose, MdUpload, MdCheckCircle, MdError, MdVideoCall } from 'react-icons/md';
-// @ts-ignore
-import ImageKit from 'imagekit-javascript';
+import { useVideoConverter, ConversionProgress } from './VideoConverter';
+import { useUploadManager, UploadProgress } from './UploadManager';
 import { API_BASE_URL } from '@/lib/config';
 
 interface VideoUploadModalProps {
@@ -17,40 +17,60 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [progress, setProgress] = useState(0);
-  const [imagekit, setImagekit] = useState<any>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [videoTitle, setVideoTitle] = useState('');
   const [videoDescription, setVideoDescription] = useState('');
+  const [isConverting, setIsConverting] = useState(false);
+  const [needsConversion, setNeedsConversion] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Use our new hooks
+  const { detectFormat, convertVideo, needsConversion: checkNeedsConversion, initError } = useVideoConverter();
+  const { uploadWithRetry, saveVideoMetadata } = useUploadManager();
 
   useEffect(() => {
     if (!isOpen) return;
 
-    // Fetch ImageKit config
-    fetch(`${API_BASE_URL}/imagekit-config`)
-      .then(res => res.json())
-      .then(data => {
-        const ik = new ImageKit({
-          publicKey: data.publicKey,
-          urlEndpoint: data.urlEndpoint
-        });
-        setImagekit(ik);
-      })
-      .catch(err => {
-        console.error('❌ Failed to fetch ImageKit config:', err);
-        setError('Failed to connect to server. Please check ImageKit configuration in .env');
-      });
-  }, [isOpen]);
+    // Reset state when modal opens
+    setError(null);
+    setStatusMessage('');
+    setProgress(0);
+    setIsConverting(false);
+    setNeedsConversion(false);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Check for initialization errors
+    if (initError) {
+      setError(initError);
+    }
+  }, [isOpen, initError]);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     
     if (file && file.type.startsWith('video/')) {
+      // Check file size first (50MB limit)
+      const maxSizeInBytes = 50 * 1024 * 1024; // 50MB in bytes
+      if (file.size > maxSizeInBytes) {
+        setError('File size too large. Please upload a video smaller than 50MB.');
+        setSelectedFile(null);
+        if (e.target) e.target.value = '';
+        return;
+      }
+
       // Create video element to check dimensions
       const video = document.createElement('video');
       video.preload = 'metadata';
+      
+      let blobUrl: string | null = null;
 
-      video.onloadedmetadata = () => {
+      const cleanup = () => {
+        if (blobUrl) {
+          URL.revokeObjectURL(blobUrl);
+          blobUrl = null;
+        }
+      };
+
+      video.onloadedmetadata = async () => {
         const width = video.videoWidth;
         const height = video.videoHeight;
         const aspectRatio = width / height;
@@ -61,7 +81,7 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
           setError('Video is too short. Please upload a video between 40 seconds and 2 minutes.');
           setSelectedFile(null);
           if (e.target) e.target.value = '';
-          URL.revokeObjectURL(video.src);
+          cleanup();
           return;
         }
 
@@ -69,7 +89,7 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
           setError('Video is too long. Please upload a video between 40 seconds and 2 minutes.');
           setSelectedFile(null);
           if (e.target) e.target.value = '';
-          URL.revokeObjectURL(video.src);
+          cleanup();
           return;
         }
 
@@ -78,36 +98,123 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
           setError('Landscape videos are not allowed. Please record in portrait mode (9:16 ratio).');
           setSelectedFile(null);
           if (e.target) e.target.value = '';
-          URL.revokeObjectURL(video.src);
+          cleanup();
           return;
         }
 
-        // Video passed all validations
-        const minutes = Math.floor(duration / 60);
-        const seconds = Math.floor(duration % 60);
-        const durationText = minutes > 0 ? `${minutes}:${seconds.toString().padStart(2, '0')}` : `${seconds}s`;
+        // Video passed basic validations, now check format
+        try {
+          const format = await detectFormat(file);
+          const needsConv = checkNeedsConversion(format);
+          setNeedsConversion(needsConv);
+
+          const minutes = Math.floor(duration / 60);
+          const seconds = Math.floor(duration % 60);
+          const durationText = minutes > 0 ? `${minutes}:${seconds.toString().padStart(2, '0')}` : `${seconds}s`;
+          
+          setSelectedFile(file);
+          setError(null);
+          
+          if (needsConv) {
+            setStatusMessage(`✅ Video accepted: ${durationText} duration, portrait format. Will be converted to MP4.`);
+          } else {
+            setStatusMessage(`✅ Video accepted: ${durationText} duration, portrait format, MP4 format.`);
+          }
+        } catch (formatError) {
+          console.warn('Format detection failed, assuming conversion needed:', formatError);
+          setNeedsConversion(true);
+          
+          const minutes = Math.floor(duration / 60);
+          const seconds = Math.floor(duration % 60);
+          const durationText = minutes > 0 ? `${minutes}:${seconds.toString().padStart(2, '0')}` : `${seconds}s`;
+          
+          setSelectedFile(file);
+          setError(null);
+          setStatusMessage(`✅ Video accepted: ${durationText} duration, portrait format. Will be converted to MP4.`);
+        }
         
-        setSelectedFile(file);
-        setError(null);
-        setStatusMessage(`✅ Video accepted: ${durationText} duration, portrait format`);
-        URL.revokeObjectURL(video.src);
+        // Clean up after a short delay to ensure video element is done
+        setTimeout(cleanup, 100);
       };
 
       video.onerror = () => {
         setSelectedFile(file);
         setError(null);
-        URL.revokeObjectURL(video.src);
+        setNeedsConversion(true); // Assume needs conversion if we can't read metadata
+        setStatusMessage('✅ Video accepted. Will be converted to MP4.');
+        cleanup();
       };
 
-      video.src = URL.createObjectURL(file);
+      // Create blob URL and assign it
+      blobUrl = URL.createObjectURL(file);
+      video.src = blobUrl;
     } else {
       setError('Please select a valid video file');
       setSelectedFile(null);
     }
   };
 
+  const generateThumbnail = async (videoBlob: Blob): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) {
+        reject(new Error('Canvas context not available'));
+        return;
+      }
+
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+
+      video.onloadedmetadata = () => {
+        // Set canvas size to video dimensions
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        // Seek to 1 second to get a better frame than the first black frame
+        video.currentTime = 1;
+      };
+
+      video.onseeked = () => {
+        try {
+          // Draw the current frame to canvas
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          // Convert canvas to blob (JPEG format, 85% quality)
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error('Failed to generate thumbnail blob'));
+              }
+              // Clean up
+              URL.revokeObjectURL(video.src);
+            },
+            'image/jpeg',
+            0.85
+          );
+        } catch (error) {
+          URL.revokeObjectURL(video.src);
+          reject(error);
+        }
+      };
+
+      video.onerror = () => {
+        URL.revokeObjectURL(video.src);
+        reject(new Error('Failed to load video for thumbnail generation'));
+      };
+
+      // Load the video
+      video.src = URL.createObjectURL(videoBlob);
+    });
+  };
+
   const handleUpload = async () => {
-    if (!selectedFile || !imagekit) return;
+    if (!selectedFile) return;
 
     if (!videoTitle.trim() || !videoDescription.trim()) {
       setError('Please fill in both title and description');
@@ -118,116 +225,144 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
     setError(null);
     setProgress(0);
     setUploadSuccess(false);
-    setStatusMessage('Uploading...');
+    setStatusMessage('Starting upload...');
 
     try {
-      const authResponse = await fetch(`${API_BASE_URL}/imagekit-auth`);
-      const authData = await authResponse.json();
+      let fileToUpload: Blob = selectedFile;
+      let fileName = selectedFile.name;
 
-      const uploadOptions = {
-        file: selectedFile,
-        fileName: selectedFile.name,
-        folder: '/pitch-sultan-videos',
-        useUniqueFileName: true,
-        tags: ['pitch-sultan', 'battle'],
-        token: authData.token,
-        signature: authData.signature,
-        expire: authData.expire
-      };
+      // Step 1: Convert video if needed
+      if (needsConversion) {
+        setIsConverting(true);
+        setStatusMessage('Converting video to MP4...');
+        
+        fileToUpload = await convertVideo(selectedFile, (conversionProgress: ConversionProgress) => {
+          setProgress(Math.round(conversionProgress.progress * 0.6)); // Conversion takes 60% of progress
+          setStatusMessage(conversionProgress.message);
+        });
 
-      imagekit.upload(
-        uploadOptions,
-        async (err: any, result: any) => {
-          if (err) {
-            setError('Upload failed: ' + (err.message || 'Unknown error'));
-            setUploading(false);
-            return;
+        // Update filename to .mp4
+        fileName = fileName.replace(/\.[^/.]+$/, '.mp4');
+        setIsConverting(false);
+      }
+
+      // Step 2: Generate thumbnail from video
+      setStatusMessage('Generating thumbnail...');
+      setProgress(needsConversion ? 60 : 5);
+      
+      let thumbnailUrl: string | undefined;
+      try {
+        const thumbnailBlob = await generateThumbnail(fileToUpload);
+        const thumbnailFileName = fileName.replace(/\.[^/.]+$/, '.jpg');
+        
+        setStatusMessage('Uploading thumbnail...');
+        thumbnailUrl = await uploadWithRetry(
+          thumbnailBlob,
+          thumbnailFileName,
+          'image/jpeg',
+          (uploadProgress: UploadProgress) => {
+            const baseProgress = needsConversion ? 60 : 5;
+            const thumbnailProgressPercent = Math.round((uploadProgress.percentage * 0.1));
+            setProgress(baseProgress + thumbnailProgressPercent);
           }
+        );
+      } catch (thumbnailError) {
+        console.warn('Thumbnail generation failed, continuing without thumbnail:', thumbnailError);
+        // Continue without thumbnail - not critical
+      }
 
-          // Save to database
-          try {
-            if (!currentUserId) {
-              setProgress(100);
-              setStatusMessage('Upload successful!');
-              setUploadSuccess(true);
-              setUploading(false);
-
-              if (onUploadSuccess) {
-                onUploadSuccess({
-                  fileId: result.fileId,
-                  name: result.name,
-                  url: result.url,
-                  uploadedAt: new Date().toISOString()
-                });
-              }
-
-              // Show approval notification for non-user uploads too
-              setTimeout(() => {
-                alert('🎉 Video uploaded successfully!\n\n📋 Your video will appear on the feed once approved by our admin team.');
-              }, 500);
-
-              setTimeout(() => handleClose(), 3000);
-              return;
-            }
-
-            const saveResponse = await fetch(`${API_BASE_URL}/pitch-sultan/videos`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                secUserId: currentUserId,
-                fileId: result.fileId,
-                url: result.url,
-                fileName: result.name,
-                title: videoTitle,
-                description: videoDescription,
-                thumbnailUrl: result.thumbnailUrl || null,
-                fileSize: result.size || null,
-                tags: result.tags || []
-              })
-            });
-
-            if (!saveResponse.ok) {
-              throw new Error('Failed to save video to database');
-            }
-
-            const savedVideo = await saveResponse.json();
-            setProgress(100);
-            setStatusMessage('Upload successful!');
-            setUploadSuccess(true);
-            setUploading(false);
-
-            if (onUploadSuccess) {
-              onUploadSuccess(savedVideo.data);
-            }
-
-            // Show approval notification alert
-            setTimeout(() => {
-              alert('🎉 Video uploaded successfully!\n\n📋 Your video is now under review and will appear on the feed once approved by our admin team.\n\n👀 You can check the status in your Profile > Manage tab.');
-            }, 500);
-
-            // Auto close after
-            setTimeout(() => handleClose(), 3000);
-          } catch (dbError: any) {
-            setError('Video uploaded but failed to save: ' + dbError.message);
-            setUploading(false);
-          }
-        },
-        (progressEvent: any) => {
-          if (progressEvent && progressEvent.total) {
-            const percentComplete = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-            setProgress(percentComplete);
-            setStatusMessage(`Uploading: ${percentComplete}%`);
-          }
+      // Step 3: Upload video to S3
+      setStatusMessage('Uploading video to cloud...');
+      const finalFileUrl = await uploadWithRetry(
+        fileToUpload,
+        fileName,
+        'video/mp4',
+        (uploadProgress: UploadProgress) => {
+          const baseProgress = needsConversion ? 70 : 15;
+          const uploadProgressPercent = Math.round((uploadProgress.percentage * (needsConversion ? 0.25 : 0.8)));
+          setProgress(baseProgress + uploadProgressPercent);
+          setStatusMessage(`Uploading video: ${uploadProgress.percentage}%`);
         }
       );
-    } catch (err: any) {
+
+      // Step 4: Save metadata to database
+      setStatusMessage('Saving video information...');
+      setProgress(95);
+
+      if (!currentUserId) {
+        // No user ID - just show success
+        setProgress(100);
+        setStatusMessage('Upload successful!');
+        setUploadSuccess(true);
+        setUploading(false);
+
+        if (onUploadSuccess) {
+          onUploadSuccess({
+            url: finalFileUrl,
+            fileName: fileName,
+            uploadedAt: new Date().toISOString()
+          });
+        }
+
+        setTimeout(() => {
+          alert('🎉 Video uploaded successfully!\n\n📋 Your video will appear on the feed once approved by our admin team.');
+        }, 500);
+
+        setTimeout(() => handleClose(), 3000);
+        return;
+      }
+
+      // Save to database with user ID
+      const savedVideo = await saveVideoMetadata({
+        url: finalFileUrl,
+        fileName: fileName,
+        title: videoTitle,
+        description: videoDescription,
+        fileSize: selectedFile.size,
+        thumbnailUrl: thumbnailUrl // Include the generated thumbnail URL
+      }, currentUserId);
+
+      setProgress(100);
+      setStatusMessage('Upload successful!');
+      setUploadSuccess(true);
       setUploading(false);
-      setError(err.message);
+
+      if (onUploadSuccess) {
+        onUploadSuccess(savedVideo);
+      }
+
+      // Show success notification
+      setTimeout(() => {
+        alert('🎉 Video uploaded successfully!\n\n📋 Your video is now under review and will appear on the feed once approved by our admin team.\n\n👀 You can check the status in your Profile > Manage tab.');
+      }, 500);
+
+      // Auto close after success
+      setTimeout(() => handleClose(), 3000);
+
+    } catch (err: any) {
+      console.error('Upload failed:', err);
+      setUploading(false);
+      setIsConverting(false);
+      
+      // Provide more helpful error messages
+      let errorMessage = 'Upload failed. Please try again.';
+      
+      if (err.message && err.message.includes('Video conversion')) {
+        errorMessage = '⚠️ Video conversion is currently unavailable.\n\n💡 Try uploading an MP4 file instead, or check your internet connection and refresh the page.';
+      } else if (err.message && err.message.includes('FFmpeg')) {
+        errorMessage = '⚠️ Video converter is having issues.\n\n💡 Please try uploading an MP4 file directly, or refresh the page and try again.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      setStatusMessage('');
+      setProgress(0);
     }
   };
 
   const handleClose = () => {
-    if (!uploading) {
+    if (!uploading && !isConverting) {
       setSelectedFile(null);
       setError(null);
       setStatusMessage('');
@@ -235,6 +370,8 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
       setUploadSuccess(false);
       setVideoTitle('');
       setVideoDescription('');
+      setIsConverting(false);
+      setNeedsConversion(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
       onClose();
     }
@@ -256,7 +393,7 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
               <p className="text-gray-400 text-xs sm:text-sm">Share your pitch with the community</p>
             </div>
           </div>
-          {!uploading && (
+          {!uploading && !isConverting && (
             <button
               onClick={handleClose}
               className="text-gray-400 hover:text-white transition p-2 -m-2"
@@ -283,12 +420,16 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
                 <span>Portrait mode only (9:16 ratio)</span>
               </div>
               <div className="flex items-center gap-2">
-                <span>☀️</span>
-                <span>Good lighting & clear audio</span>
+                <span>📁</span>
+                <span>File size: Maximum 50MB</span>
               </div>
               <div className="flex items-center gap-2">
-                <span>📐</span>
-                <span>Keep camera steady</span>
+                <span>🔄</span>
+                <span>Auto-converts to MP4 for compatibility</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>☀️</span>
+                <span>Good lighting & clear audio</span>
               </div>
             </div>
           </div>
@@ -339,7 +480,7 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
                 >
                   <MdUpload className="text-3xl text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-300 text-sm mb-1">Tap to select video</p>
-                  <p className="text-gray-500 text-xs">Portrait mode only (9:16)</p>
+                  <p className="text-gray-500 text-xs">Portrait mode • Max 50MB</p>
                 </div>
               ) : (
                 <div className="bg-gray-800 rounded-xl p-4 flex items-center gap-3">
@@ -369,7 +510,7 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
                 type="file"
                 accept="video/*"
                 onChange={handleFileSelect}
-                disabled={uploading || !imagekit}
+                disabled={uploading || isConverting}
                 className="hidden"
               />
             </div>
@@ -420,20 +561,20 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
           <div className="flex gap-3">
             <button
               onClick={handleClose}
-              disabled={uploading}
+              disabled={uploading || isConverting}
               className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 px-4 rounded-xl transition disabled:opacity-50 text-sm"
             >
               Cancel
             </button>
             <button
               onClick={handleUpload}
-              disabled={!selectedFile || uploading || !imagekit || uploadSuccess || !!error || !videoTitle.trim() || !videoDescription.trim()}
+              disabled={!selectedFile || uploading || isConverting || uploadSuccess || !!error || !videoTitle.trim() || !videoDescription.trim()}
               className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-3 px-4 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
             >
-              {uploading ? (
+              {uploading || isConverting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Uploading...
+                  {isConverting ? 'Converting...' : 'Uploading...'}
                 </>
               ) : uploadSuccess ? (
                 <>

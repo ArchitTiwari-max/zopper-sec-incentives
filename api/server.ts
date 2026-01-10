@@ -7,6 +7,7 @@ import crypto from 'crypto'
 import { PrismaClient } from '@prisma/client'
 import multer from 'multer'
 import { utils, read } from 'xlsx'
+import { s3Service } from './services/s3Service.js'
 
 const app = express()
 const prisma = new PrismaClient({ log: ['warn', 'error'] })
@@ -4418,12 +4419,15 @@ app.post('/api/pitch-sultan/videos', async (req, res) => {
     console.log('🔍 POST /api/pitch-sultan/videos received:', { secUserId, fileId, fileName });
     console.log('🔍 secUserId type:', typeof secUserId, 'length:', secUserId?.length);
 
-    if (!secUserId || !fileId || !url || !fileName) {
+    if (!secUserId || !url || !fileName) {
       return res.status(400).json({
         success: false,
-        error: "Missing required fields: secUserId, fileId, url, fileName"
+        error: "Missing required fields: secUserId, url, fileName"
       })
     }
+
+    // fileId is optional now (S3 uploads don't have fileId, ImageKit uploads do)
+    console.log('📹 Video upload type:', fileId ? 'ImageKit' : 'S3');
 
     // Generate serial number
     const lastVideo = await prisma.pitchSultanVideo.findFirst({
@@ -4432,15 +4436,19 @@ app.post('/api/pitch-sultan/videos', async (req, res) => {
     })
     const nextSerialNumber = (lastVideo?.serialNumber || 1000) + 1
 
+    // For S3 videos without a thumbnail, use the video URL itself as poster
+    // The browser will show the first frame
+    const finalThumbnailUrl = thumbnailUrl || (url.includes('.s3.') || url.includes('amazonaws.com') ? url : null);
+
     const video = await prisma.pitchSultanVideo.create({
       data: {
         secUserId,
-        fileId,
+        fileId: fileId || null, // Optional for S3 uploads
         url,
         fileName,
         title: title || null,
         description: description || null,
-        thumbnailUrl: thumbnailUrl || null,
+        thumbnailUrl: finalThumbnailUrl,
         fileSize: fileSize || null,
         duration: duration || null,
         tags: tags || [],
@@ -4721,7 +4729,7 @@ app.patch('/api/pitch-sultan/videos/:id/toggle-active', async (req, res) => {
     })
 
     console.log(`✅ Video ${id} ${newActiveStatus ? 'activated' : 'deactivated'} by sultan admin`)
-    
+
     res.json({
       success: true,
       message: `Video ${newActiveStatus ? 'activated' : 'deactivated'} successfully`,
@@ -4824,6 +4832,214 @@ app.get('/api/imagekit-auth', (req, res) => {
     expire,
     signature
   })
+})
+
+/**
+ * POST /api/upload-url
+ * Generate pre-signed S3 URL for video upload
+ */
+app.post('/api/upload-url', async (req, res) => {
+  try {
+    // Authentication - following existing pattern
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    // Validate request body
+    const { filename, mimeType } = req.body
+    if (!filename || !mimeType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: filename, mimeType'
+      })
+    }
+
+    // Check if S3 service is configured
+    if (!s3Service.isConfigured()) {
+      return res.status(500).json({
+        success: false,
+        message: 'S3 configuration not found. Please set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_S3_BUCKET_NAME in .env'
+      })
+    }
+
+    // Generate pre-signed URL
+    const uploadResponse = await s3Service.generateUploadUrl(
+      decoded.userId,
+      filename,
+      mimeType
+    )
+
+    console.log('✅ S3 upload URL generated:', {
+      uploadUrl: uploadResponse.uploadUrl?.substring(0, 50) + '...',
+      finalFileUrl: uploadResponse.finalFileUrl,
+      expiresAt: uploadResponse.expiresAt
+    });
+
+    res.json({
+      success: true,
+      ...uploadResponse
+    })
+
+  } catch (error) {
+    console.error('❌ S3 upload URL generation failed:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate upload URL'
+    })
+  }
+})
+
+/**
+ * POST /api/signed-video-url
+ * Generate signed GET URL for viewing private S3 videos
+ */
+app.post('/api/signed-video-url', async (req, res) => {
+  try {
+    const { url } = req.body
+
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required field: url'
+      })
+    }
+
+    // Check if it's an S3 URL
+    if (!url.includes('.s3.') && !url.includes('amazonaws.com')) {
+      // Not an S3 URL, return as-is (e.g., ImageKit)
+      return res.json({
+        success: true,
+        signedUrl: url,
+        expiresAt: Date.now() + (3600 * 1000) // 1 hour
+      })
+    }
+
+    // Extract S3 key from URL
+    const s3Key = s3Service.extractS3Key(url)
+    if (!s3Key) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid S3 URL format'
+      })
+    }
+
+    // Generate signed URL
+    const signedUrlResponse = await s3Service.generateViewUrl(s3Key)
+
+    res.json({
+      success: true,
+      ...signedUrlResponse
+    })
+
+  } catch (error) {
+    console.error('❌ Signed URL generation failed:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate signed URL'
+    })
+  }
+})
+
+/**
+ * POST /api/upload-proxy
+ * Proxy upload to S3 to bypass CORS issues
+ */
+app.post('/api/upload-proxy', async (req, res) => {
+  try {
+    // Authentication
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      })
+    }
+
+    // Get file from request body (base64 or buffer)
+    const { fileData, filename, mimeType } = req.body
+    if (!fileData || !filename || !mimeType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: fileData, filename, mimeType'
+      })
+    }
+
+    // Convert base64 to buffer if needed
+    let buffer: Buffer
+    if (typeof fileData === 'string') {
+      // Remove data URL prefix if present
+      const base64Data = fileData.replace(/^data:.*,/, '')
+      buffer = Buffer.from(base64Data, 'base64')
+    } else {
+      buffer = Buffer.from(fileData)
+    }
+
+    // Generate S3 key
+    const timestamp = Date.now()
+    const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_')
+    const s3Key = `videos/${decoded.userId}/${timestamp}-${sanitizedFilename}.mp4`
+
+    // Upload directly to S3 via backend
+    const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3')
+
+    const s3Client = new S3Client({
+      region: process.env.AWS_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    })
+
+    const command = new PutObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET_NAME!,
+      Key: s3Key,
+      Body: buffer,
+      ContentType: 'video/mp4',
+    })
+
+    await s3Client.send(command)
+
+    // Generate final URL
+    const finalFileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`
+
+    res.json({
+      success: true,
+      finalFileUrl
+    })
+
+  } catch (error) {
+    console.error('❌ Proxy upload failed:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload file'
+    })
+  }
 })
 
 /**
@@ -4978,8 +5194,8 @@ app.delete('/api/pitch-sultan/comments/:id', async (req, res) => {
       where: { id: commentId }
     })
 
-    // Update video's comment count
-    await prisma.pitchSultanVideo.update({
+    // Update video's comment count and get the updated count
+    const updatedVideo = await prisma.pitchSultanVideo.update({
       where: { id: comment.videoId },
       data: {
         commentsCount: {
@@ -4989,10 +5205,11 @@ app.delete('/api/pitch-sultan/comments/:id', async (req, res) => {
     })
 
     console.log(`✅ Comment ${commentId} permanently deleted by sultan admin`)
-    
+
     res.json({
       success: true,
-      message: 'Comment deleted successfully'
+      message: 'Comment deleted successfully',
+      commentsCount: updatedVideo.commentsCount
     })
 
   } catch (error) {

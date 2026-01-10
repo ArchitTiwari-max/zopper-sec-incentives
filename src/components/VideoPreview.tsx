@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MdPlayArrow, MdMoreVert, MdShare, MdFlag } from 'react-icons/md';
 import { VideoStats } from './VideoStats';
+import { getThumbnailUrl } from '@/utils/videoUtils';
 
 interface VideoPreviewProps {
   video: {
@@ -43,17 +44,6 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
 
   const uploaderName = video.secUser?.name || `SEC ${video.secUser?.phone?.slice(-4) || 'User'}`;
   const uploaderAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(uploaderName)}&background=ffd700&color=000`;
-
-  // Helper to get efficient thumbnail or force MP4 for video
-  const getThumbnailUrl = (url: string) => {
-    if (!url) return '';
-    if (url.includes('ik.imagekit.io')) {
-      // Use the standard ik-thumbnail.jpg endpoint which works for all video files
-      // This is safer than transformation parameters for thumbnails
-      return `${url}/ik-thumbnail.jpg`;
-    }
-    return url;
-  };
 
   const formatTimeAgo = (date: string) => {
     const now = new Date();
@@ -101,15 +91,22 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
   return (
     <div className="flex flex-col mb-6 cursor-pointer group" onClick={handleVideoClick}>
       <div className="relative w-full aspect-video bg-gray-800 overflow-hidden rounded-lg">
-        {/* Use Image for Thumbnail - much better for mobile performance and battery */}
+        {/* Use img tag for JPG thumbnails - much better for mobile */}
         <img
-          src={getThumbnailUrl(video.thumbnailUrl || video.url)}
+          src={getThumbnailUrl(video.url, video.thumbnailUrl)}
           alt={video.title || 'Video thumbnail'}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
           loading="lazy"
           onError={(e) => {
-            // Fallback if image fails - try to use video tag or placeholder
-            e.currentTarget.style.display = 'none';
+            // Fallback: if thumbnail fails, try using video URL
+            console.error('Thumbnail failed to load, trying video URL');
+            const target = e.currentTarget;
+            if (!target.src.includes('.mp4')) {
+              target.src = video.url;
+            } else {
+              // If video URL also fails, hide the image
+              target.style.display = 'none';
+            }
           }}
         />
 

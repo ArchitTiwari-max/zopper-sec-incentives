@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-    MdVideocam, MdStop, MdFlipCameraIos, MdClose, 
+import {
+    MdVideocam, MdStop, MdFlipCameraIos, MdClose,
     MdFiberManualRecord, MdPause, MdPlayArrow,
     MdCheck, MdRefresh
 } from 'react-icons/md';
@@ -19,6 +19,7 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({
     const [isRecording, setIsRecording] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [recordedVideo, setRecordedVideo] = useState<Blob | null>(null);
+    const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(null);
     const [recordingTime, setRecordingTime] = useState(0);
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
@@ -63,7 +64,7 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({
     const initializeCamera = async () => {
         try {
             setError(null);
-            
+
             // Stop existing stream
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
@@ -75,13 +76,13 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({
                     facingMode,
                     width: { ideal: 720 },
                     height: { ideal: 1280 }, // 9:16 ratio
-                    aspectRatio: { ideal: 9/16 }
+                    aspectRatio: { ideal: 9 / 16 }
                 },
                 audio: true
             });
 
             setStream(mediaStream);
-            
+
             if (videoRef.current) {
                 videoRef.current.srcObject = mediaStream;
             }
@@ -101,6 +102,11 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({
         }
         if (timerRef.current) {
             clearInterval(timerRef.current);
+        }
+        // Clean up blob URL
+        if (recordedVideoUrl) {
+            URL.revokeObjectURL(recordedVideoUrl);
+            setRecordedVideoUrl(null);
         }
         setIsRecording(false);
         setIsPaused(false);
@@ -128,6 +134,10 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({
             mediaRecorder.onstop = () => {
                 const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
                 setRecordedVideo(videoBlob);
+
+                // Create blob URL for preview
+                const blobUrl = URL.createObjectURL(videoBlob);
+                setRecordedVideoUrl(blobUrl);
             };
 
             mediaRecorderRef.current = mediaRecorder;
@@ -165,6 +175,11 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({
     };
 
     const retakeVideo = () => {
+        // Clean up previous blob URL
+        if (recordedVideoUrl) {
+            URL.revokeObjectURL(recordedVideoUrl);
+            setRecordedVideoUrl(null);
+        }
         setRecordedVideo(null);
         setRecordingTime(0);
         chunksRef.current = [];
@@ -195,7 +210,7 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({
                 >
                     <MdClose className="text-2xl" />
                 </button>
-                
+
                 <div className="text-white text-center">
                     <h2 className="font-semibold">Record Short</h2>
                     <p className="text-xs text-gray-400">Hold phone vertically</p>
@@ -213,7 +228,7 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({
             {/* Camera Preview */}
             <div className="flex-1 flex items-center justify-center bg-black relative">
                 {/* 9:16 Aspect Ratio Container */}
-                <div 
+                <div
                     className="relative w-full max-w-[400px] bg-black overflow-hidden"
                     style={{ aspectRatio: '9/16' }}
                 >
@@ -228,7 +243,7 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({
                         />
                     ) : (
                         <video
-                            src={URL.createObjectURL(recordedVideo)}
+                            src={recordedVideoUrl || ''}
                             controls
                             className="w-full h-full object-cover"
                         />
@@ -243,7 +258,7 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({
                                     {formatTime(recordingTime)}
                                 </span>
                             </div>
-                            
+
                             {isPaused && (
                                 <div className="bg-yellow-600 px-3 py-1 rounded-full">
                                     <span className="text-white text-sm">PAUSED</span>
@@ -303,11 +318,10 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({
                         {/* Record/Stop Button */}
                         <button
                             onClick={isRecording ? stopRecording : startRecording}
-                            className={`p-6 rounded-full transition-all duration-200 ${
-                                isRecording 
-                                    ? 'bg-red-600 hover:bg-red-700 scale-110' 
-                                    : 'bg-red-500 hover:bg-red-600'
-                            }`}
+                            className={`p-6 rounded-full transition-all duration-200 ${isRecording
+                                ? 'bg-red-600 hover:bg-red-700 scale-110'
+                                : 'bg-red-500 hover:bg-red-600'
+                                }`}
                             disabled={!!error}
                         >
                             {isRecording ? (

@@ -141,13 +141,13 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         // Remove comment from local state
         setComments(prev => prev.filter(comment => comment.id !== commentId));
-        // Notify parent about comment count change
+        // Notify parent about comment count change with the updated count from server
         if (onCommentAdded) {
-          onCommentAdded();
+          onCommentAdded(data.commentsCount);
         }
       } else {
         alert(data.error || 'Failed to delete comment');
@@ -207,7 +207,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                     {comment.comment}
                   </p>
                 </div>
-                
+
                 {/* Sultan Admin Delete Button */}
                 {currentUser && currentUser.isSultanAdmin === true && (
                   <button

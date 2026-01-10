@@ -22,6 +22,11 @@
     "vercel-build": "npm run build"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.966.0",
+    "@aws-sdk/s3-request-presigner": "^3.966.0",
+    "@ffmpeg/core": "^0.12.6",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@prisma/client": "^6.17.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.9",

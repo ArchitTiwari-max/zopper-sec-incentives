@@ -9,6 +9,7 @@ import { CommentsModal } from './CommentsModal';
 import { RatingModal } from './RatingModal';
 import { StarRating } from './StarRating';
 import { isSultanAdmin } from '@/lib/auth';
+import { getThumbnailUrl, getOptimizedVideoUrl } from '@/utils/videoUtils';
 
 interface Video {
     id: string;
@@ -40,7 +41,7 @@ interface ShortsPlayerProps {
     videos?: Video[];
     onVideoChange?: (video: Video) => void;
     startingVideoId?: string; // Add this to start from a specific video
-    onVideoStatsUpdate?: (videoId: string, updates: { views?: number, likes?: number, commentsCount?: number }) => void;
+    onVideoStatsUpdate?: (videoId: string, updates: { views?: number, likes?: number, commentsCount?: number, rating?: number, ratingCount?: number }) => void;
     currentUserId?: string; // Add current user ID for interactions
     currentUser?: any; // Add current user data for sultanadmin check
 }
@@ -68,10 +69,12 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     const [showAdminMenu, setShowAdminMenu] = useState(false);
     const [showUserTooltip, setShowUserTooltip] = useState<string | null>(null); // For user tooltip (changed from hoveredUser)
     const [isLayoutReady, setIsLayoutReady] = useState(false); // Track layout readiness
+    const [audioUnlocked, setAudioUnlocked] = useState(false); // Track site-wide audio permission
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
     const viewTimers = useRef<Map<string, NodeJS.Timeout>>(new Map()); // Track view timers
     const programmaticScrollVideoId = useRef<string | null>(null); // Track which video was programmatically scrolled to
+    const audioContextRef = useRef<AudioContext | null>(null); // Audio context for site-wide permission
 
     // Fetch videos if not provided as props
     useEffect(() => {
@@ -89,13 +92,12 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
             // Check if header exists and is in position
             const header = document.querySelector('[class*="fixed"][class*="top-0"]');
             const hasHeader = header && header.getBoundingClientRect().top === 0;
-            
+
             if (hasHeader) {
                 // Wait for next frame to ensure layout is complete
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         setIsLayoutReady(true);
-                        console.log('🎯 Layout ready - header positioned correctly');
                     });
                 });
             } else {
@@ -109,18 +111,38 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         return () => clearTimeout(timer);
     }, []);
 
+    // Initialize AudioContext for site-wide audio permission
+    const unlockAudio = async () => {
+        try {
+            if (!audioContextRef.current) {
+                audioContextRef.current = new AudioContext();
+            }
+
+            if (audioContextRef.current.state === 'suspended') {
+                await audioContextRef.current.resume();
+            }
+
+            setAudioUnlocked(true);
+            console.log('🔊 Audio unlocked for entire site');
+            return true;
+        } catch (error) {
+            console.error('❌ Audio unlock failed:', error);
+            return false;
+        }
+    };
+
     const fetchVideos = async () => {
         try {
             setLoading(true);
             console.log('📡 Fetching videos for shorts:', `${API_BASE_URL}/pitch-sultan/videos`);
-            
+
             // Include authorization header for sultan admin
             const token = localStorage.getItem('token');
             const headers: any = {};
             if (token) {
                 headers.Authorization = `Bearer ${token}`;
             }
-            
+
             const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?limit=50`, {
                 headers
             });
@@ -143,28 +165,6 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 
     // Set starting video index based on startingVideoId and scroll to it
     const hasScrolledRef = useRef(false);
-
-    // Helpers for ImageKit optimization
-    // 1. Get Thumbnail for poster (prevents black flash)
-    const getThumbnailUrl = (url: string) => {
-        if (!url) return '';
-        if (url.includes('ik.imagekit.io')) {
-            // Use the standard ik-thumbnail.jpg endpoint
-            return `${url}/ik-thumbnail.jpg`;
-        }
-        return url;
-    };
-
-    // 2. Force MP4 format for iOS/Mobile compatibility
-    const getOptimizedVideoUrl = (url: string) => {
-        if (!url) return '';
-        if (url.includes('ik.imagekit.io')) {
-            const separator = url.includes('?') ? '&' : '?';
-            // tr=f-mp4 forces conversion to MP4 format
-            return `${url}${separator}tr=f-mp4`;
-        }
-        return url;
-    };
 
     // Reset scroll ref when startingVideoId changes
     useEffect(() => {
@@ -200,7 +200,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                 block: 'start'
                             });
                             console.log('📍 Scrolled to video element:', startIndex);
-                            
+
                             // Reset programmatic scroll flag when scroll animation completes
                             // Use a longer timeout to ensure all intersection observer events complete
                             setTimeout(() => {
@@ -215,7 +215,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                 behavior: 'smooth'
                             });
                             console.log('📍 Fallback scroll to position:', scrollTop);
-                            
+
                             // Reset programmatic scroll flag when scroll animation completes
                             setTimeout(() => {
                                 console.log('🔧 isProgrammaticScroll set to FALSE (fallback complete)');
@@ -235,98 +235,22 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         }
     }, [currentIndex, videos, onVideoChange]);
 
-    // Initialize video refs array when videos change
+    // Initialize playing states for all videos when videos change
     useEffect(() => {
-        videoRefs.current = videoRefs.current.slice(0, videos.length);
-
-        // Initialize playing states for all videos (default to true since they auto-play)
-        const initialPlayingStates: { [key: string]: boolean } = {};
-        videos.forEach(video => {
-            initialPlayingStates[video.id] = true; // Default to playing
-        });
-        setVideoPlayingStates(initialPlayingStates);
-
-        // Add progress tracking to all videos
-        videoRefs.current.forEach((video, index) => {
-            if (video && videos[index]) {
-                const videoId = videos[index].id;
-
-                // Remove existing listeners to avoid duplicates
-                if ((video as any).progressHandler) {
-                    video.removeEventListener('timeupdate', (video as any).progressHandler);
-                }
-                if ((video as any).metadataHandler) {
-                    video.removeEventListener('loadedmetadata', (video as any).metadataHandler);
-                }
-
-                // Add progress tracking
-                const progressHandler = () => {
-                    if (video.duration) {
-                        const progress = (video.currentTime / video.duration) * 100;
-                        setVideoProgress(prev => ({
-                            ...prev,
-                            [videoId]: progress
-                        }));
-                    }
-                };
-
-                // Reset progress when video metadata loads
-                const metadataHandler = () => {
-                    setVideoProgress(prev => ({
-                        ...prev,
-                        [videoId]: 0
-                    }));
-                };
-
-                // Store handlers on video element for cleanup
-                (video as any).progressHandler = progressHandler;
-                (video as any).metadataHandler = metadataHandler;
-
-                // Add play/pause event listeners to track actual video state
-                const playHandler = () => {
-                    setVideoPlayingStates(prev => ({
-                        ...prev,
-                        [videoId]: true
-                    }));
-                };
-
-                const pauseHandler = () => {
-                    setVideoPlayingStates(prev => ({
-                        ...prev,
-                        [videoId]: false
-                    }));
-                };
-
-                (video as any).playHandler = playHandler;
-                (video as any).pauseHandler = pauseHandler;
-
-                video.addEventListener('timeupdate', progressHandler);
-                video.addEventListener('loadedmetadata', metadataHandler);
-                video.addEventListener('play', playHandler);
-                video.addEventListener('pause', pauseHandler);
-            }
-        });
-
-        // Cleanup function
-        return () => {
-            videoRefs.current.forEach(video => {
-                if (video) {
-                    if ((video as any).progressHandler) {
-                        video.removeEventListener('timeupdate', (video as any).progressHandler);
-                    }
-                    if ((video as any).metadataHandler) {
-                        video.removeEventListener('loadedmetadata', (video as any).metadataHandler);
-                    }
-                    if ((video as any).playHandler) {
-                        video.removeEventListener('play', (video as any).playHandler);
-                    }
-                    if ((video as any).pauseHandler) {
-                        video.removeEventListener('pause', (video as any).pauseHandler);
-                    }
+        if (videos.length > 0) {
+            videoRefs.current = videoRefs.current.slice(0, videos.length);
+            const initialPlayingStates: { [key: string]: boolean } = {};
+            videos.forEach(video => {
+                // If we already have a state for this video, keep it
+                if (videoPlayingStates[video.id] === undefined) {
+                    initialPlayingStates[video.id] = false; // Default to not playing
                 }
             });
-        };
-    }, [videos.length]); // Only depend on length, not the entire videos array
+            if (Object.keys(initialPlayingStates).length > 0) {
+                setVideoPlayingStates(prev => ({ ...prev, ...initialPlayingStates }));
+            }
+        }
+    }, [videos]);
 
     // Intersection Observer to auto-play videos when they come into view
     useEffect(() => {
@@ -341,7 +265,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 
                     if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
                         console.log('🎯 Video intersecting:', videoIndex, 'videoId:', video.id, 'isProgrammaticScroll:', isProgrammaticScroll, 'programmaticScrollVideoId:', programmaticScrollVideoId.current, 'currentTime:', videoElement.currentTime);
-                        
+
                         // Video is more than 50% visible - play it
                         // Don't update currentIndex if we're doing programmatic scrolling
                         if (!isProgrammaticScroll) {
@@ -350,7 +274,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 
                         // Check if this is the video we programmatically scrolled to
                         const isTargetVideo = programmaticScrollVideoId.current === video.id;
-                        
+
                         // Only reset video to beginning if not during programmatic scroll OR not the target video
                         if (!isProgrammaticScroll && !isTargetVideo) {
                             console.log('🔄 Resetting video to 0 (normal scroll)');
@@ -369,13 +293,14 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                 console.log('🧹 Cleared programmaticScrollVideoId');
                             }
                         }
-                        
+
                         // Ensure mute state is properly applied
                         videoElement.muted = muted;
-                        
+
                         videoElement.play().then(() => {
                             // Double-check mute state after play starts
                             videoElement.muted = muted;
+
                             // Update playing state for this video
                             setVideoPlayingStates(prev => ({
                                 ...prev,
@@ -418,13 +343,13 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                     } else if (!entry.isIntersecting) {
                         // Video is not visible - pause it and reset to beginning (but not during programmatic scroll)
                         videoElement.pause();
-                        
+
                         // Update playing state when video goes out of view
                         setVideoPlayingStates(prev => ({
                             ...prev,
                             [video.id]: false
                         }));
-                        
+
                         // Only reset to beginning when not doing programmatic scroll
                         if (!isProgrammaticScroll) {
                             videoElement.currentTime = 0; // Reset to beginning when leaving
@@ -436,7 +361,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                 }));
                             }
                         }
-                        
+
                         if (video) {
                             stopViewTimer(video.id);
                         }
@@ -459,6 +384,11 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
             // Clear all view timers when component unmounts
             viewTimers.current.forEach(timer => clearTimeout(timer));
             viewTimers.current.clear();
+
+            // Cleanup AudioContext
+            if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+                audioContextRef.current.close();
+            }
         };
     }, [videos.length, isProgrammaticScroll, isLayoutReady]); // Add isLayoutReady dependency
 
@@ -549,11 +479,19 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         }
     };
 
-    const toggleMute = () => {
+    const toggleMute = async () => {
+        // First mute button click unlocks audio for entire site
+        if (!audioUnlocked) {
+            const success = await unlockAudio();
+            if (!success) {
+                console.warn('⚠️ Failed to unlock audio');
+            }
+        }
+
         const newMutedState = !muted;
         setMuted(newMutedState);
-        
-        // Immediately apply to current video to avoid delay
+
+        // Apply to current video immediately
         const currentVideo = videoRefs.current[currentIndex];
         if (currentVideo) {
             currentVideo.muted = newMutedState;
@@ -605,11 +543,16 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         setShowCommentsModal(true);
     };
 
-    const handleCommentAdded = (newCount?: number) => {
+    const handleCommentCountUpdate = (newCount?: number) => {
         // Update the comment count for the selected video
         if (selectedVideoForModal) {
-            const finalCount = newCount ?? ((videos.find(v => v.id === selectedVideoForModal)?.commentsCount || 0) + 1);
-            
+            const currentVideo = videos.find(v => v.id === selectedVideoForModal);
+            if (!currentVideo) return;
+
+            // Use provided count, or if not provided, just keep the current count (don't auto-increment)
+            // This prevents the "delete increments count" bug because we now pass the correct count from CommentsModal
+            const finalCount = newCount !== undefined ? newCount : currentVideo.commentsCount;
+
             // Update local state
             setVideos(prevVideos =>
                 prevVideos.map(video =>
@@ -618,7 +561,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                         : video
                 )
             );
-            
+
             // Notify parent component to update its state
             if (onVideoStatsUpdate) {
                 onVideoStatsUpdate(selectedVideoForModal, { commentsCount: finalCount });
@@ -678,12 +621,12 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 // Update the video in local state
-                setVideos(prevVideos => 
-                    prevVideos.map(video => 
-                        video.id === videoId 
+                setVideos(prevVideos =>
+                    prevVideos.map(video =>
+                        video.id === videoId
                             ? { ...video, isActive: data.data.isActive }
                             : video
                     )
@@ -738,38 +681,48 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                 ? { ...video, rating: newRating, ratingCount }
                 : video
         ));
+
+        // Also update parent component (home feed) so it shows the new rating
+        if (onVideoStatsUpdate) {
+            onVideoStatsUpdate(videoId, { rating: newRating, ratingCount });
+        }
     };
 
     const handleView = async (videoId: string) => {
-        // Only count view if video hasn't been viewed yet
-        if (!viewedVideos.has(videoId)) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos/${videoId}/view`, {
-                    method: 'PUT'
-                });
-                const data = await response.json();
+        try {
+            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos/${videoId}/view`, {
+                method: 'PUT'
+            });
+            const data = await response.json();
 
-                if (data.success) {
-                    // Mark video as viewed
-                    setViewedVideos(prev => new Set([...prev, videoId]));
-                    console.log('📊 View counted for video:', videoId);
+            if (data.success && data.data) {
+                const updatedViews = data.data.views;
 
-                    // Only update parent component state, not local state
-                    if (onVideoStatsUpdate) {
-                        onVideoStatsUpdate(videoId, { views: data.data.views });
-                    }
+                // Update local state
+                setVideos(prevVideos =>
+                    prevVideos.map(video =>
+                        video.id === videoId
+                            ? { ...video, views: updatedViews }
+                            : video
+                    )
+                );
+
+                // Notify parent component
+                if (onVideoStatsUpdate) {
+                    onVideoStatsUpdate(videoId, { views: updatedViews });
                 }
-            } catch (error) {
-                console.error('❌ Error recording view:', error);
             }
+        } catch (error) {
+            console.error('❌ Error recording view:', error);
         }
     };
 
     const startViewTimer = (videoId: string) => {
-        // Clear any existing timer for this video
+        // Check if timer already exists and is still running
         const existingTimer = viewTimers.current.get(videoId);
         if (existingTimer) {
-            clearTimeout(existingTimer);
+            // Timer already running for this video, don't start another
+            return;
         }
 
         // Start a new timer - count view after 3 seconds of watching
@@ -865,13 +818,40 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                 videoRefs.current[index] = el;
                             }}
                             src={getOptimizedVideoUrl(video.url)}
-                            poster={getThumbnailUrl(video.thumbnailUrl || video.url)}
+                            poster={getThumbnailUrl(video.url, video.thumbnailUrl)}
                             className="w-full h-full object-cover"
                             loop
                             muted={muted}
                             playsInline
                             preload="metadata"
                             onClick={() => togglePlayPause(index)}
+                            onTimeUpdate={(e) => {
+                                const v = e.currentTarget;
+                                if (v.duration) {
+                                    setVideoProgress(prev => ({
+                                        ...prev,
+                                        [video.id]: (v.currentTime / v.duration) * 100
+                                    }));
+                                }
+                            }}
+                            onLoadedMetadata={() => {
+                                setVideoProgress(prev => ({
+                                    ...prev,
+                                    [video.id]: 0
+                                }));
+                            }}
+                            onPlay={() => {
+                                setVideoPlayingStates(prev => ({
+                                    ...prev,
+                                    [video.id]: true
+                                }));
+                            }}
+                            onPause={() => {
+                                setVideoPlayingStates(prev => ({
+                                    ...prev,
+                                    [video.id]: false
+                                }));
+                            }}
                         />
 
                         {/* Serial Number Overlay */}
@@ -912,13 +892,13 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                     </button>
                                     {currentUser && currentUser.isSultanAdmin === true && (
                                         <div className="relative">
-                                            <button 
+                                            <button
                                                 className="p-2 bg-black/30 rounded-full backdrop-blur-sm"
                                                 onClick={() => setShowAdminMenu(!showAdminMenu)}
                                             >
                                                 <MdMoreVert className="text-white text-xl" />
                                             </button>
-                                            
+
                                             {showAdminMenu && (
                                                 <>
                                                     {/* Backdrop */}
@@ -926,7 +906,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                                         className="fixed inset-0 z-10"
                                                         onClick={() => setShowAdminMenu(false)}
                                                     />
-                                                    
+
                                                     {/* Menu */}
                                                     <div className="absolute right-0 top-12 w-48 bg-[#282828] rounded-lg shadow-lg border border-gray-700 z-20">
                                                         <div className="py-2">
@@ -986,7 +966,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                                     }
                                                 }}
                                             />
-                                            
+
                                             {/* Sultan Admin User Tooltip */}
                                             {currentUser && currentUser.isSultanAdmin === true && showUserTooltip === video.id && (
                                                 <>
@@ -995,7 +975,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                                         className="fixed inset-0 z-[100]"
                                                         onClick={() => setShowUserTooltip(null)}
                                                     />
-                                                    
+
                                                     {/* Tooltip */}
                                                     <div className="absolute bottom-full left-0 mb-2 w-64 bg-black/95 backdrop-blur-md text-white text-xs rounded-lg p-3 shadow-lg border border-gray-600 z-[101]">
                                                         <div className="space-y-2">
@@ -1011,8 +991,8 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                                 </>
                                             )}
                                         </div>
-                                        
-                                        <span 
+
+                                        <span
                                             className={`text-white font-semibold text-sm pointer-events-auto ${currentUser && currentUser.isSultanAdmin === true ? 'cursor-pointer hover:text-yellow-400' : ''}`}
                                             onClick={(e) => {
                                                 if (currentUser && currentUser.isSultanAdmin === true) {
@@ -1030,17 +1010,15 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                     <p className="text-white text-sm line-clamp-2 mb-2">
                                         {video.title || video.fileName || 'Untitled Video'}
                                     </p>
-                                    
+
                                     {/* Sultan Admin Status Info */}
                                     {currentUser && currentUser.isSultanAdmin === true && (
-                                        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold mb-2 ${
-                                            video.isActive === false 
-                                                ? 'bg-red-600/20 text-red-400 border border-red-600/40' 
-                                                : 'bg-green-600/20 text-green-400 border border-green-600/40'
-                                        }`}>
-                                            <div className={`w-2 h-2 rounded-full ${
-                                                video.isActive === false ? 'bg-red-400' : 'bg-green-400'
-                                            }`}></div>
+                                        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold mb-2 ${video.isActive === false
+                                            ? 'bg-red-600/20 text-red-400 border border-red-600/40'
+                                            : 'bg-green-600/20 text-green-400 border border-green-600/40'
+                                            }`}>
+                                            <div className={`w-2 h-2 rounded-full ${video.isActive === false ? 'bg-red-400' : 'bg-green-400'
+                                                }`}></div>
                                             {video.isActive === false ? 'Video Inactive' : 'Video Active'}
                                         </div>
                                     )}
@@ -1134,7 +1112,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                 videoId={selectedVideoForModal || ''}
                 currentUserId={currentUserId}
                 currentUser={currentUser}
-                onCommentAdded={handleCommentAdded}
+                onCommentAdded={handleCommentCountUpdate}
             />
 
             {/* Rating Modal */}
