@@ -348,24 +348,48 @@ const ShortsView = ({ videos, startingVideoId, onVideoStatsUpdate, currentUserId
     return <ShortsPlayer videos={videos} startingVideoId={startingVideoId || undefined} onVideoStatsUpdate={onVideoStatsUpdate} currentUserId={currentUserId} currentUser={currentUser} />;
 };
 
-const CreateView = ({ onUploadClick, onRecordClick }: { onUploadClick: () => void, onRecordClick: () => void }) => (
-    <div className="flex flex-col items-center justify-center h-[80vh] text-white p-6">
-        <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mb-6 animate-bounce">
-            <MdUpload className="text-5xl text-gray-400" />
-        </div>
-        <h2 className="text-2xl font-bold mb-2">Create Content</h2>
-        <p className="text-gray-400 text-center mb-8 max-w-xs">Share your sales pitch with the Sultan community. Upload a video to get started.</p>
+const CreateView = ({ onUploadClick, onRecordClick }: { onUploadClick: () => void, onRecordClick: () => void }) => {
+    const [accepted, setAccepted] = useState(false);
 
-        <div className="flex flex-col gap-4 w-full max-w-sm">
-            <button
-                onClick={onUploadClick}
-                className="bg-[#3ea6ff] hover:bg-[#3095ef] text-black font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2"
-            >
-                <MdUpload className="text-xl" /> Upload Video
-            </button>
+    return (
+        <div className="flex flex-col items-center justify-center h-[80vh] text-white p-6">
+            <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mb-6 animate-bounce">
+                <MdUpload className="text-5xl text-gray-400" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Create Content</h2>
+            <p className="text-gray-400 text-center mb-8 max-w-xs">Share your sales pitch with the Sultan community. Upload a video to get started.</p>
+
+            <div className="flex flex-col gap-4 w-full max-w-sm">
+                <div className="bg-gray-800/80 p-4 rounded-lg border border-gray-700 mb-2 backdrop-blur-sm">
+                    <label className="flex items-start gap-3 cursor-pointer group select-none">
+                        <div className="relative flex items-center pt-0.5">
+                            <input
+                                type="checkbox"
+                                checked={accepted}
+                                onChange={(e) => setAccepted(e.target.checked)}
+                                className="w-5 h-5 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-900 border-2"
+                            />
+                        </div>
+                        <p className="text-xs text-gray-400 leading-relaxed group-hover:text-gray-300 transition-colors">
+                            I agree that by uploading this video, I grant <strong>Zopper</strong> full and exclusive rights to use, reproduce, modify, and distribute this content anywhere, in perpetuity, for any purpose.
+                        </p>
+                    </label>
+                </div>
+
+                <button
+                    onClick={onUploadClick}
+                    disabled={!accepted}
+                    className={`font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2 transition-all ${accepted
+                        ? 'bg-[#3ea6ff] hover:bg-[#3095ef] text-black active:scale-95 shadow-[0_0_15px_rgba(62,166,255,0.4)]'
+                        : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
+                        }`}
+                >
+                    <MdUpload className="text-xl" /> Upload Video
+                </button>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const NotificationsView = () => {
     return (
