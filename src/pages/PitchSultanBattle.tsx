@@ -9,7 +9,7 @@ import {
     MdSearch, MdNotificationsNone, MdCast,
     MdThumbUp, MdThumbDown,
     MdComment, MdShare,
-    MdClose, MdUpload, MdRemoveRedEye,
+    MdClose, MdUpload, MdRemoveRedEye, MdArrowBack,
     MdHelpOutline, MdHelp, MdEmail, MdPhone, MdQuestionAnswer, MdKeyboardArrowDown,
     MdPlayArrow, MdVideocam
 } from 'react-icons/md';
@@ -140,6 +140,18 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick }: {
 
                     {/* Right Icons */}
                     <div className="flex items-center gap-4 text-white">
+                        <button
+                            onClick={() => navigate('/welcome')}
+                            className="hidden md:flex items-center gap-1 text-xs font-bold text-white hover:bg-red-700 transition-colors bg-red-600 px-3 py-1.5 rounded-full shadow-sm mr-2"
+                        >
+                            <MdArrowBack className="text-sm" />
+                            Back
+                        </button>
+                        {/* Mobile Back Icon only */}
+                        <MdArrowBack
+                            className="md:hidden text-xl cursor-pointer text-red-500 hover:text-red-400"
+                            onClick={() => navigate('/welcome')}
+                        />
                         <MdNotificationsNone
                             className="text-xl cursor-pointer hover:text-gray-300"
                             onClick={onNotificationClick}
@@ -300,18 +312,17 @@ const VideoCard = ({ video, onVideoClick, currentUser }: { video: any, onVideoCl
                     alt={video.title || video.fileName || 'Video thumbnail'}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                 />
-                
+
                 {/* Sultan Admin Status Banner */}
                 {currentUser && currentUser.isSultanAdmin === true && (
-                    <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${
-                        video.isActive === false 
-                            ? 'bg-red-600 text-white' 
-                            : 'bg-green-600 text-white'
-                    }`}>
+                    <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${video.isActive === false
+                        ? 'bg-red-600 text-white'
+                        : 'bg-green-600 text-white'
+                        }`}>
                         {video.isActive === false ? 'INACTIVE' : 'ACTIVE'}
                     </div>
                 )}
-                
+
                 {/* Play overlay */}
                 <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
@@ -352,24 +363,48 @@ const ShortsView = ({ videos, startingVideoId, onVideoStatsUpdate, currentUserId
     return <ShortsPlayer videos={videos} startingVideoId={startingVideoId || undefined} onVideoStatsUpdate={onVideoStatsUpdate} currentUserId={currentUserId} currentUser={currentUser} />;
 };
 
-const CreateView = ({ onUploadClick, onRecordClick }: { onUploadClick: () => void, onRecordClick: () => void }) => (
-    <div className="flex flex-col items-center justify-center h-[80vh] text-white p-6">
-        <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mb-6 animate-bounce">
-            <MdUpload className="text-5xl text-gray-400" />
-        </div>
-        <h2 className="text-2xl font-bold mb-2">Create Content</h2>
-        <p className="text-gray-400 text-center mb-8 max-w-xs">Share your sales pitch with the Sultan community. Upload a video to get started.</p>
+const CreateView = ({ onUploadClick, onRecordClick }: { onUploadClick: () => void, onRecordClick: () => void }) => {
+    const [accepted, setAccepted] = useState(false);
 
-        <div className="flex flex-col gap-4 w-full max-w-sm">
-            <button
-                onClick={onUploadClick}
-                className="bg-[#3ea6ff] hover:bg-[#3095ef] text-black font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2"
-            >
-                <MdUpload className="text-xl" /> Upload Video
-            </button>
+    return (
+        <div className="flex flex-col items-center justify-center h-[80vh] text-white p-6">
+            <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mb-6 animate-bounce">
+                <MdUpload className="text-5xl text-gray-400" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Create Content</h2>
+            <p className="text-gray-400 text-center mb-8 max-w-xs">Share your sales pitch with the Sultan community. Upload a video to get started.</p>
+
+            <div className="flex flex-col gap-4 w-full max-w-sm">
+                <div className="bg-gray-800/80 p-4 rounded-lg border border-gray-700 mb-2 backdrop-blur-sm">
+                    <label className="flex items-start gap-3 cursor-pointer group select-none">
+                        <div className="relative flex items-center pt-0.5">
+                            <input
+                                type="checkbox"
+                                checked={accepted}
+                                onChange={(e) => setAccepted(e.target.checked)}
+                                className="w-5 h-5 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-900 border-2"
+                            />
+                        </div>
+                        <p className="text-xs text-gray-400 leading-relaxed group-hover:text-gray-300 transition-colors">
+                            I agree that by uploading this video, I grant <strong>Zopper</strong> full and exclusive rights to use, reproduce, modify, and distribute this content anywhere, in perpetuity, for any purpose.
+                        </p>
+                    </label>
+                </div>
+
+                <button
+                    onClick={onUploadClick}
+                    disabled={!accepted}
+                    className={`font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2 transition-all ${accepted
+                        ? 'bg-[#3ea6ff] hover:bg-[#3095ef] text-black active:scale-95 shadow-[0_0_15px_rgba(62,166,255,0.4)]'
+                        : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
+                        }`}
+                >
+                    <MdUpload className="text-xl" /> Upload Video
+                </button>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const NotificationsView = () => {
     return (
@@ -939,14 +974,14 @@ export const PitchSultanBattle = () => {
         try {
             setLoading(true);
             console.log('📡 Fetching videos from:', `${API_BASE_URL}/pitch-sultan/videos`);
-            
+
             // Include authorization header for sultan admin
             const token = localStorage.getItem('token');
             const headers: any = {};
             if (token) {
                 headers.Authorization = `Bearer ${token}`;
             }
-            
+
             const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?limit=50&_t=${new Date().getTime()}`, {
                 headers
             });
@@ -1121,7 +1156,7 @@ export const PitchSultanBattle = () => {
                     : video
             )
         );
-        
+
         // Also update filtered videos to keep UI consistent
         setFilteredVideos(prevFiltered =>
             prevFiltered.map(video =>
@@ -1172,6 +1207,8 @@ export const PitchSultanBattle = () => {
             <div className="pt-14 pb-16 md:pl-0">
                 <div className={`${activeTab === 'home' ? 'block' : 'hidden'}`}>
                     <div className="max-w-4xl mx-auto md:p-4">
+                        {/* Back Button */}
+
                         {/* Chips */}
                         <div className="flex gap-2 overflow-x-auto p-4 md:px-0 no-scrollbar">
                             {/* Search indicator */}
