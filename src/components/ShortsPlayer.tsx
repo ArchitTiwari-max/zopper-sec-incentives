@@ -25,6 +25,7 @@ interface Video {
     commentsCount?: number;
     uploadedAt: string;
     isActive?: boolean; // Add isActive field
+    isAd?: boolean; // Add isAd flag
     secUser: {
         id: string;
         name?: string;
@@ -73,15 +74,48 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     const [isHeld, setIsHeld] = useState(false); // Track when video is being held to pause
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+    const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
     const viewTimers = useRef<Map<string, NodeJS.Timeout>>(new Map()); // Track view timers
     const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Track hold timer
     const programmaticScrollVideoId = useRef<string | null>(null); // Track which video was programmatically scrolled to
     const audioContextRef = useRef<AudioContext | null>(null); // Audio context for site-wide permission
 
+    const AD_IMAGE_URL = 'https://vishal-zopper.s3.ap-south-1.amazonaws.com/videos/68f1c1880c5509d1d4467c65/download.png';
+    const AD_INTERVAL = 8;
+
+    // Helper to inject ads into the video list
+    const injectAds = (videoList: Video[]) => {
+        if (!videoList || videoList.length === 0) return [];
+
+        const newList: Video[] = [];
+        videoList.forEach((video, index) => {
+            newList.push(video);
+
+            // Inject an ad after every AD_INTERVAL videos
+            if ((index + 1) % AD_INTERVAL === 0) {
+                newList.push({
+                    id: `ad-${index}`,
+                    isAd: true,
+                    url: AD_IMAGE_URL,
+                    fileName: 'Sales Message',
+                    views: 0,
+                    likes: 0,
+                    uploadedAt: new Date().toISOString(),
+                    secUser: {
+                        id: 'system',
+                        name: 'Zopper Sultan',
+                        phone: 'system',
+                    }
+                } as Video);
+            }
+        });
+        return newList;
+    };
+
     // Fetch videos if not provided as props
     useEffect(() => {
         if (propVideos) {
-            setVideos(propVideos);
+            setVideos(injectAds(propVideos));
             setLoading(false);
         } else {
             fetchVideos();
@@ -151,8 +185,8 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
             const data = await response.json();
 
             if (data.success && data.data.length > 0) {
-                setVideos(data.data);
-                console.log('✅ Loaded videos for shorts:', data.data.length);
+                setVideos(injectAds(data.data));
+                console.log('✅ Loaded videos for shorts (including ads):', data.data.length);
             } else {
                 console.warn('⚠️ No videos found for shorts');
                 setVideos([]);
@@ -261,18 +295,28 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         const observer = new IntersectionObserver(
             (entries) => {
                 entries.forEach((entry) => {
-                    const videoElement = entry.target as HTMLVideoElement;
-                    const videoIndex = videoRefs.current.findIndex(ref => ref === videoElement);
+                    const slideElement = entry.target as HTMLDivElement;
+                    const videoIndex = slideRefs.current.findIndex(ref => ref === slideElement);
                     const video = videos[videoIndex];
+                    if (!video) return;
+
+                    const videoElement = videoRefs.current[videoIndex];
 
                     if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-                        console.log('🎯 Video intersecting:', videoIndex, 'videoId:', video.id, 'isProgrammaticScroll:', isProgrammaticScroll, 'programmaticScrollVideoId:', programmaticScrollVideoId.current, 'currentTime:', videoElement.currentTime);
+                        console.log('🎯 Slide intersecting:', videoIndex, 'videoId:', video.id, 'isAd:', video.isAd);
 
-                        // Video is more than 50% visible - play it
-                        // Don't update currentIndex if we're doing programmatic scrolling
+                        // Update currentIndex always for both ads and videos
                         if (!isProgrammaticScroll) {
                             setCurrentIndex(videoIndex);
                         }
+
+                        if (video.isAd) {
+                            // Pause all videos if landing on an ad
+                            videoRefs.current.forEach(v => v?.pause());
+                            return;
+                        }
+
+                        if (!videoElement) return; // Ensure videoElement exists for non-ad videos
 
                         // Check if this is the video we programmatically scrolled to
                         const isTargetVideo = programmaticScrollVideoId.current === video.id;
@@ -344,7 +388,9 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                         });
                     } else if (!entry.isIntersecting) {
                         // Video is not visible - pause it and reset to beginning (but not during programmatic scroll)
-                        videoElement.pause();
+                        if (videoElement) {
+                            videoElement.pause();
+                        }
 
                         // Update playing state when video goes out of view
                         setVideoPlayingStates(prev => ({
@@ -353,7 +399,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                         }));
 
                         // Only reset to beginning when not doing programmatic scroll
-                        if (!isProgrammaticScroll) {
+                        if (!isProgrammaticScroll && videoElement) {
                             videoElement.currentTime = 0; // Reset to beginning when leaving
                             if (video) {
                                 // Reset progress
@@ -376,9 +422,9 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
             }
         );
 
-        // Observe all video elements
-        videoRefs.current.forEach((video) => {
-            if (video) observer.observe(video);
+        // Observe all slide elements
+        slideRefs.current.forEach((slide) => {
+            if (slide) observer.observe(slide);
         });
 
         return () => {
@@ -692,12 +738,13 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     useEffect(() => {
         if (currentUserId && videos.length > 0) {
             videos.forEach(video => {
-                if (!userInteractions[video.id]) {
+                // Skip fetching interactions for ads as they are not in the database
+                if (!video.isAd && !userInteractions[video.id]) {
                     fetchUserInteractions(video.id);
                 }
             });
         }
-    }, [currentUserId, videos]);
+    }, [currentUserId, videos, userInteractions]);
 
     const handleRatingUpdate = (videoId: string, newRating: number, ratingCount: number) => {
         // Update local videos state
@@ -834,286 +881,314 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                 {videos.map((video, index) => (
                     <div
                         key={video.id}
+                        ref={(el) => {
+                            slideRefs.current[index] = el;
+                        }}
                         className="relative w-full h-full flex-shrink-0 snap-start"
                         style={{ aspectRatio: '9/16' }}
                     >
-                        {/* Video Player */}
-                        <video
-                            ref={(el) => {
-                                videoRefs.current[index] = el;
-                            }}
-                            src={getOptimizedVideoUrl(video.url)}
-                            poster={getThumbnailUrl(video.url, video.thumbnailUrl)}
-                            className="w-full h-full object-cover"
-                            loop
-                            muted={muted}
-                            playsInline
-                            preload="metadata"
-                            onClick={toggleMute}
-                            onPointerDown={() => handleHoldStart(index)}
-                            onPointerUp={() => handleHoldEnd(index)}
-                            onPointerLeave={() => handleHoldEnd(index)}
-                            onTimeUpdate={(e) => {
-                                const v = e.currentTarget;
-                                if (v.duration) {
+                        {/* Video Player or Ad Image */}
+                        {video.isAd ? (
+                            <div className="w-full h-full bg-[#1a1a1a] flex items-center justify-center">
+                                <img
+                                    src={video.url}
+                                    alt="Sales Message"
+                                    className="w-full h-full object-cover shadow-2xl"
+                                    style={{ objectPosition: 'center center' }}
+                                />
+                                {/* Ad Ribbon */}
+                                <div className="absolute top-4 right-4 bg-yellow-500 text-black text-[10px] font-bold px-2 py-0.5 rounded shadow-lg z-50">
+                                    SPONSORED
+                                </div>
+                            </div>
+                        ) : (
+                            <video
+                                ref={(el) => {
+                                    videoRefs.current[index] = el;
+                                }}
+                                src={getOptimizedVideoUrl(video.url)}
+                                poster={getThumbnailUrl(video.url, video.thumbnailUrl)}
+                                className="w-full h-full object-cover"
+                                style={{ objectPosition: 'center 20%' }}
+                                loop
+                                muted={muted}
+                                playsInline
+                                preload="metadata"
+                                onClick={toggleMute}
+                                onPointerDown={() => handleHoldStart(index)}
+                                onPointerUp={() => handleHoldEnd(index)}
+                                onPointerLeave={() => handleHoldEnd(index)}
+                                onTimeUpdate={(e) => {
+                                    const v = e.currentTarget;
+                                    if (v.duration) {
+                                        setVideoProgress(prev => ({
+                                            ...prev,
+                                            [video.id]: (v.currentTime / v.duration) * 100
+                                        }));
+                                    }
+                                }}
+                                onLoadedMetadata={() => {
                                     setVideoProgress(prev => ({
                                         ...prev,
-                                        [video.id]: (v.currentTime / v.duration) * 100
+                                        [video.id]: 0
                                     }));
-                                }
-                            }}
-                            onLoadedMetadata={() => {
-                                setVideoProgress(prev => ({
-                                    ...prev,
-                                    [video.id]: 0
-                                }));
-                            }}
-                            onPlay={() => {
-                                setVideoPlayingStates(prev => ({
-                                    ...prev,
-                                    [video.id]: true
-                                }));
-                            }}
-                            onPause={() => {
-                                setVideoPlayingStates(prev => ({
-                                    ...prev,
-                                    [video.id]: false
-                                }));
-                            }}
-                        />
+                                }}
+                                onPlay={() => {
+                                    setVideoPlayingStates(prev => ({
+                                        ...prev,
+                                        [video.id]: true
+                                    }));
+                                }}
+                                onPause={() => {
+                                    setVideoPlayingStates(prev => ({
+                                        ...prev,
+                                        [video.id]: false
+                                    }));
+                                }}
+                            />
+                        )}
 
                         {/* Serial Number Overlay */}
-                        {video.serialNumber && (
+                        {!video.isAd && video.serialNumber && (
                             <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-md text-xs font-bold text-yellow-500 border border-yellow-500/40 z-[60] shadow-lg pointer-events-none">
                                 #{video.serialNumber}
                             </div>
                         )}
 
-                        {/* Progress Bar - positioned at the very bottom */}
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50 z-50">
-                            <div
-                                className="h-full bg-white transition-all duration-100 ease-linear"
-                                style={{
-                                    width: `${videoProgress[video.id] || 0}%`
-                                }}
-                            />
-                        </div>
+                        {/* Progress Bar - positioned at the very bottom (Hide for ads) */}
+                        {!video.isAd && (
+                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50 z-50">
+                                <div
+                                    className="h-full bg-white transition-all duration-100 ease-linear"
+                                    style={{
+                                        width: `${videoProgress[video.id] || 0}%`
+                                    }}
+                                />
+                            </div>
+                        )}
 
                         {/* Overlay Controls */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60 flex flex-col justify-between p-4 pb-1 pointer-events-none">
+                        {!video.isAd && (
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60 flex flex-col justify-between p-4 pb-1 pointer-events-none">
 
-                            {/* Top Controls */}
-                            <div className="flex justify-between items-start pointer-events-auto">
-                                <div className="text-white text-sm font-medium">
-                                    Shorts
-                                </div>
-                                <div className="flex gap-2">
-                                    {currentUser && currentUser.isSultanAdmin === true && (
-                                        <div className="relative">
-                                            <button
-                                                className="p-2 bg-black/30 rounded-full backdrop-blur-sm"
-                                                onClick={() => setShowAdminMenu(!showAdminMenu)}
-                                            >
-                                                <MdMoreVert className="text-white text-xl" />
-                                            </button>
+                                {/* Top Controls */}
+                                <div className="flex justify-between items-start pointer-events-auto">
+                                    <div className="text-white text-sm font-medium">
+                                        Shorts
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {currentUser && currentUser.isSultanAdmin === true && (
+                                            <div className="relative">
+                                                <button
+                                                    className="p-2 bg-black/30 rounded-full backdrop-blur-sm"
+                                                    onClick={() => setShowAdminMenu(!showAdminMenu)}
+                                                >
+                                                    <MdMoreVert className="text-white text-xl" />
+                                                </button>
 
-                                            {showAdminMenu && (
-                                                <>
-                                                    {/* Backdrop */}
-                                                    <div
-                                                        className="fixed inset-0 z-10"
-                                                        onClick={() => setShowAdminMenu(false)}
-                                                    />
+                                                {showAdminMenu && (
+                                                    <>
+                                                        {/* Backdrop */}
+                                                        <div
+                                                            className="fixed inset-0 z-10"
+                                                            onClick={() => setShowAdminMenu(false)}
+                                                        />
 
-                                                    {/* Menu */}
-                                                    <div className="absolute right-0 top-12 w-48 bg-[#282828] rounded-lg shadow-lg border border-gray-700 z-20">
-                                                        <div className="py-2">
-                                                            <button
-                                                                onClick={() => handleToggleVideoStatus(video.id, video.isActive || true)}
-                                                                className="w-full px-4 py-2 text-left text-white hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
-                                                            >
-                                                                {video.isActive === false ? (
-                                                                    <>
-                                                                        <MdVisibility className="text-base" />
-                                                                        Activate Video
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <MdVisibilityOff className="text-base" />
-                                                                        Deactivate Video
-                                                                    </>
-                                                                )}
-                                                            </button>
+                                                        {/* Menu */}
+                                                        <div className="absolute right-0 top-12 w-48 bg-[#282828] rounded-lg shadow-lg border border-gray-700 z-20">
+                                                            <div className="py-2">
+                                                                <button
+                                                                    onClick={() => handleToggleVideoStatus(video.id, video.isActive || true)}
+                                                                    className="w-full px-4 py-2 text-left text-white hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
+                                                                >
+                                                                    {video.isActive === false ? (
+                                                                        <>
+                                                                            <MdVisibility className="text-base" />
+                                                                            Activate Video
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <MdVisibilityOff className="text-base" />
+                                                                            Deactivate Video
+                                                                        </>
+                                                                    )}
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Center Play/Pause - only show for current video when not just being held */}
-                            {index === currentIndex && videoPlayingStates[video.id] === false && !isHeld && (
-                                <div className="absolute inset-0 flex items-center justify-center pointer-events-auto z-10">
-                                    <button
-                                        onClick={() => togglePlayPause(index)}
-                                        className="p-4 bg-black/50 rounded-full backdrop-blur-sm"
+                                {/* Center Play/Pause - only show for current video (not ad) when not just being held */}
+                                {!video.isAd && index === currentIndex && videoPlayingStates[video.id] === false && !isHeld && (
+                                    <div
+                                        className="absolute inset-0 flex items-center justify-center pointer-events-auto z-10 cursor-pointer"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            togglePlayPause(index);
+                                        }}
                                     >
-                                        <MdPlayArrow className="text-white text-4xl" />
-                                    </button>
-                                </div>
-                            )}
+                                        <div className="p-4 bg-black/50 rounded-full backdrop-blur-sm">
+                                            <MdPlayArrow className="text-white text-4xl" />
+                                        </div>
+                                    </div>
+                                )}
 
-                            {/* Bottom Content */}
-                            <div className="flex items-end justify-between mb-1">
-                                {/* Video Info */}
-                                <div className="flex-1 pr-4">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className="relative pointer-events-auto">
-                                            <img
-                                                src={getUploaderAvatar(video)}
-                                                alt="Profile"
-                                                className={`w-8 h-8 rounded-full pointer-events-auto ${currentUser && currentUser.isSultanAdmin === true ? 'cursor-pointer hover:ring-2 hover:ring-yellow-400' : ''}`}
+                                {/* Bottom Content */}
+                                <div className="flex items-end justify-between mb-1">
+                                    {/* Video Info */}
+                                    <div className="flex-1 pr-4">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="relative pointer-events-auto">
+                                                <img
+                                                    src={getUploaderAvatar(video)}
+                                                    alt="Profile"
+                                                    className={`w-8 h-8 rounded-full pointer-events-auto ${currentUser && currentUser.isSultanAdmin === true ? 'cursor-pointer hover:ring-2 hover:ring-yellow-400' : ''}`}
+                                                    onClick={(e) => {
+                                                        if (currentUser && currentUser.isSultanAdmin === true) {
+                                                            e.stopPropagation();
+                                                            e.preventDefault();
+                                                            setShowUserTooltip(showUserTooltip === video.id ? null : video.id);
+                                                            console.log('Profile clicked, showing tooltip for:', video.id);
+                                                        }
+                                                    }}
+                                                />
+
+                                                {/* Sultan Admin User Tooltip */}
+                                                {currentUser && currentUser.isSultanAdmin === true && showUserTooltip === video.id && (
+                                                    <>
+                                                        {/* Backdrop to close tooltip */}
+                                                        <div
+                                                            className="fixed inset-0 z-[100]"
+                                                            onClick={() => setShowUserTooltip(null)}
+                                                        />
+
+                                                        {/* Tooltip */}
+                                                        <div className="absolute bottom-full left-0 mb-2 w-64 bg-black/95 backdrop-blur-md text-white text-xs rounded-lg p-3 shadow-lg border border-gray-600 z-[101]">
+                                                            <div className="space-y-2">
+                                                                <div className="font-semibold text-yellow-400 border-b border-gray-600 pb-1">User Details</div>
+                                                                <div><span className="text-gray-400">Name:</span> <span className="text-white">{getUserTooltipInfo(video).name}</span></div>
+                                                                <div><span className="text-gray-400">Phone:</span> <span className="text-white">{getUserTooltipInfo(video).phone}</span></div>
+                                                                <div><span className="text-gray-400">Store:</span> <span className="text-white">{getUserTooltipInfo(video).store}</span></div>
+                                                                <div><span className="text-gray-400">Region:</span> <span className="text-white">{getUserTooltipInfo(video).region}</span></div>
+                                                            </div>
+                                                            {/* Tooltip arrow */}
+                                                            <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-black/95"></div>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+
+                                            <span
+                                                className={`text-white font-semibold text-sm pointer-events-auto ${currentUser && currentUser.isSultanAdmin === true ? 'cursor-pointer hover:text-yellow-400' : ''}`}
                                                 onClick={(e) => {
                                                     if (currentUser && currentUser.isSultanAdmin === true) {
                                                         e.stopPropagation();
                                                         e.preventDefault();
                                                         setShowUserTooltip(showUserTooltip === video.id ? null : video.id);
-                                                        console.log('Profile clicked, showing tooltip for:', video.id);
+                                                        console.log('Username clicked, showing tooltip for:', video.id);
                                                     }
                                                 }}
-                                            />
-
-                                            {/* Sultan Admin User Tooltip */}
-                                            {currentUser && currentUser.isSultanAdmin === true && showUserTooltip === video.id && (
-                                                <>
-                                                    {/* Backdrop to close tooltip */}
-                                                    <div
-                                                        className="fixed inset-0 z-[100]"
-                                                        onClick={() => setShowUserTooltip(null)}
-                                                    />
-
-                                                    {/* Tooltip */}
-                                                    <div className="absolute bottom-full left-0 mb-2 w-64 bg-black/95 backdrop-blur-md text-white text-xs rounded-lg p-3 shadow-lg border border-gray-600 z-[101]">
-                                                        <div className="space-y-2">
-                                                            <div className="font-semibold text-yellow-400 border-b border-gray-600 pb-1">User Details</div>
-                                                            <div><span className="text-gray-400">Name:</span> <span className="text-white">{getUserTooltipInfo(video).name}</span></div>
-                                                            <div><span className="text-gray-400">Phone:</span> <span className="text-white">{getUserTooltipInfo(video).phone}</span></div>
-                                                            <div><span className="text-gray-400">Store:</span> <span className="text-white">{getUserTooltipInfo(video).store}</span></div>
-                                                            <div><span className="text-gray-400">Region:</span> <span className="text-white">{getUserTooltipInfo(video).region}</span></div>
-                                                        </div>
-                                                        {/* Tooltip arrow */}
-                                                        <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-black/95"></div>
-                                                    </div>
-                                                </>
-                                            )}
+                                            >
+                                                {getUploaderHandle(video)}
+                                            </span>
                                         </div>
 
-                                        <span
-                                            className={`text-white font-semibold text-sm pointer-events-auto ${currentUser && currentUser.isSultanAdmin === true ? 'cursor-pointer hover:text-yellow-400' : ''}`}
-                                            onClick={(e) => {
-                                                if (currentUser && currentUser.isSultanAdmin === true) {
-                                                    e.stopPropagation();
-                                                    e.preventDefault();
-                                                    setShowUserTooltip(showUserTooltip === video.id ? null : video.id);
-                                                    console.log('Username clicked, showing tooltip for:', video.id);
-                                                }
-                                            }}
-                                        >
-                                            {getUploaderHandle(video)}
-                                        </span>
-                                    </div>
+                                        <p className="text-white text-sm line-clamp-2 mb-2">
+                                            {video.title || video.fileName || 'Untitled Video'}
+                                        </p>
 
-                                    <p className="text-white text-sm line-clamp-2 mb-2">
-                                        {video.title || video.fileName || 'Untitled Video'}
-                                    </p>
+                                        {/* Sultan Admin Status Info */}
+                                        {currentUser && currentUser.isSultanAdmin === true && (
+                                            <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold mb-2 ${video.isActive === false
+                                                ? 'bg-red-600/20 text-red-400 border border-red-600/40'
+                                                : 'bg-green-600/20 text-green-400 border border-green-600/40'
+                                                }`}>
+                                                <div className={`w-2 h-2 rounded-full ${video.isActive === false ? 'bg-red-400' : 'bg-green-400'
+                                                    }`}></div>
+                                                {video.isActive === false ? 'Video Inactive' : 'Video Active'}
+                                            </div>
+                                        )}
 
-                                    {/* Sultan Admin Status Info */}
-                                    {currentUser && currentUser.isSultanAdmin === true && (
-                                        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold mb-2 ${video.isActive === false
-                                            ? 'bg-red-600/20 text-red-400 border border-red-600/40'
-                                            : 'bg-green-600/20 text-green-400 border border-green-600/40'
-                                            }`}>
-                                            <div className={`w-2 h-2 rounded-full ${video.isActive === false ? 'bg-red-400' : 'bg-green-400'
-                                                }`}></div>
-                                            {video.isActive === false ? 'Video Inactive' : 'Video Active'}
-                                        </div>
-                                    )}
-
-                                    <div className="text-white/80 text-xs flex items-center gap-4">
-                                        <span>{formatCount(video.views)} views</span>
-                                        {video.secUser?.store && (
-                                            <span>{video.secUser.store.storeName}</span>
+                                        {!video.isAd && (
+                                            <div className="text-white/80 text-xs flex items-center gap-4">
+                                                <span>{formatCount(video.views)} views</span>
+                                                {video.secUser?.store && (
+                                                    <span>{video.secUser.store.storeName}</span>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
-                                </div>
 
-                                {/* Action Buttons */}
-                                <div className="flex flex-col items-center gap-4 pointer-events-auto">
-                                    <button
-                                        onClick={() => handleLike(video.id)}
-                                        className="flex flex-col items-center"
-                                    >
-                                        <div className="p-3 bg-black/30 rounded-full backdrop-blur-sm hover:bg-black/50 transition">
-                                            {userInteractions[video.id]?.hasLiked ? (
-                                                <MdThumbUp className="text-2xl text-white" />
-                                            ) : (
-                                                <MdOutlineThumbUp className="text-2xl text-white/80" />
-                                            )}
-                                        </div>
-                                        <span className="text-white text-xs font-semibold mt-1">
-                                            {formatCount(video.likes)}
-                                        </span>
-                                    </button>
+                                    {/* Action Buttons */}
+                                    <div className="flex flex-col items-center gap-4 pointer-events-auto">
+                                        <button
+                                            onClick={() => handleLike(video.id)}
+                                            className="flex flex-col items-center"
+                                        >
+                                            <div className="p-3 bg-black/30 rounded-full backdrop-blur-sm hover:bg-black/50 transition">
+                                                {userInteractions[video.id]?.hasLiked ? (
+                                                    <MdThumbUp className="text-2xl text-white" />
+                                                ) : (
+                                                    <MdOutlineThumbUp className="text-2xl text-white/80" />
+                                                )}
+                                            </div>
+                                            <span className="text-white text-xs font-semibold mt-1">
+                                                {formatCount(video.likes)}
+                                            </span>
+                                        </button>
 
-                                    <button
-                                        onClick={() => handleComment(video.id)}
-                                        className="flex flex-col items-center"
-                                    >
-                                        <div className="p-3 bg-black/30 rounded-full backdrop-blur-sm hover:bg-black/50 transition">
-                                            <MdComment className="text-2xl text-white" />
-                                        </div>
-                                        <span className="text-white text-xs font-semibold mt-1">
-                                            {formatCount(video.commentsCount || 0)}
-                                        </span>
-                                    </button>
+                                        <button
+                                            onClick={() => handleComment(video.id)}
+                                            className="flex flex-col items-center"
+                                        >
+                                            <div className="p-3 bg-black/30 rounded-full backdrop-blur-sm hover:bg-black/50 transition">
+                                                <MdComment className="text-2xl text-white" />
+                                            </div>
+                                            <span className="text-white text-xs font-semibold mt-1">
+                                                {formatCount(video.commentsCount || 0)}
+                                            </span>
+                                        </button>
 
-                                    <button
-                                        onClick={() => handleRating(video.id)}
-                                        className="flex flex-col items-center"
-                                    >
-                                        <div className="p-3 bg-black/30 rounded-full backdrop-blur-sm hover:bg-black/50 transition">
-                                            {userInteractions[video.id]?.userRating ? (
-                                                <MdStar className="text-2xl text-yellow-400" />
-                                            ) : (
-                                                <MdStarOutline className="text-2xl text-white/80" />
-                                            )}
-                                        </div>
-                                        <span className="text-white text-xs font-semibold mt-1">
-                                            {video.rating && video.rating > 0
-                                                ? `${video.rating.toFixed(1)}★ (${formatCount(video.ratingCount || 0)})`
-                                                : video.ratingCount && video.ratingCount > 0
-                                                    ? formatCount(video.ratingCount)
-                                                    : 'Rate'
-                                            }
-                                        </span>
-                                    </button>
+                                        <button
+                                            onClick={() => handleRating(video.id)}
+                                            className="flex flex-col items-center"
+                                        >
+                                            <div className="p-3 bg-black/30 rounded-full backdrop-blur-sm hover:bg-black/50 transition">
+                                                {userInteractions[video.id]?.userRating ? (
+                                                    <MdStar className="text-2xl text-yellow-400" />
+                                                ) : (
+                                                    <MdStarOutline className="text-2xl text-white/80" />
+                                                )}
+                                            </div>
+                                            <span className="text-white text-xs font-semibold mt-1">
+                                                {video.rating && video.rating > 0
+                                                    ? `${video.rating.toFixed(1)}★ (${formatCount(video.ratingCount || 0)})`
+                                                    : video.ratingCount && video.ratingCount > 0
+                                                        ? formatCount(video.ratingCount)
+                                                        : 'Rate'
+                                                }
+                                            </span>
+                                        </button>
 
-                                    <button
-                                        onClick={() => handleShare(video)}
-                                        className="flex flex-col items-center"
-                                    >
-                                        <div className="p-3 bg-black/30 rounded-full backdrop-blur-sm hover:bg-black/50 transition">
-                                            <MdShare className="text-2xl text-white" />
-                                        </div>
-                                        <span className="text-white text-xs font-semibold mt-1">
-                                            Share
-                                        </span>
-                                    </button>
+                                        <button
+                                            onClick={() => handleShare(video)}
+                                            className="flex flex-col items-center"
+                                        >
+                                            <div className="p-3 bg-black/30 rounded-full backdrop-blur-sm hover:bg-black/50 transition">
+                                                <MdShare className="text-2xl text-white" />
+                                            </div>
+                                            <span className="text-white text-xs font-semibold mt-1">
+                                                Share
+                                            </span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
 
                     </div >

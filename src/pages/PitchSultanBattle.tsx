@@ -68,7 +68,7 @@ const SHORTS_FEED = [
 // Helper for video thumbnails (Shared)
 const getThumbnailUrl = (url: string, thumbnailUrl?: string) => {
     if (!url) return '';
-    
+
     // If we have a specific thumbnail URL, use it
     if (thumbnailUrl && thumbnailUrl !== url) {
         // Handle both S3 and ImageKit thumbnail URLs
@@ -311,6 +311,7 @@ const VideoCard = ({ video, onVideoClick, currentUser }: { video: any, onVideoCl
                     src={getThumbnailUrl(videoSource)}
                     alt={video.title || video.fileName || 'Video thumbnail'}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    style={{ objectPosition: 'center 20%' }}
                 />
 
                 {/* Sultan Admin Status Banner */}
