@@ -1070,9 +1070,6 @@ export const PitchSultanBattle = () => {
     const handleUploadSuccess = (videoData: any) => {
         // Refresh videos from database
         fetchVideos();
-
-        // Show success message
-        alert('Video uploaded successfully! 🎉');
     };
 
     const handleVideoUpdate = (videoId: string, updates: { title?: string, description?: string }) => {

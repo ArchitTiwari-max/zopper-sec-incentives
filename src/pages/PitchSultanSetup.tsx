@@ -4,6 +4,7 @@ import { fetchStores, Store } from '@/lib/api';
 import { API_BASE_URL } from '@/lib/config';
 import { useAuth } from '@/contexts/AuthContext';
 import { FaStore, FaUser, FaMapMarkerAlt } from 'react-icons/fa';
+import SearchableSelectDark from '@/components/SearchableSelectDark';
 
 const REGIONS = [
     { id: 'north', name: 'North' },
@@ -41,7 +42,7 @@ export function PitchSultanSetup() {
                         if (checkData.data.name && checkData.data.storeId && checkData.data.region) {
                             // User has complete profile, update localStorage and redirect to battle
                             console.log('✅ User has complete profile, updating localStorage and redirecting to battle');
-                            
+
                             // Update auth context with complete data
                             updateUser({
                                 ...user,
@@ -51,7 +52,7 @@ export function PitchSultanSetup() {
                                 storeId: checkData.data.storeId,
                                 region: checkData.data.region
                             });
-                            
+
                             navigate('/pitchsultan/battle');
                             return;
                         } else {
@@ -194,31 +195,25 @@ export function PitchSultanSetup() {
                     </div>
                 </div>
 
-                {/* Store Dropdown */}
+                {/* Store Searchable Select */}
                 <div className="mb-6">
                     <label htmlFor="store" className="block text-sm font-medium text-gray-300 mb-2">
                         Select Store
                     </label>
-                    <div className="relative">
-                        <FaStore className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 z-10" />
-                        <select
-                            id="store"
-                            value={selectedStore}
-                            onChange={(e) => {
-                                setSelectedStore(e.target.value);
-                                setError(null);
-                            }}
-                            className="w-full pl-10 pr-10 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent appearance-none text-white"
-                        >
-                            <option value="" className="bg-gray-800">Select a store...</option>
-                            {stores.map(store => (
-                                <option key={store.id} value={store.id} className="bg-gray-800">
-                                    {store.storeName} - {store.city}
-                                </option>
-                            ))}
-                        </select>
-                        <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">▾</div>
-                    </div>
+                    <SearchableSelectDark
+                        value={selectedStore}
+                        onChange={(val) => {
+                            setSelectedStore(val);
+                            setError(null);
+                        }}
+                        options={stores.map(store => ({
+                            value: store.id,
+                            label: `${store.storeName} - ${store.city}`
+                        }))}
+                        placeholder="Search or select store..."
+                        leftIcon={<FaStore className="text-gray-500" />}
+                        disabled={loading && stores.length === 0}
+                    />
                 </div>
 
                 {/* Region Dropdown */}

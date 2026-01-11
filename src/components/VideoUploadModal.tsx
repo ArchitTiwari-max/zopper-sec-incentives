@@ -304,10 +304,6 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
           });
         }
 
-        setTimeout(() => {
-          alert('🎉 Video uploaded successfully!\n\n📋 Your video will appear on the feed once approved by our admin team.');
-        }, 500);
-
         setTimeout(() => handleClose(), 3000);
         return;
       }

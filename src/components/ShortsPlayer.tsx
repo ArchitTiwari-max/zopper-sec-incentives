@@ -70,9 +70,11 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     const [showUserTooltip, setShowUserTooltip] = useState<string | null>(null); // For user tooltip (changed from hoveredUser)
     const [isLayoutReady, setIsLayoutReady] = useState(false); // Track layout readiness
     const [audioUnlocked, setAudioUnlocked] = useState(false); // Track site-wide audio permission
+    const [isHeld, setIsHeld] = useState(false); // Track when video is being held to pause
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
     const viewTimers = useRef<Map<string, NodeJS.Timeout>>(new Map()); // Track view timers
+    const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Track hold timer
     const programmaticScrollVideoId = useRef<string | null>(null); // Track which video was programmatically scrolled to
     const audioContextRef = useRef<AudioContext | null>(null); // Audio context for site-wide permission
 
@@ -465,17 +467,40 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         if (video && videoData) {
             if (video.paused) {
                 video.play().catch(console.error);
-                setVideoPlayingStates(prev => ({
-                    ...prev,
-                    [videoData.id]: true
-                }));
+                // State will be updated by onPlay listener
             } else {
                 video.pause();
-                setVideoPlayingStates(prev => ({
-                    ...prev,
-                    [videoData.id]: false
-                }));
+                // State will be updated by onPause listener
             }
+        }
+    };
+
+    const handleHoldStart = (videoIndex: number) => {
+        // Wait 200ms before pausing to ensure it's a "hold" and not a "tap"
+        if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
+
+        holdTimeoutRef.current = setTimeout(() => {
+            const video = videoRefs.current[videoIndex];
+            if (video && !video.paused) {
+                video.pause();
+                setIsHeld(true);
+            }
+        }, 200);
+    };
+
+    const handleHoldEnd = (videoIndex: number) => {
+        // Clear the timer so it doesn't pause if the user already let go (it was a tap)
+        if (holdTimeoutRef.current) {
+            clearTimeout(holdTimeoutRef.current);
+            holdTimeoutRef.current = null;
+        }
+
+        if (isHeld) {
+            const video = videoRefs.current[videoIndex];
+            if (video) {
+                video.play().catch(console.error);
+            }
+            setIsHeld(false);
         }
     };
 
@@ -824,7 +849,10 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                             muted={muted}
                             playsInline
                             preload="metadata"
-                            onClick={() => togglePlayPause(index)}
+                            onClick={toggleMute}
+                            onPointerDown={() => handleHoldStart(index)}
+                            onPointerUp={() => handleHoldEnd(index)}
+                            onPointerLeave={() => handleHoldEnd(index)}
                             onTimeUpdate={(e) => {
                                 const v = e.currentTarget;
                                 if (v.duration) {
@@ -880,16 +908,6 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                     Shorts
                                 </div>
                                 <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setMuted(!muted)}
-                                        className="p-2 bg-black/30 rounded-full backdrop-blur-sm"
-                                    >
-                                        {muted ? (
-                                            <MdVolumeOff className="text-white text-xl" />
-                                        ) : (
-                                            <MdVolumeUp className="text-white text-xl" />
-                                        )}
-                                    </button>
                                     {currentUser && currentUser.isSultanAdmin === true && (
                                         <div className="relative">
                                             <button
@@ -935,8 +953,8 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                 </div>
                             </div>
 
-                            {/* Center Play/Pause - only show for current video */}
-                            {index === currentIndex && videoPlayingStates[video.id] === false && (
+                            {/* Center Play/Pause - only show for current video when not just being held */}
+                            {index === currentIndex && videoPlayingStates[video.id] === false && !isHeld && (
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-auto z-10">
                                     <button
                                         onClick={() => togglePlayPause(index)}
