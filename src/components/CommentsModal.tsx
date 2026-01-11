@@ -161,8 +161,14 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-end justify-center z-[200] md:items-center">
-      <div className="bg-[#282828] w-full max-w-lg h-[80vh] md:h-[70vh] md:rounded-xl flex flex-col">
+    <div 
+      className="fixed inset-0 bg-black/80 flex items-end justify-center z-[200] md:items-center pb-16 md:pb-0"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-[#282828] w-full max-w-lg h-[75vh] md:h-[70vh] md:rounded-xl flex flex-col mb-2 md:mb-0"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h2 className="text-white font-semibold text-lg">Comments</h2>

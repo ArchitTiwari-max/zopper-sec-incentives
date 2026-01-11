@@ -5434,6 +5434,48 @@ app.post('/api/pitch-sultan/videos/:id/toggle-like', async (req, res) => {
   }
 })
 
+/**
+ * GET /api/pitch-sultan/ad
+ * Get the current ad image URL
+ */
+app.get('/api/pitch-sultan/ad', async (req, res) => {
+    try {
+        const ad = await prisma.pitchSultanAd.findFirst({
+            orderBy: { createdAt: 'desc' }
+        })
+        res.json({ success: true, url: ad?.imageUrl || null })
+    } catch (error) {
+        console.error('❌ Error fetching ad:', error)
+        res.status(500).json({ success: false, message: 'Failed to fetch ad' })
+    }
+})
+
+/**
+ * POST /api/pitch-sultan/ad
+ * Upload/Update the ad image
+ */
+app.post('/api/pitch-sultan/ad', async (req, res) => {
+    try {
+        const { url, uploaderName } = req.body
+        if (!url) {
+            return res.status(400).json({ success: false, message: 'URL is required' })
+        }
+
+        await prisma.pitchSultanAd.create({
+            data: {
+                 imageUrl: url,
+                 uploadedBy: uploaderName || 'Admin'
+            }
+        })
+
+        res.json({ success: true, message: 'Ad updated successfully' })
+
+    } catch (error) {
+         console.error('❌ Error updating ad:', error)
+        res.status(500).json({ success: false, message: 'Failed to update ad' })
+    }
+})
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
