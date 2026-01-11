@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     MdHome, MdHomeFilled,
@@ -22,6 +22,7 @@ import { VideoPreview } from '../components/VideoPreview';
 import contestRulesImg from '../assets/contest-rules.jpg';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/lib/config';
+import { useUploadManager } from '../components/UploadManager';
 
 
 // --- Mock Data (REMOVED - Now using database) ---
@@ -91,17 +92,19 @@ const getThumbnailUrl = (url: string, thumbnailUrl?: string) => {
 
 // --- Components ---
 
-const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick }: {
-    currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string },
+const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick, onAdUpload }: {
+    currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string, isSultanAdmin?: boolean },
     onSearch?: (query: string) => void,
     onNotificationClick?: () => void,
-    onLogoClick?: () => void
+    onLogoClick?: () => void,
+    onAdUpload?: (file: File) => void
 }) => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [isSearchActive, setIsSearchActive] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const { logout } = useAuth();
     const navigate = useNavigate();
+    const adInputRef = useRef<HTMLInputElement>(null);
 
     const handleLogout = () => {
         logout();
@@ -120,6 +123,13 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick }: {
         setSearchQuery('');
         if (onSearch) {
             onSearch(''); // Clear search
+        }
+    };
+
+    const handleAdSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0] && onAdUpload) {
+            onAdUpload(e.target.files[0]);
+            setShowProfileMenu(false);
         }
     };
 
@@ -189,6 +199,17 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick }: {
                                                 <p className="text-gray-500 text-xs">{currentUser.role}</p>
                                             </div>
 
+                                            {/* Ad Upload for Sultan Admin */}
+                                            {currentUser.isSultanAdmin && (
+                                                <button
+                                                    onClick={() => adInputRef.current?.click()}
+                                                    className="w-full px-4 py-2 text-left text-blue-400 hover:bg-blue-900/20 transition-colors flex items-center gap-2 text-sm"
+                                                >
+                                                    <MdUpload className="text-lg" />
+                                                    <span>Update Ad Image</span>
+                                                </button>
+                                            )}
+
                                             {/* Logout Button */}
                                             <button
                                                 onClick={handleLogout}
@@ -227,6 +248,14 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick }: {
                     </button>
                 </form>
             )}
+            {/* Hidden Ad Input */}
+            <input
+                type="file"
+                ref={adInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleAdSelect}
+            />
         </div>
     );
 };
@@ -915,6 +944,8 @@ export const PitchSultanBattle = () => {
     const [searchQuery, setSearchQuery] = useState(''); // Add search query state
     const [loading, setLoading] = useState(true);
     const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null); // Add this state
+    const [adImageUrl, setAdImageUrl] = useState<string | null>(null); // Ad Image URL for upload functionality
+    const { uploadWithRetry } = useUploadManager(); // Upload hook
     const [currentUser, setCurrentUser] = useState({
         name: "Loading...",
         handle: "@loading",
@@ -1008,7 +1039,40 @@ export const PitchSultanBattle = () => {
         }
     }, [activeTab]);
 
+    const handleAdUpload = async (file: File) => {
+        if (!file) return;
 
+        try {
+            // Upload to S3/Cloud
+            const filename = `ad-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+            // Use generic mime type or detect. file.type works.
+            const url = await uploadWithRetry(file, filename, file.type, (p) => {
+                console.log(`Uploading ad: ${p.percentage}%`);
+            });
+
+            // Save to backend
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${API_BASE_URL}/pitch-sultan/ad`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ url, uploaderName: currentUser.name }),
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                setAdImageUrl(url);
+                alert("Ad image updated successfully! It will appear in Shorts after every 8 videos.");
+            } else {
+                alert("Failed to update ad image record.");
+            }
+        } catch (e) {
+            console.error("Ad upload failed", e);
+            alert("Failed to upload ad image: " + (e instanceof Error ? e.message : "Unknown error"));
+        }
+    };
 
     const handleVideoClick = (video: any) => {
         console.log('🎬 Video clicked:', video.id);
@@ -1200,7 +1264,7 @@ export const PitchSultanBattle = () => {
 
     return (
         <div className="min-h-screen bg-[#0f0f0f] text-white">
-            {currentUser && <Navbar currentUser={currentUser} onSearch={handleSearch} onNotificationClick={handleNotificationClick} onLogoClick={handleLogoClick} />}
+            {currentUser && <Navbar currentUser={currentUser} onSearch={handleSearch} onNotificationClick={handleNotificationClick} onLogoClick={handleLogoClick} onAdUpload={handleAdUpload} />}
 
             <div className="pt-14 pb-16 md:pl-0">
                 <div className={`${activeTab === 'home' ? 'block' : 'hidden'}`}>
@@ -1273,7 +1337,7 @@ export const PitchSultanBattle = () => {
                         {/* Video Feed */}
                         {!loading && filteredVideos.length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-4">
-                                {filteredVideos.map(video => (
+                                {filteredVideos.map((video, index) => (
                                     <VideoPreview
                                         key={video.id}
                                         video={video}
