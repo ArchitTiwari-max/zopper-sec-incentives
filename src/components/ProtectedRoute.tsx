@@ -18,8 +18,12 @@ export function ProtectedRoute({
   const location = useLocation()
 
   if (!isAuthenticated) {
+    // Preserve the current location including query params as a return target
+    const currentPath = location.pathname + location.search + location.hash
+    const loginPath = `${redirectTo}?returnTo=${encodeURIComponent(currentPath)}`
+
     return <Navigate 
-      to={redirectTo} 
+      to={loginPath} 
       state={{ from: location }} 
       replace 
     />
@@ -60,6 +64,14 @@ export function PublicOnlyRoute({ children }: { children: ReactNode }) {
   const location = useLocation()
 
   if (isAuthenticated) {
+    // Check for returnTo in query params first (more robust)
+    const params = new URLSearchParams(location.search)
+    const returnTo = params.get('returnTo')
+    
+    if (returnTo) {
+      return <Navigate to={decodeURIComponent(returnTo)} replace />
+    }
+
     const from = (location.state as any)?.from
     if (from && typeof from === 'object') {
       const next = `${from.pathname || ''}${from.search || ''}${from.hash || ''}` || '/'
