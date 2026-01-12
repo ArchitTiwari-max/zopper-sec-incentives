@@ -135,15 +135,22 @@ export function ProctoringPanel({ secId, phone, sessionToken, onFlag }: Proctori
 
       console.debug('📸 Upload result:', result)
 
+      const cloudinaryUrl = result?.secure_url || result?.url || (result?.public_id ? `public_id=${result.public_id}` : undefined)
+      console.log('📸 ========================================')
+      console.log('📸 CLOUDINARY URL TO SAVE:', cloudinaryUrl)
+      console.log('📸 Session Token:', sessionToken)
+      console.log('📸 SEC ID:', secId)
+      console.log('📸 ========================================')
+
       await logProctoringEvent({
         secId,
         phone,
         sessionToken,
         eventType: 'snapshot',
-        details: result?.secure_url || result?.url || (result?.public_id ? `public_id=${result.public_id}` : undefined),
+        details: cloudinaryUrl,
       })
 
-      console.log('📸 Snapshot uploaded successfully:', result.secure_url)
+      console.log('✅ Snapshot URL saved to database:', cloudinaryUrl)
     } catch (e) {
       console.error('📸 Snapshot upload error:', e)
       console.error('📸 Error stack:', e instanceof Error ? e.stack : e)

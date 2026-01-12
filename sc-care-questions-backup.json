@@ -1,0 +1,2824 @@
+{
+  "totalQuestions": 234,
+  "totalCategories": 8,
+  "categoryStats": {
+    "Samsung Protect Max – MT": 30,
+    "Claims & Service Process – Coverage, Limits and Claim Journey": 29,
+    "Eligibility & Purchase Window – mT": 30,
+    "Plan Activation & Cool-off Period – mT": 29,
+    "Repair Rules & Service Basics – Samsung Protect Max": 30,
+    "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)": 37,
+    "Employee Support & Training – Samsung Protect Max (SEC Level)": 19,
+    "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)": 30
+  },
+  "questions": [
+    {
+      "questionId": 1,
+      "question": "What best describes Samsung Protect Max?",
+      "options": [
+        "A) A theft and loss insurance plan",
+        "B) A basic warranty extension",
+        "C) A comprehensive protection plan with accidental & functional damage coverage",
+        "D) An accessories-only protection plan"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 2,
+      "question": "When does Samsung Protect Max coverage begin?",
+      "options": [
+        "A) Immediately on device purchase",
+        "B) After 15 days",
+        "C) After 30 days cooling period from plan purchase",
+        "D) After first claim"
+      ],
+      "correctAnswer": "A",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 3,
+      "question": "How many claims can a customer raise under Samsung Protect Max?",
+      "options": [
+        "A) Only 1 claim",
+        "B) Maximum 2 claims",
+        "C) Limited claims based on invoice value",
+        "D) Unlimited claims during the tenure"
+      ],
+      "correctAnswer": "D",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 4,
+      "question": "Is there any invoice value capping under Samsung Protect Max?",
+      "options": [
+        "A) Yes, capped at 50% of invoice value",
+        "B) Yes, capped at ₹ 50,000",
+        "C) No invoice value capping",
+        "D) Capping applies only for second claim"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 5,
+      "question": "Is depreciation applied on parts or repair costs?",
+      "options": [
+        "A) Yes, as per device age",
+        "B) Yes, 10% per year",
+        "C) Only on battery",
+        "D) No depreciation is applied"
+      ],
+      "correctAnswer": "D",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 6,
+      "question": "What does OTD (One Time Deductible) mean?",
+      "options": [
+        "A) Deductible payable on every claim",
+        "B) Deductible paid only at policy purchase",
+        "C) A one-time amount paid every time before availing any damage claim",
+        "D) Deductible applicable only for accidental damage"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 7,
+      "question": "Does Samsung Protect Max cover theft or loss of the device?",
+      "options": [
+        "A) Yes, both theft and loss",
+        "B) Only theft",
+        "C) Only loss",
+        "D) No, theft and loss are not covered"
+      ],
+      "correctAnswer": "D",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 8,
+      "question": "Where can customers get repairs done under Samsung Protect Max?",
+      "options": [
+        "A) Any local repair shop",
+        "B) Third-party service centers",
+        "C) Samsung brand-authorized service centers only",
+        "D) Online repair partners"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 9,
+      "question": "Is Samsung Protect Max valid outside India?",
+      "options": [
+        "A) No, only valid in India",
+        "B) Yes, with global coverage",
+        "C) Only in selected countries",
+        "D) Only for premium devices"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 10,
+      "question": "Which statement about repair value is correct?",
+      "options": [
+        "A) Total repair value is capped during tenure",
+        "B) Only one repair up to invoice value is allowed",
+        "C) Each claim is allowed up to invoice value with no cap on number of claims",
+        "D) Repair value reduces after every claim"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 11,
+      "question": "A customer has already raised two damage claims under Samsung Protect Max. Can they raise another claim?",
+      "options": [
+        "A) No, maximum two claims are allowed",
+        "B) Yes, but only up to 50% invoice value",
+        "C) Yes, unlimited claims are allowed during tenure",
+        "D) Only after paying a second deductible"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 12,
+      "question": "A customer’s phone invoice value is ₹ 80,000. What is the maximum repair value allowed per claim?",
+      "options": [
+        "A) ₹ 40,000",
+        "B) ₹ 50,000",
+        "C) ₹ 80,000",
+        "D) Depends on device age"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 13,
+      "question": "A customer wants to repair their device at a local repair shop to save time. Is this allowed?",
+      "options": [
+        "A) Yes, if bills are submitted",
+        "B) Yes, only outside warranty",
+        "C) No, repairs must be done at Samsung authorized service centers",
+        "D) Allowed only for minor repairs"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 14,
+      "question": "A customer raises a claim within 10 days of purchasing Samsung Protect Max. What happens?",
+      "options": [
+        "A) Claim is approved",
+        "B) Claim is approved with higher deductible",
+        "C) Claim is rejected due to cooling period",
+        "D) Claim is converted to warranty claim"
+      ],
+      "correctAnswer": "A",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 15,
+      "question": "A customer asks whether depreciation will be applied since the phone is 1 year old. What should the SEC confirm?",
+      "options": [
+        "A) 10% depreciation applies",
+        "B) 20% depreciation applies",
+        "C) Depreciation applies only on battery",
+        "D) No depreciation is applied"
+      ],
+      "correctAnswer": "D",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 16,
+      "question": "A customer damages the device while traveling abroad. Is the claim eligible?",
+      "options": [
+        "A) No, claims are valid only in India",
+        "B) Yes, Samsung Protect Max offers global coverage .",
+        "C) Only if purchased internationally",
+        "D) Only accidental damage is covered abroad"
+      ],
+      "correctAnswer": "B",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 17,
+      "question": "When is the One Time Deductible (OTD) payable?",
+      "options": [
+        "A) At the time of policy purchase",
+        "B) One time during plan coverage period",
+        "C) Before availing any damage claim",
+        "D) After claim settlement"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 18,
+      "question": "A customer asks if theft is covered under Samsung Protect Max. What is the correct response?",
+      "options": [
+        "A) Theft is covered with FIR",
+        "B) Theft is covered once during tenure",
+        "C) Theft is covered only in India",
+        "D) Theft is not covered"
+      ],
+      "correctAnswer": "D",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 19,
+      "question": "Which statement best explains Samsung Protect Max to a customer?",
+      "options": [
+        "A) Limited repair plan with depreciation",
+        "B) Single-claim protection plan",
+        "C) Unlimited claims with no invoice value or repair cap",
+        "D) Theft and loss insurance"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 20,
+      "question": "Why is Samsung Protect Max positioned as a premium protection plan?",
+      "options": [
+        "A) Because it is cheaper than others",
+        "B) Because it includes accessories",
+        "C) Because it offers unlimited claims, no depreciation, and authorized service",
+        "D) Because it covers theft"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 21,
+      "question": "What coverage does the ADLD plan offer?",
+      "options": [
+        "A) Only screen damage coverage",
+        "B) 2-year comprehensive coverage",
+        "C) 1-year comprehensive damage coverage",
+        "D) Only liquid damage coverage"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 22,
+      "question": "What type of damages are covered under the ADLD plan?",
+      "options": [
+        "A) Only accidental damage",
+        "B) Only liquid damage",
+        "C) Accidental and liquid damage",
+        "D) Theft and loss"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 23,
+      "question": "What is covered under the Screen Protect plan?",
+      "options": [
+        "A) All types of device damage",
+        "B) Screen damage only",
+        "C) Screen and battery damage",
+        "D) Screen and liquid damage"
+      ],
+      "correctAnswer": "B",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 24,
+      "question": "Which plan should be recommended if a customer is concerned only about screen breakage?",
+      "options": [
+        "A) ADLD",
+        "B) COMBO (CPP)",
+        "C) Screen Protect",
+        "D) Extended Warranty"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 25,
+      "question": "What is the tenure of the COMBO (CPP) plan?",
+      "options": [
+        "A) 1 year",
+        "B) 18 months",
+        "C) 2 years",
+        "D) 3 years"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 26,
+      "question": "What type of damage coverage is included in the COMBO (CPP) plan?",
+      "options": [
+        "A) Only accidental damage",
+        "B) Only liquid damage",
+        "C) Accidental and liquid damage",
+        "D) Only manufacturing defects"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 27,
+      "question": "What additional benefit is included in the COMBO (CPP) plan?",
+      "options": [
+        "A) Theft coverage",
+        "B) Screen-only coverage",
+        "C) Second-year extended warranty",
+        "D) Accessories coverage"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 28,
+      "question": "Which plan offers the most comprehensive overall protection?",
+      "options": [
+        "A) Screen Protect",
+        "B) ADLD",
+        "C) COMBO (CPP)",
+        "D) Basic Warranty"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 29,
+      "question": "A customer wants 2 years of protection including damage and warranty benefits. Which plan is most suitable?",
+      "options": [
+        "A) Screen Protect",
+        "B) ADLD",
+        "C) COMBO (CPP)",
+        "D) Screen Protect + ADLD"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 30,
+      "question": "Which statement correctly compares all three plans?",
+      "options": [
+        "A) ADLD and Screen Protect both cover only screen damage",
+        "B) Screen Protect covers comprehensive damage",
+        "C) ADLD offers 1-year comprehensive damage, Screen Protect covers only screen, and COMBO (CPP) offers 2-year comprehensive damage with extended warranty",
+        "D) All plans offer identical coverage"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – MT"
+    },
+    {
+      "questionId": 31,
+      "question": "What does “Truly Unlimited Repairs” mean under Samsung protection plans?",
+      "options": [
+        "A) Only one repair is allowed per year",
+        "B) Repairs are limited by plan tenure value",
+        "C) Unlimited number of repairs are allowed during the plan tenure",
+        "D) Repairs are allowed only during warranty period"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 32,
+      "question": "What is the maximum repair value allowed per individual claim?",
+      "options": [
+        "A) ₹ 25,000",
+        "B) 50% of invoice value",
+        "C) Fixed amount defined by Samsung",
+        "D) Up to the invoice value of the device"
+      ],
+      "correctAnswer": "D",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 33,
+      "question": "Is there any overall capping on total repair value during the plan tenure?",
+      "options": [
+        "A) Yes, capped at invoice value",
+        "B) Yes, capped at twice the invoice value",
+        "C) Yes, capped based on plan type",
+        "D) No overall capping on total repair value"
+      ],
+      "correctAnswer": "D",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 34,
+      "question": "How is depreciation applied on parts or repair costs?",
+      "options": [
+        "A) Depreciation applies based on device age",
+        "B) 10% depreciation per year",
+        "C) Depreciation applies only after first claim",
+        "D) No depreciation is applicable"
+      ],
+      "correctAnswer": "D",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 35,
+      "question": "Which statement about depreciation is correct across Samsung plans?",
+      "options": [
+        "A) Depreciation applies only to screen repairs",
+        "B) Depreciation applies only to liquid damage",
+        "C) Depreciation varies by plan",
+        "D) No depreciation applies across all plans"
+      ],
+      "correctAnswer": "D",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 36,
+      "question": "A customer has already raised multiple claims under the plan. Can they raise another claim?",
+      "options": [
+        "A) No, claim limit is exhausted",
+        "B) Yes, but only after plan renewal",
+        "C) Yes, unlimited claims are allowed during tenure",
+        "D) Only one claim per year is allowed"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 37,
+      "question": "Which of the following best explains invoice value applicability?",
+      "options": [
+        "A) Total repair value cannot exceed invoice value",
+        "B) Invoice value applies only for first claim",
+        "C) Each claim is allowed up to the device invoice value",
+        "D) Invoice value applies only for screen damage"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 38,
+      "question": "Which plans offer unlimited repairs with no depreciation?",
+      "options": [
+        "A) Only ADLD",
+        "B) Only Screen Protection",
+        "C) Only CPP",
+        "D) ADLD, Screen Protection, Extended Warranty, and CPP"
+      ],
+      "correctAnswer": "D",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 39,
+      "question": "Why is “no depreciation” an important customer benefit?",
+      "options": [
+        "A) Customer pays lower deductible",
+        "B) Customer gets faster claim approval",
+        "C) Customer receives full repair value without age-based deduction",
+        "D) Customer can replace the device"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 40,
+      "question": "Which statement correctly summarizes the claims benefit across Samsung plans?",
+      "options": [
+        "A) Limited claims with depreciation",
+        "B) One-time claim benefit",
+        "C) Unlimited claims, each up to invoice value, with no depreciation",
+        "D) Claims allowed only during warranty"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 41,
+      "question": "How can a customer initiate a claim under Samsung protection plans?",
+      "options": [
+        "A) By visiting any local service shop",
+        "B) By calling the retailer",
+        "C) By logging in to Samsung’s Unified Portal using registered mobile number and OTP",
+        "D) By emailing Samsung support"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 42,
+      "question": "Which option should the customer select on the Samsung Unified Portal to start a claim?",
+      "options": [
+        "A) Register Complaint",
+        "B) Service Request",
+        "C) Raise Claim",
+        "D) Warranty Extension"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 43,
+      "question": "What details does the customer need to select while raising a Carry-In claim?",
+      "options": [
+        "A) Device color and memory",
+        "B) Issue with the device and how the issue occurred",
+        "C) Retailer name and invoice number",
+        "D) Repair cost estimate"
+      ],
+      "correctAnswer": "B",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 44,
+      "question": "How does a customer choose the service center for repair?",
+      "options": [
+        "A) Assigned automatically by Samsung",
+        "B) Selected by retailer",
+        "C) Customer selects nearest Samsung authorized service center based on pincode",
+        "D) Any service center can be selected"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 45,
+      "question": "When is the One-Time Deductible (OTD) paid during the claim process?",
+      "options": [
+        "A) At the time of policy purchase",
+        "B) After device repair",
+        "C) Before claim registration for applicable plans",
+        "D) Only for extended warranty plans"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 46,
+      "question": "For which plans is OTD payment not required during claim registration?",
+      "options": [
+        "A) ADLD and Screen Protection",
+        "B) CPP only",
+        "C) Extended Warranty plans",
+        "D) All plans require OTD"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 47,
+      "question": "What happens after successful OTD payment (if applicable)?",
+      "options": [
+        "A) Claim is rejected",
+        "B) Device replacement is approved",
+        "C) Claim is registered and a Claim ID is generated",
+        "D) Repair starts immediately"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 48,
+      "question": "How is the customer informed after claim registration?",
+      "options": [
+        "A) Phone call only",
+        "B) SMS only",
+        "C) Email only",
+        "D) Both Email and SMS"
+      ],
+      "correctAnswer": "D",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 49,
+      "question": "Where must the customer submit the device for repair?",
+      "options": [
+        "A) Any local repair shop",
+        "B) Retail outlet",
+        "C) Samsung authorized service center",
+        "D) Courier pickup point"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 50,
+      "question": "Who can initiate a claim under Samsung protection plans?",
+      "options": [
+        "A) Retailer only",
+        "B) Samsung service engineer",
+        "C) Customer using the registered mobile number",
+        "D) Promoter on behalf of customer"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 51,
+      "question": "What authentication method is used for customer login on the Samsung Unified Portal?",
+      "options": [
+        "A) Username and password",
+        "B) Invoice number",
+        "C) OTP sent to registered mobile number",
+        "D) Email verification"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 52,
+      "question": "What happens if a customer selects an incorrect issue while raising a claim?",
+      "options": [
+        "A) Claim is automatically rejected",
+        "B) Claim cannot be edited",
+        "C) Issue can be validated and corrected at the authorized service center",
+        "D) Customer must buy a new plan"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 53,
+      "question": "Which of the following is mandatory to successfully register a Carry-In claim?",
+      "options": [
+        "A) Device box",
+        "B) Retail invoice copy",
+        "C) Selection of service center, date, and time",
+        "D) Bank account details"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 54,
+      "question": "When is the processing fee / OTD charged during the claim journey?",
+      "options": [
+        "A) After repair completion",
+        "B) Before claim registration (where applicable)",
+        "C) At policy purchase",
+        "D) Only for screen damage"
+      ],
+      "correctAnswer": "B",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 55,
+      "question": "In which scenario is no OTD / processing fee applicable?",
+      "options": [
+        "A) ADLD claims",
+        "B) Screen Protection claims",
+        "C) CPP claims",
+        "D) Extended Warranty claims"
+      ],
+      "correctAnswer": "D",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 56,
+      "question": "What confirmation does the customer receive after claim registration?",
+      "options": [
+        "A) Only verbal confirmation",
+        "B) Claim approval certificate",
+        "C) Claim ID via SMS and Email",
+        "D) Repair estimate only"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 57,
+      "question": "What type of service experience is offered under Samsung protection plans?",
+      "options": [
+        "A) Reimbursement-based",
+        "B) Partial cashless",
+        "C) Fully cashless at authorized service centers",
+        "D) Post-repair refund"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 58,
+      "question": "Who performs the repair under Samsung protection plans?",
+      "options": [
+        "A) Any local technician",
+        "B) Third-party vendors",
+        "C) Samsung authorized service engineers using genuine parts",
+        "D) Customer-selected repair shop"
+      ],
+      "correctAnswer": "C",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 59,
+      "question": "Which statement best represents the end-to-end claim journey?",
+      "options": [
+        "A) Customer raises claim → Repair → Payment",
+        "B) Customer logs in → Raises claim → Pays OTD (if applicable) → Visits authorized service center → Cashless repair",
+        "C) Retailer raises claim → Replacement issued",
+        "D) Customer submits device without claim"
+      ],
+      "correctAnswer": "B",
+      "category": "Claims & Service Process – Coverage, Limits and Claim Journey"
+    },
+    {
+      "questionId": 60,
+      "question": "What is the purchase window for Samsung protection plans?",
+      "options": [
+        "A) Same day only",
+        "B) 3 days from device purchase",
+        "C) 7 days from device purchase",
+        "D) 15 days from device purchase"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 61,
+      "question": "From which date is the 7-day purchase window calculated?",
+      "options": [
+        "A) Date of activation",
+        "B) Date of device purchase (invoice date)",
+        "C) Date of delivery",
+        "D) Date of registration"
+      ],
+      "correctAnswer": "B",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 62,
+      "question": "Can a protection plan be purchased after 7 days of device purchase?",
+      "options": [
+        "A) Yes, with approval",
+        "B) Yes, for selected devices",
+        "C) No, purchase is not allowed after 7 days",
+        "D) Only for extended warranty"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 63,
+      "question": "Which devices are eligible for Samsung protection plans?",
+      "options": [
+        "A) Devices purchased from any retailer",
+        "B) Used or refurbished devices",
+        "C) Brand-new Samsung devices sold via official channels in India",
+        "D) Imported devices"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 64,
+      "question": "Are second-hand or refurbished devices eligible for coverage?",
+      "options": [
+        "A) Yes",
+        "B) Only refurbished",
+        "C) Only second-hand",
+        "D) No"
+      ],
+      "correctAnswer": "D",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 65,
+      "question": "Which product category is eligible under ADLD plans?",
+      "options": [
+        "A) Only smartphones",
+        "B) Smartphones and accessories",
+        "C) Smartphones, tablets, smartwatches, laptops (as per plan)",
+        "D) Accessories only"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 66,
+      "question": "Is Screen Protection available for all Samsung devices?",
+      "options": [
+        "A) Yes, all devices",
+        "B) Only smartphones and tablets",
+        "C) Only smartphones",
+        "D) Only laptops"
+      ],
+      "correctAnswer": "B",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 67,
+      "question": "Which plan extends the standard manufacturer warranty?",
+      "options": [
+        "A) ADLD",
+        "B) Screen Protection",
+        "C) Extended Warranty (EW)",
+        "D) CPP"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 68,
+      "question": "What type of defects are covered under Extended Warranty plans?",
+      "options": [
+        "A) Accidental damage",
+        "B) Liquid damage",
+        "C) Mechanical and electrical breakdowns",
+        "D) Screen damage"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 69,
+      "question": "Which plan offers 2 years of comprehensive coverage?",
+      "options": [
+        "A) ADLD",
+        "B) Screen Protection",
+        "C) Extended Warranty",
+        "D) Comprehensive Protection Plan (CPP)"
+      ],
+      "correctAnswer": "D",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 70,
+      "question": "Is plan purchase allowed if the device is already damaged?",
+      "options": [
+        "A) Yes",
+        "B) Yes, after inspection",
+        "C) No",
+        "D) Only screen plans allowed"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 71,
+      "question": "Where must the eligible device be purchased from?",
+      "options": [
+        "A) Any online marketplace",
+        "B) Grey market seller",
+        "C) Samsung official channels in India",
+        "D) International retailer"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 72,
+      "question": "Can a customer purchase multiple protection plans for the same device?",
+      "options": [
+        "A) Yes, unlimited",
+        "B) Only ADLD + Screen Protection",
+        "C) No, only one eligible plan per device",
+        "D) Only for premium devices"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 73,
+      "question": "Is global coverage applicable only after plan activation?",
+      "options": [
+        "A) No",
+        "B) Yes, subject to plan T&Cs",
+        "C) Only in India",
+        "D) Only for CPP"
+      ],
+      "correctAnswer": "B",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 74,
+      "question": "Can protection plans be purchased without a valid invoice?",
+      "options": [
+        "A) Yes",
+        "B) Yes, with IMEI",
+        "C) No, valid invoice is mandatory",
+        "D) Only for screen protection"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 75,
+      "question": "Which customer detail is mandatory during plan purchase?",
+      "options": [
+        "A) Email ID only",
+        "B) Address proof",
+        "C) Registered mobile number",
+        "D) PAN card"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 76,
+      "question": "Can plans be purchased for devices bought outside India?",
+      "options": [
+        "A) Yes",
+        "B) Yes, with global coverage",
+        "C) No",
+        "D) Only extended warranty allowed"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 77,
+      "question": "What happens if a customer misses the 7-day purchase window?",
+      "options": [
+        "A) Window can be extended",
+        "B) Customer can pay extra",
+        "C) Plan purchase becomes ineligible",
+        "D) Only EW can be purchased"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 78,
+      "question": "Which plan is best suited for customers wanting only screen coverage?",
+      "options": [
+        "A) ADLD",
+        "B) CPP",
+        "C) Extended Warranty",
+        "D) Screen Protection"
+      ],
+      "correctAnswer": "D",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 79,
+      "question": "Is eligibility dependent on device price segment?",
+      "options": [
+        "A) Yes",
+        "B) Yes, only premium phones",
+        "C) No, eligibility is based on plan and channel",
+        "D) Only flagship devices allowed"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 80,
+      "question": "When should SECs ideally pitch the protection plan to customers?",
+      "options": [
+        "A) After 30 days",
+        "B) During first service visit",
+        "C) At the time of purchase or within 7 days",
+        "D) After warranty expiry"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 81,
+      "question": "Is device inspection required at the time of plan purchase?",
+      "options": [
+        "A) Always required",
+        "B) Never required",
+        "C) As per plan and process defined by Samsung",
+        "D) Only for screen plans"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 82,
+      "question": "Can a plan be transferred to another device?",
+      "options": [
+        "A) Yes",
+        "B) Yes, with approval",
+        "C) No",
+        "D) Only within same brand"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 83,
+      "question": "Can a customer buy a protection plan online after device purchase?",
+      "options": [
+        "A) No",
+        "B) Yes, within 7 days via eligible channels",
+        "C) Only offline",
+        "D) Only at service center"
+      ],
+      "correctAnswer": "B",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 84,
+      "question": "Which document validates device eligibility?",
+      "options": [
+        "A) Warranty card",
+        "B) Delivery challan",
+        "C) Retail invoice",
+        "D) Payment receipt"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 85,
+      "question": "Is plan eligibility impacted if device is activated late?",
+      "options": [
+        "A) Yes",
+        "B) No, eligibility is based on invoice date",
+        "C) Depends on plan",
+        "D) Only for CPP"
+      ],
+      "correctAnswer": "B",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 86,
+      "question": "Can a customer upgrade the plan after purchase window ends?",
+      "options": [
+        "A) Yes",
+        "B) No",
+        "C) Only within 30 days",
+        "D) Only from service center"
+      ],
+      "correctAnswer": "B",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 87,
+      "question": "Who is responsible for ensuring correct eligibility at the store level?",
+      "options": [
+        "A) Customer",
+        "B) Samsung service team",
+        "C) SEC / Promoter",
+        "D) Finance team"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 88,
+      "question": "What is the key risk of selling plans outside the eligibility window?",
+      "options": [
+        "A) Customer dissatisfaction",
+        "B) Claim rejection",
+        "C) Compliance issue",
+        "D) All of the above"
+      ],
+      "correctAnswer": "D",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 89,
+      "question": "Which statement best summarizes Eligibility & Purchase Window?",
+      "options": [
+        "A) Plans can be purchased anytime",
+        "B) Eligibility depends on claim approval",
+        "C) Plans are available only for new Samsung devices purchased via official channels within 7 days",
+        "D) Eligibility applies only to premium phones"
+      ],
+      "correctAnswer": "C",
+      "category": "Eligibility & Purchase Window – mT"
+    },
+    {
+      "questionId": 90,
+      "question": "Does Samsung Protect Max have any cooling / cool-off period?",
+      "options": [
+        "A) Yes, 7 days",
+        "B) Yes, 15 days",
+        "C) Yes, 30 days",
+        "D) No, there is no cooling period"
+      ],
+      "correctAnswer": "D",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 91,
+      "question": "Who is responsible for activating Samsung Protect Max?",
+      "options": [
+        "A) Customer",
+        "B) SEC / Promoter",
+        "C) Service Center",
+        "D) Backend system / operations team"
+      ],
+      "correctAnswer": "D",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 92,
+      "question": "What is the primary responsibility of the SEC for Samsung Protect Max activation?",
+      "options": [
+        "A) Activating the plan",
+        "B) Registering the policy",
+        "C) Ensuring correct sales invoice is generated at the store",
+        "D) Approving claims"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 93,
+      "question": "What is the maximum window allowed for plan purchase?",
+      "options": [
+        "A) Same day only",
+        "B) 3 days",
+        "C) 7 days",
+        "D) 15 days"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 94,
+      "question": "Can the plan purchase date and plan activation date be different?",
+      "options": [
+        "A) No, they are always same",
+        "B) Only for online purchases",
+        "C) Yes, activation can happen within 7 days of purchase in case customer buy plan on Device Purchase day but Within 7 days .",
+        "D) Only for premium devices"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 95,
+      "question": "From which date does Samsung Protect Max coverage start?",
+      "options": [
+        "A) Invoice date",
+        "B) Plan purchase date",
+        "C) Plan activation date",
+        "D) First claim date"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 96,
+      "question": "Can a customer raise a claim before plan activation is completed?",
+      "options": [
+        "A) Yes",
+        "B) Only screen claims",
+        "C) Only with approval",
+        "D) No"
+      ],
+      "correctAnswer": "D",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 97,
+      "question": "Is there any waiting period after plan activation to raise a claim?",
+      "options": [
+        "A) Yes, 7 days",
+        "B) Yes, 15 days",
+        "C) Yes, 30 days",
+        "D) No waiting period"
+      ],
+      "correctAnswer": "D",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 98,
+      "question": "Why does Samsung Protect Max not have a cooling period?",
+      "options": [
+        "A) It is a free plan",
+        "B) It replaces warranty",
+        "C) It is designed as a premium plan with immediate coverage",
+        "D) It covers only screen damage"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 99,
+      "question": "Which mechanism controls misuse in Samsung Protect Max instead of a cooling period?",
+      "options": [
+        "A) Claim limit",
+        "B) Depreciation",
+        "C) OTD (One Time Deductible)",
+        "D) Invoice capping"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 100,
+      "question": "What confirms successful activation of Samsung Protect Max?",
+      "options": [
+        "A) Retail invoice",
+        "B) Payment receipt",
+        "C) Policy confirmation via SMS / Email",
+        "D) Claim ID"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 101,
+      "question": "Is plan activation manual or automatic?",
+      "options": [
+        "A) Manual by SEC",
+        "B) Manual by service center",
+        "C) System / backend driven",
+        "D) Customer driven"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 102,
+      "question": "What happens if the correct sales invoice is not generated at the store?",
+      "options": [
+        "A) Claim still allowed",
+        "B) Activation delayed",
+        "C) Plan activation may fail or get delayed",
+        "D) No impact"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 103,
+      "question": "What happens if the plan is not activated within the 7-day window?",
+      "options": [
+        "A) Activation window extends",
+        "B) Claim allowed",
+        "C) Plan becomes ineligible for activation",
+        "D) Only screen claims allowed"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 104,
+      "question": "Can backend activate the plan after the 7-day window?",
+      "options": [
+        "A) Yes, with approval",
+        "B) Yes, by paying extra",
+        "C) Only for flagship devices",
+        "D) No"
+      ],
+      "correctAnswer": "D",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 105,
+      "question": "Who should monitor activation completion post-sale?",
+      "options": [
+        "A) Customer",
+        "B) Service center",
+        "C) Backend / operations team",
+        "D) Finance team"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 106,
+      "question": "Is device inspection mandatory for Samsung Protect Max activation?",
+      "options": [
+        "A) Always mandatory",
+        "B) Never required",
+        "C) As per Samsung defined backend process.Currently No Inception Required .",
+        "D) Only at service center"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 107,
+      "question": "Can a claim be raised on the same day as plan activation?",
+      "options": [
+        "A) No",
+        "B) Only after 24 hours",
+        "C) Only screen damage",
+        "D) Yes"
+      ],
+      "correctAnswer": "D",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 108,
+      "question": "Is plan activation linked to device network activation?",
+      "options": [
+        "A) Yes",
+        "B) Yes .Plan should not be sold on Preactivated devices .",
+        "C) Only for smartphones",
+        "D) Only for tablets"
+      ],
+      "correctAnswer": "B",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 109,
+      "question": "Does absence of cooling period reduce the plan tenure?",
+      "options": [
+        "A) Yes",
+        "B) No",
+        "C) Only first year",
+        "D) Only CPP"
+      ],
+      "correctAnswer": "B",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 110,
+      "question": "Which date is used to calculate Samsung Protect Max tenure?",
+      "options": [
+        "A) Invoice date",
+        "B) Purchase date",
+        "C) Activation date",
+        "D) First claim date"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 111,
+      "question": "Can claims be backdated to before activation date?",
+      "options": [
+        "A) Yes",
+        "B) Only first claim",
+        "C) Only with approval",
+        "D) No"
+      ],
+      "correctAnswer": "D",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 112,
+      "question": "If device damage occurs between purchase and activation, is it covered?",
+      "options": [
+        "A) Yes",
+        "B) Only screen damage",
+        "C) No",
+        "D) Only with approval"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 113,
+      "question": "How can a customer verify activation status?",
+      "options": [
+        "A) At store only",
+        "B) Via service center",
+        "C) Via Samsung Unified Portal / SMS / Email",
+        "D) Only through call center"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 114,
+      "question": "Which document is the proof of activation date?",
+      "options": [
+        "A) Retail invoice",
+        "B) Repair job card",
+        "C) Policy confirmation SMS / Email",
+        "D) Payment receipt"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 115,
+      "question": "Does backend activation impact unlimited claims benefit?",
+      "options": [
+        "A) Yes",
+        "B) No",
+        "C) Only first claim",
+        "D) Only second claim"
+      ],
+      "correctAnswer": "B",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 116,
+      "question": "What must SECs clearly communicate to customers?",
+      "options": [
+        "A) 30-day cooling period",
+        "B) Manual activation required",
+        "C) Backend activation with no cooling period",
+        "D) Warranty replacement"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 117,
+      "question": "Which store-level error can most impact activation?",
+      "options": [
+        "A) Wrong device color",
+        "B) Delay in delivery",
+        "C) Incorrect or missing sales invoice",
+        "D) Late claim filing"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 118,
+      "question": "What is the biggest customer benefit of backend-driven activation?",
+      "options": [
+        "A) Lower price",
+        "B) Faster replacement",
+        "C) Seamless and error-free activation",
+        "D) Longer warranty"
+      ],
+      "correctAnswer": "C",
+      "category": "Plan Activation & Cool-off Period – mT"
+    },
+    {
+      "questionId": 119,
+      "question": "What type of service model is used in Samsung Protect Max?",
+      "options": [
+        "A) Pick-up and drop",
+        "B) Home service",
+        "C) Carry-in service only",
+        "D) Courier service"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 120,
+      "question": "Where does the customer take the damaged device for repair?",
+      "options": [
+        "A) Retail store",
+        "B) Local repair shop",
+        "C) Samsung authorized service center",
+        "D) Online partner"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 121,
+      "question": "Who repairs the device under Samsung Protect Max?",
+      "options": [
+        "A) Local technician",
+        "B) Retail staff",
+        "C) Samsung authorized service engineer",
+        "D) Third-party vendor"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 122,
+      "question": "Are genuine Samsung parts used during repair?",
+      "options": [
+        "A) Sometimes",
+        "B) Only for new phones",
+        "C) Yes, always",
+        "D) Customer choice"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 123,
+      "question": "Is IMEI mandatory on the damaged device for repair?",
+      "options": [
+        "A) No",
+        "B) Only invoice needed",
+        "C) Yes, IMEI must be readable on device",
+        "D) Only box IMEI required"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 124,
+      "question": "If IMEI is readable on the device, can repair be done?",
+      "options": [
+        "A) No",
+        "B) Only partial repair",
+        "C) Yes, repair can be done",
+        "D) Only replacement allowed"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 125,
+      "question": "What happens if IMEI is not readable on the device?",
+      "options": [
+        "A) Repair still done",
+        "B) Replacement given",
+        "C) Repair may not be possible",
+        "D) Cash settlement given"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 126,
+      "question": "Does Samsung Protect Max offer 100% repair guarantee?",
+      "options": [
+        "A) No",
+        "B) Only for screen damage",
+        "C) Yes, 100% repair guarantee",
+        "D) Only first claim"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 127,
+      "question": "If repair cost is very high, will Samsung still repair the device?",
+      "options": [
+        "A) No",
+        "B) Only up to 80% value",
+        "C) Yes, device will be repaired",
+        "D) Only partial repair"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 128,
+      "question": "Is there any repair value limit under Samsung Protect Max?",
+      "options": [
+        "A) Yes, 80% of invoice",
+        "B) Yes, fixed amount",
+        "C) Each claim upto Invoice Value (No limit on multiple claims and No Invoice capping on multiple claims) .",
+        "D) Only one repair allowed"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 129,
+      "question": "What does BER mean?",
+      "options": [
+        "A) Basic electronic repair",
+        "B) Samsung repair rule",
+        "C) Beyond Economic Repair",
+        "D) Battery exchange rule"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 130,
+      "question": "Who usually uses the BER concept?",
+      "options": [
+        "A) Samsung service centers",
+        "B) Customers",
+        "C) Third-party insurance companies",
+        "D) Retail stores"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 131,
+      "question": "What does BER mean in third-party plans?",
+      "options": [
+        "A) Full repair",
+        "B) Free replacement",
+        "C) Repair not done if cost is high",
+        "D) Unlimited repair"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 132,
+      "question": "Is BER allowed in Samsung Protect Max?",
+      "options": [
+        "A) Yes",
+        "B) Sometimes",
+        "C) No, BER is not allowed",
+        "D) Only for old phones"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 133,
+      "question": "Is cash settlement allowed under Samsung Protect Max?",
+      "options": [
+        "A) Yes",
+        "B) Sometimes",
+        "C) No settlement allowed",
+        "D) Only after first claim"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 134,
+      "question": "What happens if repair cost is more than 80% of invoice value?",
+      "options": [
+        "A) Claim rejected",
+        "B) Settlement done",
+        "C) Device is still repaired",
+        "D) Plan cancelled"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 135,
+      "question": "Even if repair cost equals 100% of invoice value, what happens?",
+      "options": [
+        "A) Settlement given",
+        "B) Device replaced",
+        "C) Device is repaired",
+        "D) Claim rejected"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 136,
+      "question": "Do Samsung service centers have tools for heavy or major damage repair?",
+      "options": [
+        "A) No",
+        "B) Only for screen",
+        "C) Yes, they have full repair tools",
+        "D) Only basic repair"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 137,
+      "question": "Can Samsung service centers repair devices with very heavy or major damage if IMEI is readable?",
+      "options": [
+        "A) No, heavy damage is not covered",
+        "B) Only small damages are repaired",
+        "C) Yes, service centers can repair even major damage if IMEI is readable",
+        "D) Only replacement is allowed"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 138,
+      "question": "What is the main focus of Samsung Protect Max?",
+      "options": [
+        "A) Settlement",
+        "B) Replacement",
+        "C) Repair the device fully",
+        "D) Refund to customer"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 139,
+      "question": "If damage is very severe, what will Samsung try first?",
+      "options": [
+        "A) Settlement",
+        "B) Replacement",
+        "C) Repair the device",
+        "D) Cancel plan"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 140,
+      "question": "Why is Samsung Protect Max different from third-party plans?",
+      "options": [
+        "A) Cheaper price",
+        "B) Fewer claims",
+        "C) No BER and 100% repair",
+        "D) Longer waiting period"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 141,
+      "question": "Can customer demand cash instead of repair?",
+      "options": [
+        "A) Yes",
+        "B) Only first claim",
+        "C) No",
+        "D) Only screen damage"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 142,
+      "question": "What should promoter clearly explain to customer?",
+      "options": [
+        "A) Settlement amount",
+        "B) Depreciation value",
+        "C) Repair only, no settlement",
+        "D) Replacement rules"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 143,
+      "question": "Is depreciation applied during repair?",
+      "options": [
+        "A) Yes",
+        "B) Depends on age",
+        "C) No depreciation",
+        "D) Only after second claim"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 144,
+      "question": "Can the same device be repaired multiple times?",
+      "options": [
+        "A) No",
+        "B) Only once",
+        "C) Yes, unlimited repairs",
+        "D) Only screen once"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 145,
+      "question": "What happens after repair is completed?",
+      "options": [
+        "A) New policy issued",
+        "B) Settlement processed",
+        "C) Device returned to customer",
+        "D) Plan closed"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 146,
+      "question": "Who should guide customer for service related questions?",
+      "options": [
+        "A) Backend team",
+        "B) Finance team",
+        "C) SEC / Promoter",
+        "D) Courier partner"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 147,
+      "question": "What is the biggest benefit for customer in Samsung Protect Max?",
+      "options": [
+        "A) Cash settlement",
+        "B) Replacement",
+        "C) Guaranteed repair without depreciation",
+        "D) Free accessories"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 148,
+      "question": "Which statement is correct for Samsung Protect Max?",
+      "options": [
+        "A) BER allowed",
+        "B) Settlement possible",
+        "C) 100% repair guarantee, no BER, no settlement",
+        "D) Repair depends on cost"
+      ],
+      "correctAnswer": "C",
+      "category": "Repair Rules & Service Basics – Samsung Protect Max"
+    },
+    {
+      "questionId": 149,
+      "question": "On what basis are Samsung Protect Max incentives calculated?",
+      "options": [
+        "A) Device price",
+        "B) Device MOP",
+        "C) Samsung Protect Max plan value",
+        "D) Discount value"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 150,
+      "question": "What is the flat incentive percentage on Samsung Protect Max plans?",
+      "options": [
+        "A) 5%",
+        "B) 6%",
+        "C) 7%",
+        "D) 10%"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 151,
+      "question": "Is incentive based on phone model or plan price?",
+      "options": [
+        "A) Phone model",
+        "B) Phone MRP",
+        "C) Plan price",
+        "D) Brand"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 152,
+      "question": "What is the minimum quantity gate per SEC per month?",
+      "options": [
+        "A) 1",
+        "B) 2",
+        "C) 3",
+        "D) 5"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 153,
+      "question": "If a SEC sells only 2 plans in a month, will incentive be paid?",
+      "options": [
+        "A) Yes",
+        "B) Partial",
+        "C) No",
+        "D) Only on combo"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 154,
+      "question": "If a store has 3 SECs, what is the minimum total quantity needed?",
+      "options": [
+        "A) 6",
+        "B) 9",
+        "C) 12",
+        "D) 15"
+      ],
+      "correctAnswer": "B",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 155,
+      "question": "Incentives are paid for which stores under this logic?",
+      "options": [
+        "A) All retailers",
+        "B) Online stores",
+        "C) Croma & Vijay Sales",
+        "D) Distributor outlets"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 156,
+      "question": "Are incentives device MOP based?",
+      "options": [
+        "A) Yes",
+        "B) Sometimes",
+        "C) No",
+        "D) Only for premium phones"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 157,
+      "question": "Which plans generally give higher incentive value per sale?",
+      "options": [
+        "A) Screen Protect",
+        "B) EW",
+        "C) ADLD & COMBO",
+        "D) SP"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 158,
+      "question": "Why does COMBO plan give higher incentive?",
+      "options": [
+        "A) More quantity",
+        "B) Easy to sell",
+        "C) Higher plan value",
+        "D) Fewer claims"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 159,
+      "question": "Can a SEC earn incentive on Screen Protect plans?",
+      "options": [
+        "A) No",
+        "B) Only with approval",
+        "C) Yes, if gate is met",
+        "D) Only on S series"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 160,
+      "question": "What happens if minimum gate is not achieved?",
+      "options": [
+        "A) Incentive reduced",
+        "B) Incentive delayed",
+        "C) No incentive paid",
+        "D) Only combo counted"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 161,
+      "question": "What is SalesDost portal used for?",
+      "options": [
+        "A) Claims",
+        "B) Training",
+        "C) Spot / runtime incentives (extra earnings)",
+        "D) Invoice upload"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 162,
+      "question": "Are SalesDost incentives separate from monthly incentives?",
+      "options": [
+        "A) No",
+        "B) Included",
+        "C) Yes, additional",
+        "D) Only for managers"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 163,
+      "question": "Can a SEC earn both monthly incentive and SalesDost incentive?",
+      "options": [
+        "A) No",
+        "B) Only one",
+        "C) Yes",
+        "D) Only on combo"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 164,
+      "question": "What helps a SEC earn more incentive faster?",
+      "options": [
+        "A) Selling low price plans",
+        "B) Selling only quantity",
+        "C) Selling higher value plans",
+        "D) Avoiding combo"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 165,
+      "question": "Incentive calculation depends on which of the following?",
+      "options": [
+        "A) Claims",
+        "B) Returns",
+        "C) Total plan value sold",
+        "D) Warranty"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 166,
+      "question": "If a SEC sells ₹ 2,00,000 worth of plans, what is incentive?",
+      "options": [
+        "A) ₹ 10,000",
+        "B) ₹ 12,000",
+        "C) ₹ 14,000",
+        "D) ₹ 20,000"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 167,
+      "question": "Does selling Fold / Flip help incentive earning?",
+      "options": [
+        "A) No",
+        "B) Only sometimes",
+        "C) Yes, higher plan value gives higher incentive",
+        "D) Only for contests"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 168,
+      "question": "A SEC sells 100 Samsung devices in a month and attaches Protect Max on 30 devices. Is the SEC eligible for incentive?",
+      "options": [
+        "A) No",
+        "B) Only partial",
+        "C) Yes (gate is met)",
+        "D) Only on combo"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 169,
+      "question": "Out of 30 attachments, 7 are COMBO plans on Fold 7 / S25. Remaining 23 are ADLD plans on A17. Which plans give more incentive value?",
+      "options": [
+        "A) ADLD on A17",
+        "B) Screen Protect",
+        "C) COMBO plans",
+        "D) All same"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 170,
+      "question": "Assume COMBO plan price = ₹ 18,999. Incentive per COMBO plan is approx?",
+      "options": [
+        "A) ₹ 900",
+        "B) ₹ 1,000",
+        "C) ₹ 1,330 (7%)",
+        "D) ₹ 1,800"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 171,
+      "question": "Incentive from 7 COMBO plans ( ₹ 18,999 each) is approx?",
+      "options": [
+        "A) ₹ 6,000",
+        "B) ₹ 7,500",
+        "C) ₹ 9,310",
+        "D) ₹ 12,000"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 172,
+      "question": "Assume ADLD plan price for A17 = ₹ 2,249. Incentive per ADLD plan is approx?",
+      "options": [
+        "A) ₹ 80",
+        "B) ₹ 100",
+        "C) ₹ 157",
+        "D) ₹ 250"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 173,
+      "question": "Incentive from 23 ADLD plans (Plan Value ₹ 2,249 each) is approx?",
+      "options": [
+        "A) ₹ 2,000",
+        "B) ₹ 2,800",
+        "C) ₹ 3,600",
+        "D) ₹ 5,000"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 174,
+      "question": "Total monthly incentive in this scenario will be approximately?",
+      "options": [
+        "A) ₹ 8,000",
+        "B) ₹ 10,000",
+        "C) ₹ 12,900",
+        "D) ₹ 18,000"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 175,
+      "question": "What is the key reason incentive is high even with only 30% attachment?",
+      "options": [
+        "A) More quantity",
+        "B) Discounts",
+        "C) High-value COMBO plans",
+        "D) SalesDost"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 176,
+      "question": "If the same SEC sells only ADLD on A-series and no Combo, incentive will be?",
+      "options": [
+        "A) Higher",
+        "B) Same",
+        "C) Lower",
+        "D) Zero"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 177,
+      "question": "To increase incentive, SEC should focus on which mix?",
+      "options": [
+        "A) Only quantity",
+        "B) Only A-series",
+        "C) Mix of Flagship & A-series plans",
+        "D) Only Screen Protect"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 178,
+      "question": "If a store has 2 SECs, minimum total quantity required is?",
+      "options": [
+        "A) 3",
+        "B) 6",
+        "C) 9",
+        "D) 12"
+      ],
+      "correctAnswer": "B",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 179,
+      "question": "If store sells 40 plans but one SEC sells only 2, what happens?",
+      "options": [
+        "A) Store blocked",
+        "B) All paid",
+        "C) That SEC not eligible",
+        "D) Incentive shared"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 180,
+      "question": "Which plan should SEC confidently pitch for higher earnings?",
+      "options": [
+        "A) Screen Protect",
+        "B) EW",
+        "C) COMBO & ADLD",
+        "D) Only SP"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 181,
+      "question": "Is incentive same for same plan sold on different phones?",
+      "options": [
+        "A) Yes",
+        "B) No",
+        "C) Yes, because plan value is same",
+        "D) Only for S series"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 182,
+      "question": "What happens if SalesDost contest is missed?",
+      "options": [
+        "A) No incentive",
+        "B) Reduced payout",
+        "C) Monthly incentive still paid",
+        "D) Only combo paid"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 183,
+      "question": "What should SEC track daily to maximize incentive?",
+      "options": [
+        "A) Claims",
+        "B) Device stock",
+        "C) Plan value & quantity sold",
+        "D) Returns"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 184,
+      "question": "Who is responsible for maximizing incentive earnings?",
+      "options": [
+        "A) Backend team",
+        "B) Store manager",
+        "C) SEC / Promoter",
+        "D) Service center"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 185,
+      "question": "Which statement best explains Samsung Protect Max incentive scheme?",
+      "options": [
+        "A) Device-based incentive",
+        "B) Settlement-based",
+        "C) 7% flat incentive on plan value with minimum quantity gate",
+        "D) Only combo counted"
+      ],
+      "correctAnswer": "C",
+      "category": "Samsung Protect Max – Incentives, Schemes & Earnings (SEC Level)"
+    },
+    {
+      "questionId": 186,
+      "question": "For any kind of Samsung Protect Max training, whom should the SEC contact first?",
+      "options": [
+        "A) Store manager",
+        "B) Call center",
+        "C) ASE / Samsung Protect Max local SPOC from Zopper",
+        "D) Service center"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 187,
+      "question": "Who is the Samsung Protect Max local SPOC associated with?",
+      "options": [
+        "A) Retail store",
+        "B) Samsung service",
+        "C) Zopper",
+        "D) Distributor"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 188,
+      "question": "If a SEC needs refresher training, what is the correct action?",
+      "options": [
+        "A) Self-study only",
+        "B) Contact store HR",
+        "C) Reach out to ASE or Zopper SPOC",
+        "D) Wait for monthly call"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 189,
+      "question": "Who is responsible for coordinating training at store level?",
+      "options": [
+        "A) Store manager",
+        "B) Backend team",
+        "C) SEC",
+        "D) Service engineer"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 190,
+      "question": "Why is it important to train store digital staff (partner staff)?",
+      "options": [
+        "A) They handle billing",
+        "B) They manage inventory",
+        "C) They influence customer decisions and attachment",
+        "D) They manage service"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 191,
+      "question": "Who should ensure that store digital staff are trained on Protect Max?",
+      "options": [
+        "A) Samsung HO",
+        "B) Zopper backend",
+        "C) SEC with support from ASE / SPOC",
+        "D) Service center"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 192,
+      "question": "If store staff are not aware of Protect Max benefits, what will happen?",
+      "options": [
+        "A) Higher sales",
+        "B) Faster claims",
+        "C) Low attachment and poor conversion",
+        "D) No impact"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 193,
+      "question": "For any operational issue or confusion, whom should the SEC escalate to?",
+      "options": [
+        "A) Retail customer care",
+        "B) Store cashier",
+        "C) ASE or Samsung Protect Max Zopper SPOC",
+        "D) Distributor"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 194,
+      "question": "Can SEC directly contact Zopper SPOC for support?",
+      "options": [
+        "A) No",
+        "B) Only through manager",
+        "C) Yes",
+        "D) Only via email"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 195,
+      "question": "What type of support can ASE / Zopper SPOC provide?",
+      "options": [
+        "A) Device repair",
+        "B) Incentive payout",
+        "C) Training, process support, and escalation help",
+        "D) Billing support"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 196,
+      "question": "Who is responsible for ensuring correct POSM placement at Samsung counter?",
+      "options": [
+        "A) Store manager",
+        "B) Zopper team",
+        "C) SEC",
+        "D) Service engineer"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 197,
+      "question": "What kind of POSM should be placed at the counter?",
+      "options": [
+        "A) Any available poster",
+        "B) Old campaign material",
+        "C) Approved Samsung Protect Max POSM only",
+        "D) Handwritten notes"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 198,
+      "question": "Why is correct POSM placement important?",
+      "options": [
+        "A) For decoration",
+        "B) For audit only",
+        "C) For customer awareness and higher attachment",
+        "D) For store branding"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 199,
+      "question": "If POSM is missing or damaged, what should SEC do?",
+      "options": [
+        "A) Ignore it",
+        "B) Replace with local print",
+        "C) Inform ASE / Zopper SPOC",
+        "D) Remove counter branding"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 200,
+      "question": "Who approves the POSM used for Samsung Protect Max?",
+      "options": [
+        "A) Store manager",
+        "B) Distributor",
+        "C) Samsung / Zopper",
+        "D) SEC"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 201,
+      "question": "How often should SEC engage with store staff for training?",
+      "options": [
+        "A) Only once",
+        "B) Only during launch",
+        "C) Regularly and as required",
+        "D) Only during review calls"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 202,
+      "question": "What is the best way to improve Protect Max sales at store level?",
+      "options": [
+        "A) Focus only on price",
+        "B) Avoid training",
+        "C) Continuous training and engagement",
+        "D) Only online selling"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 203,
+      "question": "If store staff give wrong information to customer, what is the risk?",
+      "options": [
+        "A) Faster sales",
+        "B) No impact",
+        "C) Customer dissatisfaction and claim issues",
+        "D) Higher incentive"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 204,
+      "question": "Who should SEC approach for urgent escalation?",
+      "options": [
+        "A) Retail cashier",
+        "B) Samsung HO",
+        "C) ASE or Zopper SPOC",
+        "D) Courier partner"
+      ],
+      "correctAnswer": "C",
+      "category": "Employee Support & Training – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 205,
+      "question": "What is the main goal of Samsung Protect Max sales?",
+      "options": [
+        "A) Sell only warranty",
+        "B) Push discounts",
+        "C) Protect the customer’s device and increase attachment",
+        "D) Sell accessories"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 206,
+      "question": "When is the best time to pitch Samsung Protect Max to a customer?",
+      "options": [
+        "A) After 1 month",
+        "B) At service center",
+        "C) At the time of device purchase",
+        "D) During claim"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 207,
+      "question": "Which customer is most suitable for Samsung Protect Max?",
+      "options": [
+        "A) Customer buying accessories",
+        "B) Customer buying a new Samsung device",
+        "C) Customer coming for repair",
+        "D) Customer buying SIM"
+      ],
+      "correctAnswer": "B",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 208,
+      "question": "What should be the first line of pitch to the customer?",
+      "options": [
+        "A) This plan is expensive",
+        "B) Claims are difficult",
+        "C) This plan fully protects your device from damage",
+        "D) Only screen is covered"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 209,
+      "question": "Which benefit should be highlighted first to customers?",
+      "options": [
+        "A) Incentives",
+        "B) Backend process",
+        "C) Unlimited repairs with Samsung service",
+        "D) Claim form"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 210,
+      "question": "How should SEC explain repairs under Samsung Protect Max?",
+      "options": [
+        "A) Settlement based",
+        "B) Replacement based",
+        "C) 100% repair through Samsung authorized service centers",
+        "D) Cash refund"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 211,
+      "question": "What is an important difference between Samsung Protect Max and third-party plans?",
+      "options": [
+        "A) Cheaper price",
+        "B) Waiting period",
+        "C) No BER and no cash settlement",
+        "D) Fewer claims"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 212,
+      "question": "Which customer fear should SEC address clearly?",
+      "options": [
+        "A) Colour choice",
+        "B) Storage",
+        "C) High repair cost after damage",
+        "D) Phone weight"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 213,
+      "question": "How should SEC explain “No BER” in simple words?",
+      "options": [
+        "A) Claim rejected",
+        "B) Refund given",
+        "C) Samsung repairs the phone even if repair cost is high",
+        "D) Customer pays extra"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 214,
+      "question": "Which example helps customer understand value better?",
+      "options": [
+        "A) Plan terms",
+        "B) Invoice rules",
+        "C) Cost of screen or motherboard repair",
+        "D) Claim ID"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 215,
+      "question": "Which plan should be pitched more confidently for premium phones?",
+      "options": [
+        "A) Screen Protect",
+        "B) EW",
+        "C) COMBO / ADLD under Protect Max",
+        "D) No plan"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 216,
+      "question": "Why do premium phone customers prefer Samsung Protect Max?",
+      "options": [
+        "A) Low price",
+        "B) Easy refund",
+        "C) High repair cost protection",
+        "D) More accessories"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 217,
+      "question": "What should SEC avoid while pitching?",
+      "options": [
+        "A) Benefits",
+        "B) Examples",
+        "C) False promises like cash settlement",
+        "D) Samsung service"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 218,
+      "question": "Which language should SEC use while pitching?",
+      "options": [
+        "A) Technical terms",
+        "B) Legal language",
+        "C) Simple, customer-friendly language",
+        "D) Only English"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 219,
+      "question": "How should SEC handle customer objection “I am careful with my phone”?",
+      "options": [
+        "A) Stop pitching",
+        "B) Ignore",
+        "C) Explain accidental and liquid damage risk",
+        "D) Reduce price"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 220,
+      "question": "What is the correct pitch for liquid damage?",
+      "options": [
+        "A) Liquid damage never happens",
+        "B) Only screen breaks",
+        "C) Even water damage is covered under Protect Max",
+        "D) Only warranty applies"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 221,
+      "question": "Which customer segment gives better attachment chance?",
+      "options": [
+        "A) Feature phone buyers",
+        "B) Smartphone buyers with high usage",
+        "C) Accessory buyers",
+        "D) SIM buyers"
+      ],
+      "correctAnswer": "B",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 222,
+      "question": "Why is it important to explain Samsung authorized service clearly?",
+      "options": [
+        "A) Faster sales",
+        "B) More incentives",
+        "C) Customer trust and confidence",
+        "D) Claim approval"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 223,
+      "question": "What should SEC clearly confirm before closing the sale?",
+      "options": [
+        "A) Device colour",
+        "B) Discount",
+        "C) Customer understands coverage and repair process",
+        "D) Claim steps"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 224,
+      "question": "Which point builds maximum trust with the customer?",
+      "options": [
+        "A) Cheap plan",
+        "B) Free gift",
+        "C) Samsung brand-authorized repair",
+        "D) Paper policy"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 225,
+      "question": "How should SEC pitch Protect Max for A-Series phones?",
+      "options": [
+        "A) Not required",
+        "B) Only screen",
+        "C) Affordable protection against accidental damage",
+        "D) Warranty only"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 226,
+      "question": "What happens if SEC explains plan wrongly?",
+      "options": [
+        "A) Faster sales",
+        "B) No issue",
+        "C) Customer dissatisfaction and complaints",
+        "D) Higher incentive"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 227,
+      "question": "What role does POSM play in sales strategy?",
+      "options": [
+        "A) Decoration",
+        "B) Audit",
+        "C) Helps customer understand and ask about Protect Max",
+        "D) Billing"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 228,
+      "question": "Who should SEC also train for better sales?",
+      "options": [
+        "A) Security guard",
+        "B) Cleaner",
+        "C) Store digital / partner staff",
+        "D) Courier"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 229,
+      "question": "Which question from customer indicates buying intent?",
+      "options": [
+        "A) Is phone heavy?",
+        "B) Is charger included?",
+        "C) What happens if phone breaks?",
+        "D) Is colour available?"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 230,
+      "question": "How should SEC close the pitch confidently?",
+      "options": [
+        "A) Push forcefully",
+        "B) Avoid questions",
+        "C) Link plan value to device price and risk",
+        "D) Reduce MRP"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 231,
+      "question": "Which approach increases attachment percentage?",
+      "options": [
+        "A) Selling fast",
+        "B) Skipping explanation",
+        "C) Need-based selling",
+        "D) Discount focus"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 232,
+      "question": "What is the correct way to compare Protect Max with third-party plans?",
+      "options": [
+        "A) Criticize others",
+        "B) Talk about price only",
+        "C) Highlight Samsung repair and no BER",
+        "D) Avoid comparison"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 233,
+      "question": "Which customer reaction shows successful pitch?",
+      "options": [
+        "A) Silence",
+        "B) Confusion",
+        "C) Customer asks about coverage and repair",
+        "D) Walks away"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    },
+    {
+      "questionId": 234,
+      "question": "Which statement best summarizes Sales Strategy for Samsung Protect Max?",
+      "options": [
+        "A) Push plan aggressively",
+        "B) Focus on incentive",
+        "C) Understand customer need, explain repair protection clearly, and build trust",
+        "D) Sell only premium phones"
+      ],
+      "correctAnswer": "C",
+      "category": "Sales Strategy & Customer Understanding – Samsung Protect Max (SEC Level)"
+    }
+  ]
+}

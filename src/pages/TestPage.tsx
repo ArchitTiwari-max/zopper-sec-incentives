@@ -397,7 +397,7 @@ export function TestPage() {
 
       {/* Proctoring */}
       <ProctoringPanel
-        secId={testState.phone!}
+        secId={(secDetails?.secId && secDetails.secId.trim()) || testState.phone!}
         phone={testState.phone!}
         sessionToken={sessionToken}
         onFlag={() => setTestState(prev => ({ ...prev, }))}

@@ -18,6 +18,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma db push --force-reset && npm run db:seed",
     "load-questions": "npx tsx scripts/load-kome-questions.ts",
+    "load-sc-care-questions": "npx tsx scripts/load-sc-care-questions.ts",
     "postinstall": "prisma generate",
     "vercel-build": "npm run build"
   },

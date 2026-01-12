@@ -3198,12 +3198,28 @@ app.post('/api/proctoring/event', async (req, res) => {
     const { secId, phone, sessionToken, eventType, details } = req.body || {}
     if (!secId || !eventType) return res.status(400).json({ success: false, message: 'secId and eventType are required' })
 
+    // Log snapshot events explicitly
+    if (eventType === 'snapshot') {
+      console.log('📸 ========================================')
+      console.log('📸 RECEIVING SNAPSHOT EVENT')
+      console.log('📸 SEC ID:', secId)
+      console.log('📸 Session Token:', sessionToken)
+      console.log('📸 Cloudinary URL:', details)
+      console.log('📸 ========================================')
+    }
+
     // Try Prisma if model exists; otherwise, store in-memory
     try {
       // @ts-ignore
       if (prisma.proctoringEvent) {
         // @ts-ignore
         const saved = await prisma.proctoringEvent.create({ data: { secId, phone, sessionToken, eventType, details } })
+
+        if (eventType === 'snapshot') {
+          console.log('✅ Snapshot event saved to database with ID:', saved.id)
+          console.log('✅ URL in database:', saved.details)
+        }
+
         return res.json({ success: true, data: saved })
       }
     } catch (e) {
@@ -3309,6 +3325,47 @@ app.get('/api/proctoring/score', async (req, res) => {
     const score = Math.max(0, 100 - penalty)
 
     return res.json({ success: true, identifier: phone || secId, score, events })
+  } catch (e: any) {
+    return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
+  }
+})
+
+// DEBUG: Check proctoring events for a specific SEC
+app.get('/api/debug/proctoring/:secId', async (req, res) => {
+  try {
+    const { secId } = req.params
+    // @ts-ignore
+    if (!prisma.proctoringEvent) {
+      return res.json({ success: false, message: 'ProctoringEvent model not available' })
+    }
+
+    // @ts-ignore
+    const allEvents = await prisma.proctoringEvent.findMany({
+      where: { secId },
+      orderBy: { createdAt: 'desc' },
+      take: 20
+    })
+
+    // @ts-ignore
+    const snapshotEvents = await prisma.proctoringEvent.findMany({
+      where: { secId, eventType: 'snapshot' },
+      orderBy: { createdAt: 'desc' },
+      take: 20
+    })
+
+    const screenshotUrls = snapshotEvents
+      .map((event: any) => event.details)
+      .filter((url: string) => url?.startsWith('http'))
+
+    return res.json({
+      success: true,
+      secId,
+      totalEvents: allEvents.length,
+      snapshotEvents: snapshotEvents.length,
+      screenshotUrls,
+      sampleEvent: snapshotEvents[0] || null,
+      allEventTypes: allEvents.map((e: any) => ({ type: e.eventType, sessionToken: e.sessionToken, createdAt: e.createdAt }))
+    })
   } catch (e: any) {
     return res.status(500).json({ success: false, message: e?.message || 'internal_error' })
   }
@@ -3427,30 +3484,75 @@ app.post('/api/test-submissions', async (req, res) => {
     let screenshotUrls: string[] = []
     try {
       // @ts-ignore
-      if (prisma.proctoringEvent && sessionTok) {
+      if (prisma.proctoringEvent) {
+        console.log(`📸 ========== FETCHING SCREENSHOTS ==========`)
+        console.log(`📸 Session Token: ${sessionTok}`)
+        console.log(`📸 SEC ID: ${secId}`)
+
+        // Try to fetch by sessionToken first
         // @ts-ignore
-        const snapshotEvents = await prisma.proctoringEvent.findMany({
-          where: {
-            sessionToken: sessionTok,
-            eventType: 'snapshot'
-          },
-          orderBy: { createdAt: 'asc' }
-        })
+        let snapshotEvents: any[] = []
+
+        if (sessionTok) {
+          console.log(`📸 Trying to fetch by sessionToken: ${sessionTok}`)
+          // @ts-ignore
+          snapshotEvents = await prisma.proctoringEvent.findMany({
+            where: {
+              sessionToken: sessionTok,
+              eventType: 'snapshot'
+            },
+            orderBy: { createdAt: 'asc' }
+          })
+          console.log(`📸 Found ${snapshotEvents.length} events by sessionToken`)
+        }
+
+        // If no events found by sessionToken, try secId as fallback
+        if (snapshotEvents.length === 0 && secId) {
+          console.log(`📸 No events by sessionToken, trying by secId: ${secId}`)
+          // @ts-ignore
+          snapshotEvents = await prisma.proctoringEvent.findMany({
+            where: {
+              secId: secId,
+              eventType: 'snapshot'
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 10 // Get last 10 screenshots for this SEC
+          })
+          console.log(`📸 Found ${snapshotEvents.length} events by secId`)
+        }
+
+        if (snapshotEvents.length > 0) {
+          console.log(`📸 Sample event:`, {
+            id: snapshotEvents[0].id,
+            secId: snapshotEvents[0].secId,
+            sessionToken: snapshotEvents[0].sessionToken,
+            details: snapshotEvents[0].details?.substring(0, 100)
+          })
+        }
 
         // Extract URLs from details field
         screenshotUrls = snapshotEvents
           .map((event: any) => {
             if (event.details?.startsWith('http')) {
+              console.log(`📸 ✅ Valid URL: ${event.details.substring(0, 60)}...`)
               return event.details
+            } else {
+              console.log(`📸 ❌ Invalid details:`, event.details)
+              return null
             }
-            return null
           })
           .filter((url: string | null): url is string => url !== null)
 
-        console.log(`📸 Found ${screenshotUrls.length} screenshot URLs for session ${sessionTok}`)
+        console.log(`📸 Total valid screenshot URLs: ${screenshotUrls.length}`)
+        if (screenshotUrls.length > 0) {
+          console.log(`📸 First URL:`, screenshotUrls[0])
+        }
+        console.log(`📸 ========================================`)
+      } else {
+        console.log(`⚠️ ProctoringEvent model not available`)
       }
     } catch (e) {
-      console.warn('⚠️ Failed to fetch screenshot URLs (non-critical):', e)
+      console.error('⚠️ Failed to fetch screenshot URLs:', e)
     }
 
     // Fetch all questions for validation and snapshotting
@@ -3513,7 +3615,7 @@ app.post('/api/test-submissions', async (req, res) => {
       const secUser = await prisma.sECUser.findFirst({ where: { secId } })
 
       if (secUser) {
-        const isPassed = score >= 60
+        const isPassed = score >= 80
         const title = isPassed ? '🎉 Congratulations!' : '📝 Test Completed'
         const message = `You have successfully attempted the exam and scored ${score}%. ${isPassed ? 'Great job!' : 'Keep learning and try again!'}`
 
@@ -3560,7 +3662,7 @@ app.get('/api/test-submissions/statistics', async (req, res) => {
     const totalScore = submissions.reduce((sum, sub) => sum + sub.score, 0)
     const avgScore = Math.round(totalScore / submissions.length)
 
-    const passed = submissions.filter(sub => sub.score >= 60).length
+    const passed = submissions.filter(sub => sub.score >= 80).length
     const passRate = Math.round((passed / submissions.length) * 100)
 
     const totalTime = submissions.reduce((sum, sub) => sum + sub.completionTime, 0)
@@ -5439,15 +5541,15 @@ app.post('/api/pitch-sultan/videos/:id/toggle-like', async (req, res) => {
  * Get the current ad image URL
  */
 app.get('/api/pitch-sultan/ad', async (req, res) => {
-    try {
-        const ad = await prisma.pitchSultanAd.findFirst({
-            orderBy: { createdAt: 'desc' }
-        })
-        res.json({ success: true, url: ad?.imageUrl || null })
-    } catch (error) {
-        console.error('❌ Error fetching ad:', error)
-        res.status(500).json({ success: false, message: 'Failed to fetch ad' })
-    }
+  try {
+    const ad = await prisma.pitchSultanAd.findFirst({
+      orderBy: { createdAt: 'desc' }
+    })
+    res.json({ success: true, url: ad?.imageUrl || null })
+  } catch (error) {
+    console.error('❌ Error fetching ad:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch ad' })
+  }
 })
 
 /**
@@ -5455,25 +5557,25 @@ app.get('/api/pitch-sultan/ad', async (req, res) => {
  * Upload/Update the ad image
  */
 app.post('/api/pitch-sultan/ad', async (req, res) => {
-    try {
-        const { url, uploaderName } = req.body
-        if (!url) {
-            return res.status(400).json({ success: false, message: 'URL is required' })
-        }
-
-        await prisma.pitchSultanAd.create({
-            data: {
-                 imageUrl: url,
-                 uploadedBy: uploaderName || 'Admin'
-            }
-        })
-
-        res.json({ success: true, message: 'Ad updated successfully' })
-
-    } catch (error) {
-         console.error('❌ Error updating ad:', error)
-        res.status(500).json({ success: false, message: 'Failed to update ad' })
+  try {
+    const { url, uploaderName } = req.body
+    if (!url) {
+      return res.status(400).json({ success: false, message: 'URL is required' })
     }
+
+    await prisma.pitchSultanAd.create({
+      data: {
+        imageUrl: url,
+        uploadedBy: uploaderName || 'Admin'
+      }
+    })
+
+    res.json({ success: true, message: 'Ad updated successfully' })
+
+  } catch (error) {
+    console.error('❌ Error updating ad:', error)
+    res.status(500).json({ success: false, message: 'Failed to update ad' })
+  }
 })
 
 // Health check endpoint

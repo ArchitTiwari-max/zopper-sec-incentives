@@ -56,7 +56,7 @@ export function TestResult() {
     )
   }
 
-  const isPassed = result.score >= 60
+  const isPassed = result.score >= 80
   const correctCount = Math.round((result.score / 100) * result.totalQuestions)
 
   return (
@@ -130,7 +130,7 @@ export function TestResult() {
           <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto mb-8 pt-8 border-t border-gray-200">
             <div className="text-center">
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Pass Mark</p>
-              <p className="text-lg font-semibold text-gray-900">60%</p>
+              <p className="text-lg font-semibold text-gray-900">80%</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Time Taken</p>

@@ -44,15 +44,15 @@ export function AdminTestResults() {
 
     // Apply score filter
     if (filterScore === 'pass') {
-      filtered = filtered.filter(sub => sub.score >= 60)
+      filtered = filtered.filter(sub => sub.score >= 80)
     } else if (filterScore === 'fail') {
-      filtered = filtered.filter(sub => sub.score < 60)
+      filtered = filtered.filter(sub => sub.score < 80)
     }
 
     // Apply sorting
     filtered.sort((a, b) => {
       let comparison = 0
-      
+
       switch (sortBy) {
         case 'score':
           comparison = a.score - b.score
@@ -64,7 +64,7 @@ export function AdminTestResults() {
           comparison = a.secId.localeCompare(b.secId)
           break
       }
-      
+
       return sortOrder === 'desc' ? -comparison : comparison
     })
 
@@ -89,15 +89,15 @@ export function AdminTestResults() {
     const exportData = filteredSubmissions.map(submission => {
       // Check if responses have enriched data
       const hasEnrichedData = submission.responses.some(r => r.isCorrect !== undefined)
-      
+
       const correctCount = hasEnrichedData ? submission.responses.filter(r => r.isCorrect).length : 'N/A'
       const wrongCount = hasEnrichedData ? submission.responses.filter(r => !r.isCorrect).length : 'N/A'
-      const answerDetails = hasEnrichedData 
-        ? submission.responses.map((r, idx) => 
-            `Q${idx + 1}: ${r.isCorrect ? 'CORRECT' : 'WRONG'} (Selected: ${r.selectedAnswer}, Correct: ${r.correctAnswer})`
-          ).join(' | ')
+      const answerDetails = hasEnrichedData
+        ? submission.responses.map((r, idx) =>
+          `Q${idx + 1}: ${r.isCorrect ? 'CORRECT' : 'WRONG'} (Selected: ${r.selectedAnswer}, Correct: ${r.correctAnswer})`
+        ).join(' | ')
         : 'Answer details not available'
-      
+
       return {
         'SEC ID': submission.secId,
         'Store': submission.storeName ? `${submission.storeName}, ${submission.storeCity || ''}` : 'N/A',
@@ -108,7 +108,7 @@ export function AdminTestResults() {
         'Total Questions': submission.totalQuestions,
         'Completion Time (min)': Math.round(submission.completionTime / 60),
         'Submitted At': new Date(submission.submittedAt).toLocaleString(),
-        'Status': submission.score >= 60 ? 'PASS' : 'FAIL',
+        'Status': submission.score >= 80 ? 'PASS' : 'FAIL',
         'Proctoring Flagged': submission.isProctoringFlagged ? 'YES' : 'NO',
         'Answer Details': answerDetails
       }
@@ -135,7 +135,6 @@ export function AdminTestResults() {
 
   const getScoreColor = (score: number): string => {
     if (score >= 80) return 'text-green-600 bg-green-50'
-    if (score >= 60) return 'text-yellow-600 bg-yellow-50'
     return 'text-red-600 bg-red-50'
   }
 
@@ -173,7 +172,7 @@ export function AdminTestResults() {
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-2xl font-bold text-yellow-600">{stats.passRate}%</div>
-          <div className="text-sm text-gray-600">Pass Rate (≥60%)</div>
+          <div className="text-sm text-gray-600">Pass Rate (≥80%)</div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-2xl font-bold text-purple-600">{formatTime(stats.averageTime)}</div>
@@ -192,11 +191,11 @@ export function AdminTestResults() {
               className="border border-gray-300 rounded-md px-3 py-1 text-sm"
             >
               <option value="all">All Results</option>
-              <option value="pass">Pass (≥60%)</option>
-              <option value="fail">Fail (&lt;60%)</option>
+              <option value="pass">Pass (≥80%)</option>
+              <option value="fail">Fail (&lt;80%)</option>
             </select>
           </div>
-          
+
           <div className="text-sm text-gray-600">
             Showing {filteredSubmissions.length} of {submissions.length} results
           </div>
@@ -216,7 +215,7 @@ export function AdminTestResults() {
             <table className="w-full table-fixed">
               <thead className="bg-gray-50">
                 <tr>
-                  <th 
+                  <th
                     className="w-[8%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('secId')}
                   >
@@ -225,7 +224,7 @@ export function AdminTestResults() {
                   <th className="w-[18%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Store
                   </th>
-                  <th 
+                  <th
                     className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('score')}
                   >
@@ -237,7 +236,7 @@ export function AdminTestResults() {
                   <th className="w-[9%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Time
                   </th>
-                  <th 
+                  <th
                     className="w-[18%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('submittedAt')}
                   >
@@ -282,9 +281,9 @@ export function AdminTestResults() {
                       {formatTime(submission.completionTime)}
                     </td>
                     <td className="px-3 py-3 text-xs text-gray-900">
-                      {new Date(submission.submittedAt).toLocaleString('en-US', { 
-                        month: '2-digit', 
-                        day: '2-digit', 
+                      {new Date(submission.submittedAt).toLocaleString('en-US', {
+                        month: '2-digit',
+                        day: '2-digit',
                         year: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit'
@@ -292,12 +291,11 @@ export function AdminTestResults() {
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex flex-col gap-1">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full inline-block text-center ${
-                          submission.score >= 60 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {submission.score >= 60 ? 'PASS' : 'FAIL'}
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full inline-block text-center ${submission.score >= 80
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                          }`}>
+                          {submission.score >= 80 ? 'PASS' : 'FAIL'}
                         </span>
                         {submission.isProctoringFlagged && (
                           <button
@@ -344,7 +342,7 @@ export function AdminTestResults() {
                         onClick={() => {
                           // Check if responses have enriched data
                           const hasEnrichedData = submission.responses.some(r => r.isCorrect !== undefined && r.correctAnswer !== undefined)
-                          
+
                           if (!hasEnrichedData) {
                             // Show basic response data without correct/incorrect info
                             const answersHTML = submission.responses.map((r, idx) => {
@@ -360,7 +358,7 @@ export function AdminTestResults() {
                                 </div>
                               </div>`
                             }).join('')
-                            
+
                             const modal = document.createElement('div')
                             modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;'
                             modal.innerHTML = `
@@ -391,7 +389,7 @@ export function AdminTestResults() {
                             document.body.appendChild(modal)
                             return
                           }
-                          
+
                           const correctCount = submission.responses.filter(r => r.isCorrect).length
                           const wrongCount = submission.responses.filter(r => !r.isCorrect).length
                           const answersHTML = submission.responses.map((r, idx) => {
@@ -413,7 +411,7 @@ export function AdminTestResults() {
                               </div>
                             </div>`
                           }).join('')
-                          
+
                           const modal = document.createElement('div')
                           modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;'
                           modal.innerHTML = `

@@ -95,7 +95,7 @@ export function TestDetails() {
             >
               ← Back
             </button>
-            <span className={`px-4 py-2 rounded-full text-sm font-semibold ${submission.score >= 60 ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
+            <span className={`px-4 py-2 rounded-full text-sm font-semibold ${submission.score >= 80 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
               Score: {submission.score}%
             </span>
           </div>

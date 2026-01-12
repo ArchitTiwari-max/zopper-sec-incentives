@@ -23,71 +23,54 @@ export function AdminScreenshots() {
 
   useEffect(() => {
     const loadScreenshots = async () => {
-      if (!sessionToken) {
+      if (!sessionToken && !secId) {
         setLoading(false)
         return
       }
 
       try {
-        const res = await fetch(`${config.apiUrl}/proctoring/events?sessionToken=${encodeURIComponent(sessionToken)}`)
+        console.log('📸 Fetching screenshots for sessionToken:', sessionToken, 'secId:', secId)
+
+        // Fetch test submission to get screenshotUrls directly
+        const res = await fetch(`${config.apiUrl}/test-submissions`)
         const data = await res.json()
-        
+
         if (data.success && data.data) {
-          console.log('📸 All proctoring events:', data.data)
-          console.log('📸 Total events:', data.data.length)
-          console.log('📸 Event types found:', data.data.map((e: ScreenshotEvent) => e.eventType))
-          console.log('📸 Sample event:', data.data[0])
-          
-          // Filter only snapshot events and extract Cloudinary URLs
-          const snapshotEvents = data.data.filter((e: ScreenshotEvent) => e.eventType === 'snapshot')
-          console.log('📸 Total snapshot events found:', snapshotEvents.length)
-          console.log('📸 Snapshot events:', snapshotEvents)
-          
-          const imageUrls = snapshotEvents
-            .map((event: ScreenshotEvent) => {
-              console.log('📸 Processing event:', event)
-              console.log('📸 Event details:', event.details)
-              
-              // If details is already a full URL, use it directly
-              if (event.details?.startsWith('http')) {
-                console.log('📸 Using direct URL from details')
-                return event.details
-              }
-              
-              // Otherwise, try to extract public_id and construct URL
-              const match = event.details?.match(/public_id=(.+)/)
-              console.log('📸 Regex match:', match)
-              
-              if (match && match[1]) {
-                const publicId = match[1]
-                console.log('📸 Extracted public_id:', publicId)
-                
-                // Construct Cloudinary URL
-                const cloudName = config.cloudinary?.cloudName
-                console.log('📸 Cloud name from config:', cloudName)
-                
-                if (cloudName) {
-                  const url = `https://res.cloudinary.com/${cloudName}/image/upload/${publicId}`
-                  console.log('📸 Constructed URL:', url)
-                  return url
-                }
-              }
-              return null
-            })
-            .filter((url: string | null): url is string => url !== null)
-          
-          console.log('📸 Final image URLs:', imageUrls)
-          setScreenshots(imageUrls)
+          console.log('📸 Total submissions found:', data.data.length)
+
+          // Find the submission matching this sessionToken or secId
+          const submission = data.data.find((sub: any) =>
+            sub.sessionToken === sessionToken ||
+            (secId && sub.secId === secId)
+          )
+
+          if (submission) {
+            console.log('📸 Found submission:', submission.id)
+            console.log('📸 Screenshot URLs in submission:', submission.screenshotUrls)
+
+            // Get screenshots directly from screenshotUrls field
+            const imageUrls = submission.screenshotUrls || []
+
+            console.log('📸 Total screenshots:', imageUrls.length)
+            setScreenshots(imageUrls)
+          } else {
+            console.log('📸 No submission found for sessionToken:', sessionToken, 'or secId:', secId)
+            setScreenshots([])
+          }
+        } else {
+          console.log('📸 Failed to fetch submissions:', data)
+          setScreenshots([])
         }
       } catch (error) {
-        console.error('Error loading screenshots:', error)
+        console.error('❌ Error loading screenshots:', error)
+        setScreenshots([])
       } finally {
         setLoading(false)
       }
     }
 
     loadScreenshots()
-  }, [sessionToken])
+  }, [sessionToken, secId])
 
   if (loading) {
     return (

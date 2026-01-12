@@ -94,11 +94,11 @@ export function AllResults() {
           )}
         </div>
         <div className="text-right">
-          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${s.score >= 60 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${s.score >= 80 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
             {s.score}%
           </span>
           <div className="text-xs text-gray-500 mt-1">
-            {s.score >= 60 ? 'PASSED' : 'FAILED'}
+            {s.score >= 80 ? 'PASSED' : 'FAILED'}
           </div>
         </div>
       </div>
