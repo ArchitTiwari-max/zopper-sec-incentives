@@ -64,7 +64,7 @@ export function TestResult() {
       {isPassed && <Confetti />}
       <div className="max-w-4xl mx-auto">
         {/* Certificate Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-12 mb-6 relative overflow-hidden border-8 border-double border-[#0B2C5F]">
+        <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-12 mb-6 relative overflow-hidden border-8 border-double border-[#0B2C5F]">
           {/* Decorative Corner Ornaments */}
           <div className="absolute top-0 left-0 w-24 h-24 border-t-4 border-l-4 border-blue-200 rounded-tl-2xl"></div>
           <div className="absolute top-0 right-0 w-24 h-24 border-t-4 border-r-4 border-blue-200 rounded-tr-2xl"></div>
@@ -100,7 +100,7 @@ export function TestResult() {
 
           {/* Achievement Statement */}
           <div className="text-center mb-8">
-            <p className="text-gray-700 text-lg leading-relaxed">
+            <p className="text-gray-700 text-base leading-snug px-4">
               has successfully completed the assessment with a score of
             </p>
           </div>
@@ -127,21 +127,21 @@ export function TestResult() {
           </div>
 
           {/* Details Grid */}
-          <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto mb-8 pt-8 border-t border-gray-200">
-            <div className="text-center">
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Pass Mark</p>
-              <p className="text-lg font-semibold text-gray-900">80%</p>
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 max-w-2xl mx-auto mb-8 pt-8 border-t border-gray-200">
+            <div className="text-center flex items-center gap-2">
+              <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider">Pass Mark:</p>
+              <p className="text-sm sm:text-base font-semibold text-gray-900">80%</p>
             </div>
-            <div className="text-center">
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Time Taken</p>
-              <p className="text-lg font-semibold text-gray-900">
+            <div className="text-center flex items-center gap-2">
+              <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider">Time Taken:</p>
+              <p className="text-sm sm:text-base font-semibold text-gray-900">
                 {Math.floor(result.completionTime / 60)}m {result.completionTime % 60}s
               </p>
             </div>
-            <div className="text-center">
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Date</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {new Date(result.submittedAt).toLocaleDateString()}
+            <div className="text-center flex items-center gap-2">
+              <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider">Date:</p>
+              <p className="text-sm sm:text-base font-semibold text-gray-900">
+                {new Date(result.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
               </p>
             </div>
           </div>
@@ -153,7 +153,7 @@ export function TestResult() {
 
           {/* Motivational Footer */}
           <div className="text-center border-t border-gray-200 pt-6">
-            <p className="text-sm italic text-gray-600">
+            <p className="text-sm italic text-gray-600 px-4">
               {isPassed
                 ? '"Excellence is not a destination, it is a continuous journey."'
                 : '"Every expert was once a beginner. Keep learning and growing!"'}
@@ -162,7 +162,7 @@ export function TestResult() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <div className="flex flex-wrap gap-3 justify-center">
           <button
             onClick={() => navigate(`/test-store-selection?phone=${result.phone}`)}
             className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold shadow-lg hover:shadow-xl transition-all"
