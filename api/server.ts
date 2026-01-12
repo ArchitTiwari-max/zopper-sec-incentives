@@ -4385,8 +4385,14 @@ app.get('/api/questions/unique/:secId', async (req, res) => {
 
     const selectedQuestions = []
     const secHash = hashString(secId)
+    // "Make 13 sets of different questions"
+    // We limit the randomness to 13 variants based on the SEC ID
+    const setVariant = secHash % 13
 
-    // Select exactly 1 question from each category
+    // Scale the variant to use as a seed for selection
+    const selectionSeed = setVariant * 9973
+
+    // Select exactly 2 questions from each category
     for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex++) {
       const categoryGroup = categories[categoryIndex]
       if (!categoryGroup.category) continue
@@ -4402,28 +4408,51 @@ app.get('/api/questions/unique/:secId', async (req, res) => {
       })
 
       if (categoryQuestions.length > 0) {
-        // Deterministic selection: same SEC always gets same question from this category
-        // Different SECs get different questions
-        const questionIndex = (secHash + (categoryIndex * 31) + (categoryIndex * 17)) % categoryQuestions.length
-        const selectedQuestion = categoryQuestions[questionIndex]
+        // We want 2 questions per category
+        const countToSelect = 2
 
-        selectedQuestions.push({
-          id: selectedQuestion.questionId,
-          question: selectedQuestion.question,
-          options: selectedQuestion.options,
-          correctAnswer: selectedQuestion.correctAnswer,
-          category: selectedQuestion.category
-        })
+        // Track selected indices to ensure we pick distinct questions
+        const selectedIndices = new Set<number>()
 
-        console.log(`   ✅ Category ${categoryIndex + 1}/${categories.length}: "${categoryGroup.category}" - Selected Q${selectedQuestion.questionId} (${questionIndex + 1}/${categoryQuestions.length})`)
+        // If category has fewer questions than we want, limit to available
+        const actualCount = Math.min(countToSelect, categoryQuestions.length)
+
+        for (let i = 0; i < actualCount; i++) {
+          // Deterministic selection based on setVariant and category
+          // Logic: (Seed + CategoryOffset + ItemOffset) % Length
+          // categoryIndex * 31: Distinguish between categories
+          // i * 199: Distinguish between the 1st and 2nd question
+          let questionIndex = (selectionSeed + (categoryIndex * 31) + (i * 199)) % categoryQuestions.length
+
+          // verify uniqueness (linear probing if collision occurs)
+          // This ensures we don't pick the same question twice for the same user
+          let attempts = 0
+          while (selectedIndices.has(questionIndex) && attempts < categoryQuestions.length) {
+            questionIndex = (questionIndex + 1) % categoryQuestions.length
+            attempts++
+          }
+
+          selectedIndices.add(questionIndex)
+          const selectedQuestion = categoryQuestions[questionIndex]
+
+          selectedQuestions.push({
+            id: selectedQuestion.questionId,
+            question: selectedQuestion.question,
+            options: selectedQuestion.options,
+            correctAnswer: selectedQuestion.correctAnswer,
+            category: selectedQuestion.category
+          })
+
+          console.log(`   ✅ Category ${categoryIndex + 1}/${categories.length}: "${categoryGroup.category}" - Selected Q${selectedQuestion.questionId}`)
+        }
       } else {
         console.warn(`   ⚠️  Category "${categoryGroup.category}" has no questions!`)
       }
     }
 
-    // Ensure we have exactly 10 questions
-    if (selectedQuestions.length !== 10) {
-      console.warn(`⚠️  Expected 10 questions but got ${selectedQuestions.length}`)
+    // Ensure we have exactly 16 questions (assuming 8 categories * 2)
+    if (selectedQuestions.length !== 16) {
+      console.warn(`⚠️  Expected 16 questions but got ${selectedQuestions.length} (Check # of categories)`)
     }
 
     console.log(`🎉 Generated ${selectedQuestions.length} unique questions for SEC ${secId}`)
