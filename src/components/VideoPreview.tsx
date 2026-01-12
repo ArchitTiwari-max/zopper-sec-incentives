@@ -96,6 +96,7 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
           src={getThumbnailUrl(video.url, video.thumbnailUrl)}
           alt={video.title || 'Video thumbnail'}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+          style={{ objectPosition: 'center 20%' }}
           loading="lazy"
           onError={(e) => {
             // Fallback: if thumbnail fails, try using video URL
@@ -112,11 +113,10 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
 
         {/* Sultan Admin Status Banner */}
         {currentUser && currentUser.isSultanAdmin === true && (
-          <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${
-            video.isActive === false 
-              ? 'bg-red-600 text-white' 
-              : 'bg-green-600 text-white'
-          }`}>
+          <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${video.isActive === false
+            ? 'bg-red-600 text-white'
+            : 'bg-green-600 text-white'
+            }`}>
             {video.isActive === false ? 'INACTIVE' : 'ACTIVE'}
           </div>
         )}
