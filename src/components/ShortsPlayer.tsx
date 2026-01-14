@@ -25,6 +25,7 @@ interface Video {
     commentsCount?: number;
     uploadedAt: string;
     isActive?: boolean; // Add isActive field
+    type?: string; // Optional type for union discrimination
     secUser: {
         id: string;
         name?: string;
@@ -64,7 +65,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 }) => {
     const [videos, setVideos] = useState<Video[]>([]);
     const [contentItems, setContentItems] = useState<ContentItem[]>([]); // Combined videos and ads
-    const [adImageUrl, setAdImageUrl] = useState<string | null>(null); // Ad image URL
+    const [adImageUrls, setAdImageUrls] = useState<string[]>([]); // Ad image URLs
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [muted, setMuted] = useState(true);
@@ -107,11 +108,15 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                 const res = await fetch(`${API_BASE_URL}/pitch-sultan/ad`);
                 const data = await res.json();
                 console.log('🔍 Shorts Ad fetch response:', data);
-                if (data.success && data.url) {
-                    setAdImageUrl(data.url);
-                    console.log('✅ Shorts Ad image set:', data.url);
+                if (data.success && data.urls && data.urls.length > 0) {
+                    setAdImageUrls(data.urls);
+                    console.log('✅ Shorts Ad images set:', data.urls.length);
+                } else if (data.success && data.url) {
+                    // Backward compatibility
+                    setAdImageUrls([data.url]);
+                    console.log('✅ Shorts Ad image set (single):', data.url);
                 } else {
-                    console.log('❌ No ad image found for shorts');
+                    console.log('❌ No ad images found for shorts');
                 }
             } catch (e) {
                 console.error("Failed to fetch ad for shorts", e);
@@ -124,25 +129,27 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     useEffect(() => {
         if (videos.length > 0) {
             const items: ContentItem[] = [];
-            
+
             videos.forEach((video, index) => {
                 items.push(video);
-                
+
                 // Insert ad after every 8 videos (index 7, 15, 23, etc.)
-                if ((index + 1) % 8 === 0 && adImageUrl) {
+                if ((index + 1) % 8 === 0 && adImageUrls.length > 0) {
+                    // Pick a random ad from the list
+                    const randomAdUrl = adImageUrls[Math.floor(Math.random() * adImageUrls.length)];
                     items.push({
                         id: `ad-${Math.floor(index / 8)}`,
                         type: 'ad',
-                        imageUrl: adImageUrl
+                        imageUrl: randomAdUrl
                     });
-                    console.log(`🎯 Inserted ad after video ${index + 1}`);
+                    console.log(`🎯 Inserted random ad after video ${index + 1}`);
                 }
             });
-            
+
             setContentItems(items);
             console.log(`📋 Created ${items.length} content items (${videos.length} videos + ${items.length - videos.length} ads)`);
         }
-    }, [videos, adImageUrl]);
+    }, [videos, adImageUrls]);
 
     // Layout readiness check - ensure DOM is stable before positioning
     useEffect(() => {
@@ -232,7 +239,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     // Set starting video index based on startingVideoId and scroll to it
     useEffect(() => {
         if (contentItems.length > 0 && startingVideoId && !hasScrolledRef.current && isLayoutReady) {
-            const startIndex = contentItems.findIndex(item => 
+            const startIndex = contentItems.findIndex(item =>
                 item.type !== 'ad' && (item as Video).id === startingVideoId
             );
             console.log('🎯 Looking for video ID:', startingVideoId, 'Found at index:', startIndex);
@@ -342,7 +349,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                         if (contentItem && contentItem.type !== 'ad') {
                             const video = contentItem as Video;
                             const videoElement = element.querySelector('video') as HTMLVideoElement;
-                            
+
                             if (videoElement) {
                                 // Check if this is the video we programmatically scrolled to
                                 const isTargetVideo = programmaticScrollVideoId.current === video.id;
@@ -390,7 +397,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                 const otherVideo = otherItem as Video;
                                 const otherElement = containerRef.current?.children[index] as HTMLElement;
                                 const otherVideoElement = otherElement?.querySelector('video') as HTMLVideoElement;
-                                
+
                                 if (otherVideoElement && !otherVideoElement.paused) {
                                     otherVideoElement.pause();
                                     // Update playing state for other videos
@@ -398,7 +405,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                         ...prev,
                                         [otherVideo.id]: false
                                     }));
-                                    
+
                                     // Only reset to beginning if not during programmatic scroll
                                     if (!isProgrammaticScroll) {
                                         otherVideoElement.currentTime = 0; // Reset to beginning
@@ -415,7 +422,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                         // Content is not visible - pause video if it's a video
                         const video = contentItem as Video;
                         const videoElement = element.querySelector('video') as HTMLVideoElement;
-                        
+
                         if (videoElement) {
                             videoElement.pause();
 
@@ -547,7 +554,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
             const video = contentItem as Video;
             const element = containerRef.current?.children[itemIndex] as HTMLElement;
             const videoElement = element?.querySelector('video') as HTMLVideoElement;
-            
+
             if (videoElement) {
                 if (videoElement.paused) {
                     videoElement.play().catch(console.error);
@@ -629,12 +636,12 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         // Trigger animations
         setLikeAnimations(prev => ({ ...prev, [videoId]: true }));
         setFloatingHearts(prev => ({ ...prev, [videoId]: true }));
-        
+
         // Reset animations
         setTimeout(() => {
             setLikeAnimations(prev => ({ ...prev, [videoId]: false }));
         }, 600);
-        
+
         setTimeout(() => {
             setFloatingHearts(prev => ({ ...prev, [videoId]: false }));
         }, 1500);
@@ -780,7 +787,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     // Delete video (Sultan Admin only)
     const handleDeleteVideo = async (videoId: string) => {
         const confirmDelete = window.confirm('Are you sure you want to delete this video? This action cannot be undone.');
-        
+
         if (!confirmDelete) {
             return;
         }
@@ -807,7 +814,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                 setVideos(prevVideos => prevVideos.filter(video => video.id !== videoId));
                 alert('Video deleted successfully!');
                 setShowAdminMenu(false);
-                
+
                 // If we're currently viewing the deleted video, navigate to the next one
                 const currentItem = contentItems[currentIndex];
                 if (currentItem && currentItem.type !== 'ad' && (currentItem as Video).id === videoId) {
@@ -1010,12 +1017,12 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                     onError={() => console.log('❌ Ad image failed to load')}
                                     onLoad={() => console.log('✅ Ad image loaded successfully')}
                                 />
-                                
+
                                 {/* Ad Label */}
                                 <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-md text-xs font-bold text-yellow-500 border border-yellow-500/40 z-10 shadow-lg pointer-events-none">
                                     Sponsored
                                 </div>
-                                
+
                                 {/* Ad Overlay */}
                                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60 flex flex-col justify-between p-4 pb-1 pointer-events-none">
                                     {/* Top Controls */}
@@ -1024,7 +1031,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                             Shorts
                                         </div>
                                     </div>
-                                    
+
                                     {/* Bottom Content */}
                                     <div className="flex items-end justify-between mb-1">
                                         <div className="flex-1 pr-4">
@@ -1149,7 +1156,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                                                                         </>
                                                                                     )}
                                                                                 </button>
-                                                                                
+
                                                                                 {/* Delete Video Option */}
                                                                                 <button
                                                                                     onClick={() => handleDeleteVideo(video.id)}
@@ -1279,25 +1286,22 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                                                     </div>
                                                                 </div>
                                                             )}
-                                                            
-                                                            <div className={`p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${
-                                                                userInteractions[video.id]?.hasLiked 
-                                                                    ? 'bg-red-500/20 ring-2 ring-red-400/50' 
-                                                                    : 'bg-black/30 hover:bg-black/50'
-                                                            } ${
-                                                                likeAnimations[video.id] 
-                                                                    ? 'like-heartbeat like-pulse' 
+
+                                                            <div className={`p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${userInteractions[video.id]?.hasLiked
+                                                                ? 'bg-red-500/20 ring-2 ring-red-400/50'
+                                                                : 'bg-black/30 hover:bg-black/50'
+                                                                } ${likeAnimations[video.id]
+                                                                    ? 'like-heartbeat like-pulse'
                                                                     : ''
-                                                            }`}>
+                                                                }`}>
                                                                 {userInteractions[video.id]?.hasLiked ? (
                                                                     <MdThumbUp className="text-2xl text-red-400 drop-shadow-lg" />
                                                                 ) : (
                                                                     <MdOutlineThumbUp className="text-2xl text-white/80" />
                                                                 )}
                                                             </div>
-                                                            <span className={`text-white text-xs font-semibold mt-1 transition-all duration-300 ${
-                                                                likeAnimations[video.id] ? 'scale-110 text-red-300' : 'scale-100'
-                                                            }`}>
+                                                            <span className={`text-white text-xs font-semibold mt-1 transition-all duration-300 ${likeAnimations[video.id] ? 'scale-110 text-red-300' : 'scale-100'
+                                                                }`}>
                                                                 {formatCount(video.likes)}
                                                             </span>
                                                         </button>

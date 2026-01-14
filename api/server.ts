@@ -5571,13 +5571,14 @@ app.post('/api/pitch-sultan/videos/:id/toggle-like', async (req, res) => {
  */
 app.get('/api/pitch-sultan/ad', async (req, res) => {
   try {
-    const ad = await prisma.pitchSultanAd.findFirst({
-      orderBy: { createdAt: 'desc' }
+    const ads = await prisma.pitchSultanAd.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: { imageUrl: true }
     })
-    res.json({ success: true, url: ad?.imageUrl || null })
+    res.json({ success: true, urls: ads.map(a => a.imageUrl) })
   } catch (error) {
-    console.error('❌ Error fetching ad:', error)
-    res.status(500).json({ success: false, message: 'Failed to fetch ad' })
+    console.error('❌ Error fetching ads:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch ads' })
   }
 })
 

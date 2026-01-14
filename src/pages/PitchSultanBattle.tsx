@@ -97,7 +97,7 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick, onAdU
     onSearch?: (query: string) => void,
     onNotificationClick?: () => void,
     onLogoClick?: () => void,
-    onAdUpload?: (file: File) => void
+    onAdUpload?: (files: FileList) => void
 }) => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [isSearchActive, setIsSearchActive] = useState(false);
@@ -127,8 +127,8 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick, onAdU
     };
 
     const handleAdSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0] && onAdUpload) {
-            onAdUpload(e.target.files[0]);
+        if (e.target.files && e.target.files.length > 0 && onAdUpload) {
+            onAdUpload(e.target.files);
             setShowProfileMenu(false);
         }
     };
@@ -206,7 +206,7 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick, onAdU
                                                     className="w-full px-4 py-2 text-left text-blue-400 hover:bg-blue-900/20 transition-colors flex items-center gap-2 text-sm"
                                                 >
                                                     <MdUpload className="text-lg" />
-                                                    <span>Update Ad Image</span>
+                                                    <span>Upload Ad Images</span>
                                                 </button>
                                             )}
 
@@ -254,6 +254,7 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick, onAdU
                 ref={adInputRef}
                 className="hidden"
                 accept="image/*"
+                multiple
                 onChange={handleAdSelect}
             />
         </div>
@@ -1039,38 +1040,61 @@ export const PitchSultanBattle = () => {
         }
     }, [activeTab]);
 
-    const handleAdUpload = async (file: File) => {
-        if (!file) return;
+    const handleAdUpload = async (files: FileList) => {
+        if (!files || files.length === 0) return;
+
+        let successCount = 0;
+        let failCount = 0;
 
         try {
-            // Upload to S3/Cloud
-            const filename = `ad-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
-            // Use generic mime type or detect. file.type works.
-            const url = await uploadWithRetry(file, filename, file.type, (p) => {
-                console.log(`Uploading ad: ${p.percentage}%`);
-            });
-
-            // Save to backend
             const token = localStorage.getItem('token');
-            const res = await fetch(`${API_BASE_URL}/pitch-sultan/ad`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ url, uploaderName: currentUser.name }),
-            });
 
-            const data = await res.json();
-            if (data.success) {
-                setAdImageUrl(url);
-                alert("Ad image updated successfully! It will appear in Shorts after every 8 videos.");
-            } else {
-                alert("Failed to update ad image record.");
+            // Loop through all selected files
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                try {
+                    console.log(`Processing ad ${i + 1}/${files.length}: ${file.name}`);
+
+                    // Upload to S3/Cloud
+                    const filename = `ad-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+                    const url = await uploadWithRetry(file, filename, file.type, (p) => {
+                        console.log(`Uploading ad ${file.name}: ${p.percentage}%`);
+                    });
+
+                    // Save to backend
+                    const res = await fetch(`${API_BASE_URL}/pitch-sultan/ad`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ url, uploaderName: currentUser.name }),
+                    });
+
+                    const data = await res.json();
+                    if (data.success) {
+                        successCount++;
+                        // Update ad image url state to the last successful one (for immediate feedback if used elsewhere)
+                        setAdImageUrl(url);
+                    } else {
+                        failCount++;
+                        console.error(`Failed to save ad record for ${file.name}:`, data.message);
+                    }
+                } catch (innerErr) {
+                    failCount++;
+                    console.error(`Failed to handle file ${file.name}`, innerErr);
+                }
             }
+
+            if (successCount > 0) {
+                alert(`Successfully uploaded ${successCount} ad image${successCount > 1 ? 's' : ''}! ${failCount > 0 ? `(${failCount} failed)` : ''} They will appear in Shorts randomly.`);
+            } else {
+                alert("Failed to upload ad images.");
+            }
+
         } catch (e) {
-            console.error("Ad upload failed", e);
-            alert("Failed to upload ad image: " + (e instanceof Error ? e.message : "Unknown error"));
+            console.error("Ad upload process failed", e);
+            alert("Failed to upload ad images: " + (e instanceof Error ? e.message : "Unknown error"));
         }
     };
 
