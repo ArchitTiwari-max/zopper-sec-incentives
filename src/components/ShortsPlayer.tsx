@@ -25,7 +25,7 @@ interface Video {
     commentsCount?: number;
     uploadedAt: string;
     isActive?: boolean; // Add isActive field
-    type?: string; // Optional type for union discrimination
+    type?: 'video'; // Type property for ContentItem union
     secUser: {
         id: string;
         name?: string;
@@ -1013,7 +1013,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                 <img
                                     src={(item as AdSlide).imageUrl}
                                     alt="Sponsored"
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-fill"
                                     onError={() => console.log('❌ Ad image failed to load')}
                                     onLoad={() => console.log('✅ Ad image loaded successfully')}
                                 />
@@ -1038,9 +1038,13 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                             <p className="text-white text-base sm:text-lg font-bold mb-2">
                                                 Sponsored Content
                                             </p>
-                                            <p className="text-white/80 text-xs sm:text-sm">
+                                            <p className="text-white/80 text-xs">
                                                 Swipe up to continue watching
                                             </p>
+                                        </div>
+                                        {/* Ad Label - Moved to bottom right */}
+                                        <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-md text-xs font-bold text-yellow-500 border border-yellow-500/40 shadow-lg pointer-events-none">
+                                            Sponsored
                                         </div>
                                     </div>
                                 </div>

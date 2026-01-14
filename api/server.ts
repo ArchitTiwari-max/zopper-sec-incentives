@@ -4744,20 +4744,53 @@ app.put('/api/pitch-sultan/videos/:id/like', async (req, res) => {
 
 /**
  * PUT /api/pitch-sultan/videos/:id
- * Update video details (title, description, etc.)
+ * Update video details (title, description, tags) - Sultan Admin or video owner only
  */
 app.put('/api/pitch-sultan/videos/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { title, description } = req.body
+    const { title, description, tags } = req.body
 
-    console.log('🔄 Updating video:', { id, title, description });
+    // Verify authentication
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'Authorization required' })
+    }
 
-    const video = await prisma.pitchSultanVideo.update({
+    const token = authHeader.split(' ')[1]
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (e) {
+      return res.status(401).json({ success: false, error: 'Invalid or expired token' })
+    }
+
+    // Get the video to check ownership
+    const video = await prisma.pitchSultanVideo.findUnique({
+      where: { id },
+      select: { secUserId: true }
+    })
+
+    if (!video) {
+      return res.status(404).json({ success: false, error: 'Video not found' })
+    }
+
+    // Check permissions: must be Sultan Admin or video owner
+    const isSultanAdmin = decoded.isSultanAdmin === true
+    const isVideoOwner = decoded.userId === video.secUserId
+    
+    if (!isSultanAdmin && !isVideoOwner) {
+      return res.status(403).json({ success: false, error: 'You do not have permission to edit this video' })
+    }
+
+    console.log('🔄 Updating video:', { id, title, description, tags });
+
+    const updatedVideo = await prisma.pitchSultanVideo.update({
       where: { id },
       data: {
         ...(title !== undefined && { title }),
-        ...(description !== undefined && { description })
+        ...(description !== undefined && { description }),
+        ...(tags !== undefined && { tags })
       },
       include: {
         secUser: {
@@ -4768,8 +4801,8 @@ app.put('/api/pitch-sultan/videos/:id', async (req, res) => {
       }
     })
 
-    console.log('✅ Video updated successfully:', video.id);
-    res.json({ success: true, data: video })
+    console.log('✅ Video updated successfully:', updatedVideo.id);
+    res.json({ success: true, data: updatedVideo })
   } catch (error) {
     console.error("❌ Error updating video:", error)
     res.status(500).json({ success: false, error: "Failed to update video" })
@@ -4778,16 +4811,65 @@ app.put('/api/pitch-sultan/videos/:id', async (req, res) => {
 
 /**
  * DELETE /api/pitch-sultan/videos/:id
- * Soft delete a video (set isActive to false) and reorder serial numbers
+ * Delete a video and all associated data (comments, likes, ratings) - Sultan Admin or video owner only
  */
 app.delete('/api/pitch-sultan/videos/:id', async (req, res) => {
   try {
     const { id } = req.params
 
+    // Verify authentication
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'Authorization required' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as any
+    } catch (e) {
+      return res.status(401).json({ success: false, error: 'Invalid or expired token' })
+    }
+
+    // Get the video to check ownership
+    const video = await prisma.pitchSultanVideo.findUnique({
+      where: { id },
+      select: { secUserId: true, isActive: true }
+    })
+
+    if (!video) {
+      return res.status(404).json({ success: false, error: 'Video not found' })
+    }
+
+    // Check permissions: must be Sultan Admin or video owner
+    const isSultanAdmin = decoded.isSultanAdmin === true
+    const isVideoOwner = decoded.userId === video.secUserId
+    
+    if (!isSultanAdmin && !isVideoOwner) {
+      return res.status(403).json({ success: false, error: 'You do not have permission to delete this video' })
+    }
+
+    console.log('🗑️ Deleting video and associated data:', id);
+
+    // Delete associated data first (cascade delete)
+    await prisma.videoComment.deleteMany({
+      where: { videoId: id }
+    })
+
+    await prisma.userVideoLike.deleteMany({
+      where: { videoId: id }
+    })
+
+    await prisma.userVideoRating.deleteMany({
+      where: { videoId: id }
+    })
+
     // Hard delete the video from database
-    const video = await prisma.pitchSultanVideo.delete({
+    const deletedVideo = await prisma.pitchSultanVideo.delete({
       where: { id }
     })
+
+    console.log('✅ Video and associated data deleted successfully:', id);
 
     // Re-assign serial numbers for ALL remaining active videos
     // Fetch all active videos ordered by creation time
@@ -4808,9 +4890,9 @@ app.delete('/api/pitch-sultan/videos/:id', async (req, res) => {
       nextSerial++
     }
 
-    res.json({ success: true, data: video })
+    res.json({ success: true, data: deletedVideo })
   } catch (error) {
-    console.error("Error deleting video:", error)
+    console.error("❌ Error deleting video:", error)
     res.status(500).json({ success: false, error: "Failed to delete video" })
   }
 })

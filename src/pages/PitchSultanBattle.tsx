@@ -611,7 +611,7 @@ const HelpSupportView = () => {
 };
 
 const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideoDelete }: {
-    currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string },
+    currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string; isSultanAdmin: boolean },
     videos: any[],
     onVideoClick?: (video: any) => void,
     onVideoUpdate?: (videoId: string, updates: { title?: string, description?: string }) => void,
@@ -623,17 +623,24 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
     const [newDescription, setNewDescription] = useState('');
 
     // Filter videos by current user (if we have user ID)
-    const userVideos = videos.filter(video =>
-        video.secUser?.name === currentUser.name ||
-        video.secUser?.phone === currentUser.handle.replace('@', '')
-    );
+    // For Sultan Admin, show all videos; for regular users, show only their videos
+    const userVideos = currentUser?.isSultanAdmin 
+        ? videos 
+        : videos.filter(video =>
+            video.secUser?.name === currentUser.name ||
+            video.secUser?.phone === currentUser.handle.replace('@', '')
+        );
 
     const handleDeleteVideo = async (videoId: string) => {
         if (!confirm('Are you sure you want to delete this video?')) return;
 
         try {
+            const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos/${videoId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             });
 
             if (response.ok) {
@@ -644,7 +651,9 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
                 alert('Video deleted successfully!');
                 console.log('✅ Video deleted successfully');
             } else {
-                alert('Failed to delete video');
+                const error = await response.json();
+                alert(`Failed to delete video: ${error.error || 'Unknown error'}`);
+                console.error('Delete failed:', error);
             }
         } catch (error) {
             console.error('Error deleting video:', error);
@@ -656,10 +665,12 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
         try {
             console.log('🔄 Updating video:', { videoId, title, description });
 
+            const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos/${videoId}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ title, description })
             });
@@ -947,14 +958,24 @@ export const PitchSultanBattle = () => {
     const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null); // Add this state
     const [adImageUrl, setAdImageUrl] = useState<string | null>(null); // Ad Image URL for upload functionality
     const { uploadWithRetry } = useUploadManager(); // Upload hook
-    const [currentUser, setCurrentUser] = useState({
+    const [currentUser, setCurrentUser] = useState<{
+        name: string;
+        handle: string;
+        avatar: string;
+        subscribers: string;
+        role: string;
+        store: string;
+        region: string;
+        isSultanAdmin: boolean;
+    }>({
         name: "Loading...",
         handle: "@loading",
         avatar: "https://ui-avatars.com/api/?name=Loading&background=ffd700&color=000",
         subscribers: "0",
         role: "SEC",
         store: "",
-        region: ""
+        region: "",
+        isSultanAdmin: false
     });
 
     // Check authentication and load Pitch Sultan user
