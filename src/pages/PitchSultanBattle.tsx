@@ -1228,6 +1228,12 @@ export const PitchSultanBattle = () => {
                     new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
                 );
                 break;
+            case 'Trending':
+                // Sort by views, highest first
+                filtered = filtered.sort((a, b) =>
+                    (b.views || 0) - (a.views || 0)
+                );
+                break;
             default:
                 // Already filtered by search if applicable
                 break;
@@ -1333,7 +1339,7 @@ export const PitchSultanBattle = () => {
                             )}
 
                             {/* Filter chips */}
-                            {['All', 'Recently Uploaded'].map((chip, i) => (
+                            {['All', 'Recently Uploaded', 'Trending'].map((chip, i) => (
                                 <span
                                     key={i}
                                     onClick={() => handleFilterChange(chip)}
@@ -1382,15 +1388,47 @@ export const PitchSultanBattle = () => {
                         {/* Video Feed */}
                         {!loading && filteredVideos.length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-4">
-                                {filteredVideos.map((video, index) => (
-                                    <VideoPreview
-                                        key={video.id}
-                                        video={video}
-                                        onVideoClick={handleVideoClick}
-                                        showMenu={true}
-                                        currentUser={currentUser}
-                                    />
-                                ))}
+                                {filteredVideos.map((video, index) => {
+                                    let borderStyle = "";
+                                    let rankBadge = null;
+
+                                    if (activeFilter === 'Trending') {
+                                        if (index === 0) {
+                                            borderStyle = "ring-4 ring-yellow-400 rounded-lg p-1 relative";
+                                            rankBadge = (
+                                                <div className="absolute -top-3 -right-3 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center z-10 shadow-lg font-bold text-black border-2 border-black">
+                                                    1
+                                                </div>
+                                            );
+                                        } else if (index === 1) {
+                                            borderStyle = "ring-4 ring-gray-300 rounded-lg p-1 relative";
+                                            rankBadge = (
+                                                <div className="absolute -top-3 -right-3 w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center z-10 shadow-lg font-bold text-black border-2 border-black">
+                                                    2
+                                                </div>
+                                            );
+                                        } else if (index === 2) {
+                                            borderStyle = "ring-4 ring-amber-700 rounded-lg p-1 relative";
+                                            rankBadge = (
+                                                <div className="absolute -top-3 -right-3 w-8 h-8 bg-amber-700 rounded-full flex items-center justify-center z-10 shadow-lg font-bold text-white border-2 border-black">
+                                                    3
+                                                </div>
+                                            );
+                                        }
+                                    }
+
+                                    return (
+                                        <div key={video.id} className={borderStyle}>
+                                            {rankBadge}
+                                            <VideoPreview
+                                                video={video}
+                                                onVideoClick={handleVideoClick}
+                                                showMenu={true}
+                                                currentUser={currentUser}
+                                            />
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
