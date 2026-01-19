@@ -624,8 +624,8 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
 
     // Filter videos by current user (if we have user ID)
     // For Sultan Admin, show all videos; for regular users, show only their videos
-    const userVideos = currentUser?.isSultanAdmin 
-        ? videos 
+    const userVideos = currentUser?.isSultanAdmin
+        ? videos
         : videos.filter(video =>
             video.secUser?.name === currentUser.name ||
             video.secUser?.phone === currentUser.handle.replace('@', '')
@@ -1036,7 +1036,13 @@ export const PitchSultanBattle = () => {
                 headers.Authorization = `Bearer ${token}`;
             }
 
-            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?limit=50&_t=${new Date().getTime()}`, {
+            const viewerId = secUser?.id;
+            const queryParams = new URLSearchParams();
+            queryParams.append('limit', '10000');
+            queryParams.append('_t', new Date().getTime().toString());
+            if (viewerId) queryParams.append('userId', viewerId);
+
+            const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?${queryParams.toString()}`, {
                 headers
             });
             const data = await response.json();
@@ -1122,6 +1128,7 @@ export const PitchSultanBattle = () => {
     const handleVideoClick = (video: any) => {
         console.log('🎬 Video clicked:', video.id);
         console.log('🎬 Current selectedVideoId:', selectedVideoId);
+
         setSelectedVideoId(video.id);
         setActiveTab('shorts');
         console.log('🎬 Set selectedVideoId to:', video.id, 'and switched to shorts tab');
@@ -1434,9 +1441,12 @@ export const PitchSultanBattle = () => {
                     </div>
                 </div>
 
-                <div className={`${activeTab === 'shorts' ? 'block' : 'hidden'} fixed inset-0 bg-black z-40`}>
-                    <ShortsView videos={videos} startingVideoId={selectedVideoId} onVideoStatsUpdate={handleVideoStatsUpdate} currentUserId={secUser?.id} currentUser={currentUser} />
-                </div>
+                {/* Shorts View - Only mount when active */}
+                {activeTab === 'shorts' && (
+                    <div className="fixed inset-0 bg-black z-40">
+                        <ShortsView videos={videos} startingVideoId={selectedVideoId} onVideoStatsUpdate={handleVideoStatsUpdate} currentUserId={secUser?.id} currentUser={currentUser} />
+                    </div>
+                )}
 
                 <div className={`${activeTab === 'create' ? 'block' : 'hidden'}`}>
                     <CreateView onUploadClick={handleUploadClick} onRecordClick={handleRecordClick} />

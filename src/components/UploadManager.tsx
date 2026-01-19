@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '@/lib/config';
+import { clearAuth } from '@/lib/auth';
 
 export interface UploadUrlResponse {
   uploadUrl: string;
@@ -10,6 +11,15 @@ export interface UploadProgress {
   loaded: number;
   total: number;
   percentage: number;
+}
+
+// Helper function to handle 401 errors
+const handleUnauthorized = (error: any) => {
+  if (error.status === 401 || error.message?.includes('401') || error.message?.includes('Invalid or expired token')) {
+    // Clear auth and redirect to login
+    clearAuth();
+    window.location.href = '/';
+  }
 }
 
 export class UploadManager {
@@ -36,6 +46,13 @@ export class UploadManager {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      
+      // Handle 401 Unauthorized - token expired or invalid
+      if (response.status === 401) {
+        handleUnauthorized({ status: 401, message: errorData.message });
+        throw new Error('Your session has expired. Please log in again.');
+      }
+      
       throw new Error(errorData.message || `Upload URL request failed: ${response.status}`);
     }
 
@@ -193,6 +210,13 @@ export class UploadManager {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      
+      // Handle 401 Unauthorized - token expired or invalid
+      if (response.status === 401) {
+        handleUnauthorized({ status: 401, message: errorData.message });
+        throw new Error('Your session has expired. Please log in again.');
+      }
+      
       throw new Error(errorData.message || `Failed to save video metadata: ${response.status}`);
     }
 

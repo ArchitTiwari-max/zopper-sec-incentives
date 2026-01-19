@@ -221,6 +221,13 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
       return;
     }
 
+    // Check if token is still valid before starting upload
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Your session has expired. Please log in again.');
+      return;
+    }
+
     setUploading(true);
     setError(null);
     setProgress(0);

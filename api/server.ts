@@ -4612,28 +4612,48 @@ app.post('/api/pitch-sultan/videos', async (req, res) => {
  */
 app.get('/api/pitch-sultan/videos', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 50
+    const limit = Math.min(parseInt(req.query.limit as string) || 10000, 10000) // Max 10000 videos
     const skip = parseInt(req.query.skip as string) || 0
     const secUserId = req.query.secUserId as string
 
-    // Check if user is sultan admin
+    // Check if user is sultan admin and get their user ID
     let isSultanAdminUser = false
+    let currentUserId: string | null = null
     const authHeader = req.headers.authorization
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1]
       try {
         const decoded = jwt.verify(token, JWT_SECRET) as any
         isSultanAdminUser = decoded.isSultanAdmin === true
+        currentUserId = decoded.userId || null
       } catch (e) {
         // Token invalid, continue as regular user
       }
     }
 
-    // For sultan admin, show all videos (active + inactive)
-    // For regular users, show only active videos
-    const where: any = isSultanAdminUser ? {} : { isActive: true }
+    // Build where clause based on user type
+    let where: any
+    if (isSultanAdminUser) {
+      // Sultan admin sees all videos (active + inactive)
+      where = {}
+    } else if (currentUserId) {
+      // Regular SEC user sees:
+      // 1. All their own videos (active + inactive)
+      // 2. Other users' active videos
+      where = {
+        OR: [
+          { secUserId: currentUserId }, // Their own videos (all statuses)
+          { isActive: true } // Other users' active videos
+        ]
+      }
+    } else {
+      // Not logged in, show only active videos
+      where = { isActive: true }
+    }
+
+    // If secUserId is specified, filter to that user's videos
     if (secUserId) {
-      where.secUserId = secUserId
+      where = { secUserId }
     }
 
     const videos = await prisma.pitchSultanVideo.findMany({
@@ -4676,11 +4696,45 @@ app.get('/api/pitch-sultan/videos', async (req, res) => {
       skip
     })
 
+    // --- Optimization: Batch fetch interactions for the current viewer ---
+    const viewerUserId = (req.query.userId as string) || currentUserId;
+    let videosWithInteractions = videos;
+
+    if (viewerUserId && videos.length > 0) {
+      const videoIds = videos.map(v => v.id);
+
+      const [userLikes, userRatings] = await Promise.all([
+        prisma.userVideoLike.findMany({
+          where: {
+            userId: viewerUserId,
+            videoId: { in: videoIds }
+          },
+          select: { videoId: true }
+        }),
+        prisma.userVideoRating.findMany({
+          where: {
+            userId: viewerUserId,
+            videoId: { in: videoIds }
+          },
+          select: { videoId: true, rating: true }
+        })
+      ]);
+
+      const likedVideoIds = new Set(userLikes.map(l => l.videoId));
+      const ratingMap = new Map(userRatings.map(r => [r.videoId, r.rating]));
+
+      videosWithInteractions = videos.map(v => ({
+        ...v,
+        hasLiked: likedVideoIds.has(v.id),
+        userRating: ratingMap.get(v.id) || null
+      }));
+    }
+
     const total = await prisma.pitchSultanVideo.count({ where })
 
     res.json({
       success: true,
-      data: videos,
+      data: videosWithInteractions,
       pagination: {
         total,
         limit,
@@ -4778,7 +4832,7 @@ app.put('/api/pitch-sultan/videos/:id', async (req, res) => {
     // Check permissions: must be Sultan Admin or video owner
     const isSultanAdmin = decoded.isSultanAdmin === true
     const isVideoOwner = decoded.userId === video.secUserId
-    
+
     if (!isSultanAdmin && !isVideoOwner) {
       return res.status(403).json({ success: false, error: 'You do not have permission to edit this video' })
     }
@@ -4844,7 +4898,7 @@ app.delete('/api/pitch-sultan/videos/:id', async (req, res) => {
     // Check permissions: must be Sultan Admin or video owner
     const isSultanAdmin = decoded.isSultanAdmin === true
     const isVideoOwner = decoded.userId === video.secUserId
-    
+
     if (!isSultanAdmin && !isVideoOwner) {
       return res.status(403).json({ success: false, error: 'You do not have permission to delete this video' })
     }
@@ -5687,6 +5741,55 @@ app.post('/api/pitch-sultan/ad', async (req, res) => {
   } catch (error) {
     console.error('❌ Error updating ad:', error)
     res.status(500).json({ success: false, message: 'Failed to update ad' })
+  }
+})
+
+/**
+ * POST /api/pitch-sultan/videos/increment-all-views
+ * Increment view count by 1 for all videos
+ */
+app.post('/api/pitch-sultan/videos/increment-all-views', async (req, res) => {
+  try {
+    // Get all videos
+    const videos = await prisma.pitchSultanVideo.findMany({
+      select: { id: true }
+    })
+
+    if (videos.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No videos found to increment',
+        data: { videosUpdated: 0 }
+      })
+    }
+
+    // Update each video to increment views by 1
+    const updatePromises = videos.map(video =>
+      prisma.pitchSultanVideo.update({
+        where: { id: video.id },
+        data: {
+          views: {
+            increment: 1
+          }
+        }
+      })
+    )
+
+    const updatedVideos = await Promise.all(updatePromises)
+
+    console.log(`✅ Successfully incremented views by 1 for ${updatedVideos.length} videos`)
+    res.json({
+      success: true,
+      message: `Views incremented by 1 for ${updatedVideos.length} videos`,
+      data: { videosUpdated: updatedVideos.length }
+    })
+  } catch (error) {
+    console.error('❌ Error incrementing views for all videos:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to increment views for all videos',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    })
   }
 })
 
