@@ -354,12 +354,6 @@ const VideoCard = ({ video, onVideoClick, currentUser }: { video: any, onVideoCl
                     </div>
                 )}
 
-                {/* Play overlay */}
-                <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
-                        <MdPlayArrow className="text-black text-3xl ml-1" />
-                    </div>
-                </div>
             </div>
             <div className="flex gap-3 mt-3 px-3 md:px-0">
                 <img src={uploaderAvatar} alt="" className="w-9 h-9 rounded-full mt-1 flex-shrink-0" />
@@ -424,11 +418,8 @@ const CreateView = ({ onUploadClick, onRecordClick }: { onUploadClick: () => voi
 
                 <button
                     onClick={onUploadClick}
-                    disabled={!accepted}
-                    className={`font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2 transition-all ${accepted
-                        ? 'bg-[#3ea6ff] hover:bg-[#3095ef] text-black active:scale-95 shadow-[0_0_15px_rgba(62,166,255,0.4)]'
-                        : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
-                        }`}
+                    disabled={true}
+                    className={`font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2 transition-all bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700 opacity-50`}
                 >
                     <MdUpload className="text-xl" /> Upload Video
                 </button>
@@ -1127,11 +1118,11 @@ export const PitchSultanBattle = () => {
 
     const handleVideoClick = (video: any) => {
         console.log('🎬 Video clicked:', video.id);
-        console.log('🎬 Current selectedVideoId:', selectedVideoId);
+     //   console.log('🎬 Current selectedVideoId:', selectedVideoId);
 
-        setSelectedVideoId(video.id);
-        setActiveTab('shorts');
-        console.log('🎬 Set selectedVideoId to:', video.id, 'and switched to shorts tab');
+       // setSelectedVideoId(video.id);
+        // Removed: setActiveTab('shorts'); - no direct jump to shorts player
+        console.log('🎬 Set selectedVideoId to:', video.id);
     };
 
     const handleRecordClick = () => {

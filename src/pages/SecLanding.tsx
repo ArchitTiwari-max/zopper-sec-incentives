@@ -67,7 +67,7 @@ export function SecLanding() {
                         `}</style>
                         <div
                             style={{ animation: 'float 3s ease-in-out infinite' }}
-                            onClick={() => navigate('/pitchsultan')}
+                            onClick={() => navigate('/pitchsultan/rewards')}
                             className="cursor-pointer relative rounded-2xl overflow-hidden aspect-[3/4] shadow-lg border border-white/10 group bg-black"
                         >
                             <img src={pitchSultanImg} alt="Pitch Sultan" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
@@ -90,7 +90,7 @@ export function SecLanding() {
 
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-5">
                                 <span className="text-white font-bold text-xl mb-1">Pitch Sultan</span>
-                                <span className="text-yellow-400 text-sm text-left font-medium">Live Now!</span>
+                                <span className="text-yellow-400 text-sm text-left font-medium">Winner Announcement</span>
                             </div>
                         </div>
                     </motion.div>
@@ -105,7 +105,7 @@ export function SecLanding() {
                         <img src={salesDostImg} alt="Sales Dost" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-5">
                             <span className="text-white font-bold text-xl mb-1">SalesDost</span>
-                            <span className="text-yellow-400 text-sm text-left font-medium">Live Now!</span>
+     
                         </div>
                     </motion.div>
                 </div>

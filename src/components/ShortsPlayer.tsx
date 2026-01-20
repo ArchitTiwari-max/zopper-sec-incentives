@@ -102,6 +102,12 @@ const VideoSlide = ({
     const viewRecordedRef = useRef(false);
     const fetchedInteractionsRef = useRef<string | null>((video as any).hasLiked !== undefined ? video.id : null);
 
+    // Debug: Log when video element is created/destroyed
+    useEffect(() => {
+        console.log(`🎥 [${video.id.slice(-4)}] VideoSlide mounted, isActive=${isActive}`);
+        return () => console.log(`🎥 [${video.id.slice(-4)}] VideoSlide unmounted`);
+    }, [video.id]);
+
     // 1. Fetch interactions ON-DEMAND only when active
     useEffect(() => {
         if (isActive && currentUserId && fetchedInteractionsRef.current !== video.id) {
@@ -144,11 +150,12 @@ const VideoSlide = ({
                 }, 3000);
                 return () => clearTimeout(viewTimer);
             }
-        } else if (videoRef.current) {
+        } else if (videoRef.current && !isActive) {
+            // Just pause, don't clear src (will be cleared on unmount)
             videoRef.current.pause();
             viewRecordedRef.current = false;
         }
-    }, [isActive, video.id, muted]); // Added muted to ensure we retry play if it was the blocker
+    }, [isActive, video.id, muted]);
 
     const [showMuteIcon, setShowMuteIcon] = useState(false);
     const muteTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -174,8 +181,8 @@ const VideoSlide = ({
 
     return (
         <div className="relative w-full h-full bg-black flex-shrink-0 snap-start cursor-pointer" onClick={handleVideoTap}>
-            {/* 1. Video Player - Only rendered if active to save resources */}
-            {isActive ? (
+            {/* 1. Video Player - Only render when active to avoid empty src errors */}
+            {isActive && (
                 <video
                     ref={videoRef}
                     src={getOptimizedVideoUrl(video.url)}
@@ -189,17 +196,26 @@ const VideoSlide = ({
                     onPlay={() => setIsPlaying(true)}
                     onPause={() => setIsPlaying(false)}
                     onTimeUpdate={(e) => setProgress((e.currentTarget.currentTime / e.currentTarget.duration) * 100)}
-                    onLoadStart={() => console.log(`📥 [${video.id.slice(-4)}] Started loading from S3:`, new Date().toISOString())}
-                    onLoadedMetadata={() => console.log(`📊 [${video.id.slice(-4)}] Metadata loaded (moov atom read):`, new Date().toISOString())}
-                    onCanPlay={() => console.log(`✅ [${video.id.slice(-4)}] Can play (enough buffered):`, new Date().toISOString())}
-                    onPlaying={() => console.log(`▶️ [${video.id.slice(-4)}] Actually playing:`, new Date().toISOString())}
-                    onWaiting={() => console.log(`⏳ [${video.id.slice(-4)}] Buffering...`, new Date().toISOString())}
+                    onLoadStart={() => console.log(`📥 [${video.id.slice(-4)}] Video element STARTED loading`)}
+                    onLoadedMetadata={() => console.log(`📊 [${video.id.slice(-4)}] Metadata loaded`)}
+                    onCanPlay={() => console.log(`✅ [${video.id.slice(-4)}] Can play`)}
+                    onPlaying={() => console.log(`▶️ [${video.id.slice(-4)}] Playing`)}
+                    onWaiting={() => console.log(`⏳ [${video.id.slice(-4)}] Buffering`)}
+                    onError={(e) => {
+                        const error = e.currentTarget.error;
+                        if (error && error.code !== 4) { // Ignore MEDIA_ERR_SRC_NOT_SUPPORTED when src is empty
+                            console.error(`❌ [${video.id.slice(-4)}] Video error:`, error.message);
+                        }
+                    }}
                 />
-            ) : (
+            )}
+            
+            {/* Show thumbnail when inactive or video not loaded */}
+            {!isActive && (
                 <img
                     src={getThumbnailUrl(video.url, video.thumbnailUrl)}
-                    className="w-full h-full object-cover opacity-50"
-                    alt="Thumbnail placeholder"
+                    className="w-full h-full object-cover"
+                    alt="Thumbnail"
                 />
             )}
 
@@ -314,6 +330,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     const [currentIndex, setCurrentIndex] = useState(0);
     const [muted, setMuted] = useState(true);
     const [modals, setModals] = useState({ comments: false, rating: false, videoId: '' });
+    const isInitialLoadRef = useRef(true);
 
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -344,29 +361,47 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         return result;
     }, [videos, adImageUrls]);
 
-    // 3. Handle Initial Scroll to Start Video
+    // 3. Handle Initial Scroll to Start Video (only on first load)
     useEffect(() => {
-        if (feed.length > 0 && startingVideoId) {
+        if (feed.length > 0 && startingVideoId && isInitialLoadRef.current) {
             const index = feed.findIndex(item => item.id === startingVideoId);
             if (index !== -1) {
                 setCurrentIndex(index);
                 setTimeout(() => {
                     containerRef.current?.scrollTo({ top: index * containerRef.current.clientHeight, behavior: 'auto' });
+                    isInitialLoadRef.current = false; // Mark as done after scrolling
                 }, 100);
             }
         }
     }, [feed, startingVideoId]);
 
-    // 4. Scroll Intersection Logic
+    // 4. Scroll Intersection Logic with delay to prevent fast-scroll downloads
     useEffect(() => {
+        const activationTimers = new Map<Element, NodeJS.Timeout>();
+        
         const obs = new IntersectionObserver(
             (entries) => {
                 entries.forEach(entry => {
+                    const index = parseInt(entry.target.getAttribute('data-index') || '0');
+                    
                     if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-                        const index = parseInt(entry.target.getAttribute('data-index') || '0');
-                        setCurrentIndex(index);
-                        const item = feed[index];
-                        if (item?.type === 'video' && onVideoChange) onVideoChange(item.data);
+                        // Skip delay for first video on initial load only
+                        const delay = (isInitialLoadRef.current && index === 0) ? 0 : 300;
+                        
+                        const timer = setTimeout(() => {
+                            setCurrentIndex(index);
+                            const item = feed[index];
+                            if (item?.type === 'video' && onVideoChange) onVideoChange(item.data);
+                            isInitialLoadRef.current = false; // Mark initial load as done
+                        }, delay);
+                        activationTimers.set(entry.target, timer);
+                    } else {
+                        // Cancel activation if scrolled away before delay
+                        const timer = activationTimers.get(entry.target);
+                        if (timer) {
+                            clearTimeout(timer);
+                            activationTimers.delete(entry.target);
+                        }
                     }
                 });
             },
@@ -376,7 +411,10 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         if (containerRef.current) {
             Array.from(containerRef.current.children).forEach(el => obs.observe(el));
         }
-        return () => obs.disconnect();
+        return () => {
+            activationTimers.forEach(timer => clearTimeout(timer));
+            obs.disconnect();
+        };
     }, [feed, onVideoChange]);
 
     // 5. Shared Actions (Now only handles the network call, state is local to slide)
@@ -426,15 +464,14 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         <div className="fixed inset-0 bg-black flex justify-center overflow-hidden" style={{ paddingTop: '56px', paddingBottom: '60px' }}>
             <div ref={containerRef} className="w-full max-w-[400px] h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide">
                 {feed.map((item, index) => {
-                    // Lazy load thumbnails: only for current and adjacent slides
-                    const isNearScan = Math.abs(index - currentIndex) <= 1;
+                    const isCurrentVideo = index === currentIndex;
 
                     return (
                         <div key={item.id} data-index={index} className="w-full h-full snap-start">
                             {item.type === 'video' ? (
                                 <VideoSlide
                                     video={item.data}
-                                    isActive={index === currentIndex}
+                                    isActive={isCurrentVideo}
                                     muted={muted}
                                     toggleMute={() => setMuted(!muted)}
                                     onLike={handleLike}
@@ -447,7 +484,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                                     onView={handleView}
                                 />
                             ) : (
-                                isNearScan ? <AdSlide data={item.data} /> : <div className="w-full h-full bg-black" />
+                                <AdSlide data={item.data} />
                             )}
                         </div>
                     );

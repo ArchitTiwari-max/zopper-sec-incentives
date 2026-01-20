@@ -1,0 +1,72 @@
+[
+  {
+    "filename": "1001.jpg",
+    "originalSize": "368.94KB",
+    "compressedSize": "-",
+    "url": null,
+    "status": "compression failed"
+  },
+  {
+    "filename": "1011.jpg",
+    "originalSize": "380.64KB",
+    "compressedSize": "-",
+    "url": null,
+    "status": "compression failed"
+  },
+  {
+    "filename": "1012.jpg",
+    "originalSize": "432.97KB",
+    "compressedSize": "-",
+    "url": null,
+    "status": "compression failed"
+  },
+  {
+    "filename": "1019.jpg",
+    "originalSize": "356.89KB",
+    "compressedSize": "-",
+    "url": null,
+    "status": "compression failed"
+  },
+  {
+    "filename": "1030.jpg",
+    "originalSize": "384.61KB",
+    "compressedSize": "-",
+    "url": null,
+    "status": "compression failed"
+  },
+  {
+    "filename": "1037.jpg",
+    "originalSize": "394.39KB",
+    "compressedSize": "-",
+    "url": null,
+    "status": "compression failed"
+  },
+  {
+    "filename": "1047.png",
+    "originalSize": "5185.29KB",
+    "compressedSize": "-",
+    "url": null,
+    "status": "compression failed"
+  },
+  {
+    "filename": "1048.jpg",
+    "originalSize": "492.61KB",
+    "compressedSize": "-",
+    "url": null,
+    "status": "compression failed"
+  },
+  {
+    "filename": "1053.jpg",
+    "originalSize": "392.62KB",
+    "compressedSize": "-",
+    "url": null,
+    "status": "compression failed"
+  },
+  {
+    "filename": "1059.jpg",
+    "originalSize": "374.84KB",
+    "compressedSize": "-",
+    "url": null,
+    "status": "compression failed"
+  }
+]

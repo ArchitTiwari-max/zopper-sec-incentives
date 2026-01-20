@@ -1,0 +1,79 @@
+[
+  {
+    "filename": "1001.jpg",
+    "originalSize": "368.94KB",
+    "compressedSize": "98.40KB",
+    "url": null,
+    "status": "upload failed"
+  },
+  {
+    "filename": "1011.jpg",
+    "originalSize": "380.64KB",
+    "compressedSize": "96.09KB",
+    "url": null,
+    "status": "upload failed"
+  },
+  {
+    "filename": "1012.jpg",
+    "originalSize": "432.97KB",
+    "compressedSize": "120.97KB",
+    "url": null,
+    "status": "upload failed"
+  },
+  {
+    "filename": "1019.jpg",
+    "originalSize": "356.89KB",
+    "compressedSize": "95.72KB",
+    "url": null,
+    "status": "upload failed"
+  },
+  {
+    "filename": "1030.jpg",
+    "originalSize": "384.61KB",
+    "compressedSize": "95.92KB",
+    "url": null,
+    "status": "upload failed"
+  },
+  {
+    "filename": "1037.jpg",
+    "originalSize": "394.39KB",
+    "compressedSize": "106.18KB",
+    "url": null,
+    "status": "upload failed"
+  },
+  {
+    "filename": "1047.png",
+    "originalSize": "5185.29KB",
+    "compressedSize": "1745.29KB",
+    "url": null,
+    "status": "too large (1745.29KB)"
+  },
+  {
+  "filename": "1047.png",
+  "originalSize": "5185.29KB",
+  "compressedSize": "173.69KB",
+  "url": "https://d2f4sgw13r1zfn.cloudfront.net/media/Pitchsultan_winners/1047.png",
+  "status": "uploaded"
+},
+  {
+    "filename": "1048.jpg",
+    "originalSize": "492.61KB",
+    "compressedSize": "138.45KB",
+    "url": null,
+    "status": "upload failed"
+  },
+  {
+    "filename": "1053.jpg",
+    "originalSize": "392.62KB",
+    "compressedSize": "104.64KB",
+    "url": null,
+    "status": "upload failed"
+  },
+  {
+    "filename": "1059.jpg",
+    "originalSize": "374.84KB",
+    "compressedSize": "102.96KB",
+    "url": null,
+    "status": "upload failed"
+  }
+]
