@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     MdHome, MdHomeFilled,
     MdOutlineSlowMotionVideo, MdSlowMotionVideo,
@@ -934,6 +934,7 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
 
 export const PitchSultanBattle = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user, isAuthenticated, isSEC } = useAuth();
 
     // Cast user to SECAuthData since we know it's SEC (isSEC is true)
@@ -1058,6 +1059,18 @@ export const PitchSultanBattle = () => {
         }
     }, [activeTab]);
 
+    // Handle deep link to specific video from location state
+    useEffect(() => {
+        if (location.state?.videoId) {
+            console.log('🔗 Deep link videoId detected:', location.state.videoId);
+            setSelectedVideoId(location.state.videoId);
+            setActiveTab('shorts');
+
+            // Clear location state to prevent re-opening on refresh
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state]);
+
     const handleAdUpload = async (files: FileList) => {
         if (!files || files.length === 0) return;
 
@@ -1118,9 +1131,9 @@ export const PitchSultanBattle = () => {
 
     const handleVideoClick = (video: any) => {
         console.log('🎬 Video clicked:', video.id);
-     //   console.log('🎬 Current selectedVideoId:', selectedVideoId);
+        //   console.log('🎬 Current selectedVideoId:', selectedVideoId);
 
-       // setSelectedVideoId(video.id);
+        // setSelectedVideoId(video.id);
         // Removed: setActiveTab('shorts'); - no direct jump to shorts player
         console.log('🎬 Set selectedVideoId to:', video.id);
     };
