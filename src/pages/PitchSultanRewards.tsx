@@ -30,6 +30,14 @@ const WINNERS_DATA: Winner[] = [
     { serial_number: "1059", id: "696a107a5340015c829eda00", url: "https://d2f4sgw13r1zfn.cloudfront.net/media/Pitchsultan_winners/1059.jpg", secName: "SOURAV KUMAR", storeName: "Croma- A163 -Jalandhar-Lajpat Nagar", objectPosition: "center 50%" }
 ];
 
+const EARLY_BIRD_DATA: Winner[] = [
+    { serial_number: "1001", id: "69613b962e53ebe5a5c7db85", url: "https://d2f4sgw13r1zfn.cloudfront.net/media/Pitchsultan_winners/1001.jpg", secName: "Meena kumari", storeName: "Croma- A055 -Delhi-Connaught Place", objectPosition: "center 70%" },
+    { serial_number: "1002", id: "69613db82e53ebe5a5c7db87", url: "/assets/winners/1002.png", secName: "Varsha", storeName: "Croma- A477 -Dehradun-Saharanpur Road", objectPosition: "center 20%" },
+    { serial_number: "1003", id: "69614063ff9b2af81c05e025", url: "/assets/winners/1003.png", secName: "Salman Khan", storeName: "Croma- A642 -Bangalore-Vega City", objectPosition: "center 20%" },
+    { serial_number: "1004", id: "69622c31b5a0f0bf575083bd", url: "/assets/winners/1004.png", secName: "Anshu", storeName: "Croma- A217 -Surat-VIP Road", objectPosition: "center 25%" },
+    { serial_number: "1005", id: "69623b3a9f05f41f1aaa6be3", url: "/assets/winners/1005.png", secName: "Praveen Kumar Singh", storeName: "Croma- A055 -Delhi-Connaught Place", objectPosition: "center 20%" }
+];
+
 export const PitchSultanRewards = () => {
     const navigate = useNavigate();
     const topWinner = WINNERS_DATA[0];
@@ -130,6 +138,42 @@ export const PitchSultanRewards = () => {
                                 />
 
 
+
+                                {/* Serial Number & Info */}
+                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent p-3 pt-8">
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="text-yellow-400 font-bold text-[10px] uppercase">Serial: {winner.serial_number}</span>
+                                        <h4 className="text-white font-bold text-sm truncate">{winner.secName}</h4>
+                                        <p className="text-gray-400 text-[10px] truncate">{winner.storeName}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Early Birds - Grid */}
+            <div className="max-w-6xl mx-auto mb-12">
+                <h2 className="text-2xl font-bold text-white mb-6 text-center">TOP 5 EARLY BIRDS</h2>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {EARLY_BIRD_DATA.map((winner, index) => (
+                        <motion.div
+                            key={winner.serial_number}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 + index * 0.05 }}
+                            className="group cursor-pointer"
+                            onClick={() => handleWinnerClick(winner)}
+                        >
+                            <div className="relative overflow-hidden rounded-2xl shadow-lg aspect-square">
+                                <img
+                                    src={winner.url}
+                                    alt={`Early Bird ${winner.serial_number}`}
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                    style={{ objectPosition: winner.objectPosition || "center" }}
+                                />
 
                                 {/* Serial Number & Info */}
                                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent p-3 pt-8">
