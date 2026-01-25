@@ -1,0 +1,461 @@
+{
+  "totalSubmitters": 65,
+  "exportedAt": "2026-01-23T05:06:01.966Z",
+  "submitters": [
+    {
+      "secId": "3708870",
+      "phone": "6377159886",
+      "name": "Manish Santani",
+      "storeId": "store_000241",
+      "region": "north"
+    },
+    {
+      "secId": "North86413",
+      "phone": "9462008833",
+      "name": "Akbar khan",
+      "storeId": "store_000245",
+      "region": "north"
+    },
+    {
+      "secId": null,
+      "phone": "9928563176",
+      "name": "9928563176",
+      "storeId": "store_000243",
+      "region": "north"
+    },
+    {
+      "secId": "NORTH59399",
+      "phone": "9873829955",
+      "name": "GAURAV SINGHAL",
+      "storeId": "store_000179",
+      "region": "north"
+    },
+    {
+      "secId": null,
+      "phone": "9999777910",
+      "name": "Sumant kumar",
+      "storeId": "store_000379",
+      "region": "north"
+    },
+    {
+      "secId": "West9857",
+      "phone": "7700987551",
+      "name": "Ashish harsora",
+      "storeId": "store_000625",
+      "region": "west"
+    },
+    {
+      "secId": null,
+      "phone": "7756998722",
+      "name": "aarti singh",
+      "storeId": "store_000625",
+      "region": "west"
+    },
+    {
+      "secId": "3355426",
+      "phone": "8249426923",
+      "name": "Y Meghana",
+      "storeId": "store_000687",
+      "region": "south"
+    },
+    {
+      "secId": null,
+      "phone": "9962473050",
+      "name": "Bhuvanesh",
+      "storeId": "store_000717",
+      "region": "south"
+    },
+    {
+      "secId": null,
+      "phone": "7276452315",
+      "name": "Ganesh sudhir bhure",
+      "storeId": "store_000640",
+      "region": "west"
+    },
+    {
+      "secId": "NORTH35680",
+      "phone": "9814654646",
+      "name": "SOURAV KUMAR",
+      "storeId": "store_000247",
+      "region": "north"
+    },
+    {
+      "secId": "East58773",
+      "phone": "8100432608",
+      "name": "SOUMAJIT ROY",
+      "storeId": "store_000271",
+      "region": "east"
+    },
+    {
+      "secId": "EAST99453",
+      "phone": "8271116222",
+      "name": "SURAJ KUMAR PANDIT",
+      "storeId": "store_000428",
+      "region": "east"
+    },
+    {
+      "secId": "WEST83242",
+      "phone": "8237952639",
+      "name": "AAKASH SHINDE",
+      "storeId": "store_000647",
+      "region": "west"
+    },
+    {
+      "secId": null,
+      "phone": "7569720524",
+      "name": "Mohd sajeed khan",
+      "storeId": "store_000220",
+      "region": "south"
+    },
+    {
+      "secId": "WEST81782",
+      "phone": "9586051609",
+      "name": "KARELIYA RAHULKUMAR ANILBHAI",
+      "storeId": "store_000499",
+      "region": "west"
+    },
+    {
+      "secId": "EAST92571",
+      "phone": "8017838550",
+      "name": "Anushikha Bose",
+      "storeId": "store_000271",
+      "region": "east"
+    },
+    {
+      "secId": null,
+      "phone": "9987432175",
+      "name": "Bilal ansari",
+      "storeId": "store_000333",
+      "region": "south"
+    },
+    {
+      "secId": null,
+      "phone": "7382470372",
+      "name": "KISHORE PODISHETTI",
+      "storeId": "store_000483",
+      "region": "south"
+    },
+    {
+      "secId": "WEST64073",
+      "phone": "7020496418",
+      "name": "Altamash Miyabhai Shaikh",
+      "storeId": "store_000357",
+      "region": "west"
+    },
+    {
+      "secId": "94822",
+      "phone": "9137303035",
+      "name": "ABDUL MUBEEN KHAN",
+      "storeId": "store_000701",
+      "region": "west"
+    },
+    {
+      "secId": null,
+      "phone": "8668993472",
+      "name": "Abhishek",
+      "storeId": "store_000356",
+      "region": "west"
+    },
+    {
+      "secId": "EAST52050",
+      "phone": "7044339703",
+      "name": "Chayan Das",
+      "storeId": "store_000271",
+      "region": "east"
+    },
+    {
+      "secId": "EAST81956",
+      "phone": "7029543643",
+      "name": "Suman Roy",
+      "storeId": "store_000492",
+      "region": "east"
+    },
+    {
+      "secId": null,
+      "phone": "8435363145",
+      "name": "Nirmal makwana",
+      "storeId": "store_000233",
+      "region": "west"
+    },
+    {
+      "secId": "South97436",
+      "phone": "7093299335",
+      "name": "SIDDANTAPU RAMYA",
+      "storeId": "store_000567",
+      "region": "south"
+    },
+    {
+      "secId": "NORTH49886",
+      "phone": "7973390912",
+      "name": "Ramandeep",
+      "storeId": "store_000318",
+      "region": "north"
+    },
+    {
+      "secId": "WEST109585",
+      "phone": "9860589046",
+      "name": "GUNJAN GULHANE",
+      "storeId": "store_000353",
+      "region": "west"
+    },
+    {
+      "secId": null,
+      "phone": "9877732964",
+      "name": "Vikram Kumar",
+      "storeId": "store_000316",
+      "region": "north"
+    },
+    {
+      "secId": "North94275",
+      "phone": "8708323804",
+      "name": "Sachin",
+      "storeId": "store_000613",
+      "region": "north"
+    },
+    {
+      "secId": "NORTH77686",
+      "phone": "8707258851",
+      "name": "Saurabh yadav",
+      "storeId": "store_000606",
+      "region": "north"
+    },
+    {
+      "secId": null,
+      "phone": "8218981308",
+      "name": "Tushar sethi",
+      "storeId": "store_000406",
+      "region": "west"
+    },
+    {
+      "secId": null,
+      "phone": "8412098681",
+      "name": "Uzeb Shaikh",
+      "storeId": "store_000434",
+      "region": "west"
+    },
+    {
+      "secId": "North30811",
+      "phone": "9140682442",
+      "name": "Vibhu singh sengar",
+      "storeId": "store_000297",
+      "region": "north"
+    },
+    {
+      "secId": null,
+      "phone": "6394502060",
+      "name": "Manoj Rora",
+      "storeId": "store_000544",
+      "region": "north"
+    },
+    {
+      "secId": "North80796",
+      "phone": "9044467509",
+      "name": "JUBER",
+      "storeId": "store_000294",
+      "region": "north"
+    },
+    {
+      "secId": "NORTH51157",
+      "phone": "9264995526",
+      "name": "Abhishek Kumar",
+      "storeId": "store_000260",
+      "region": "north"
+    },
+    {
+      "secId": "SOUTH9346",
+      "phone": "8867811147",
+      "name": "MOHAMMED ISHAQ",
+      "storeId": "store_000054",
+      "region": "south"
+    },
+    {
+      "secId": "South1696",
+      "phone": "9989999421",
+      "name": "B k anand",
+      "storeId": "store_000202",
+      "region": "south"
+    },
+    {
+      "secId": "WEST82757",
+      "phone": "8108784550",
+      "name": "Zakir khan",
+      "storeId": "store_000514",
+      "region": "west"
+    },
+    {
+      "secId": null,
+      "phone": "8080555696",
+      "name": "Ansar Ansari",
+      "storeId": "store_000691",
+      "region": "west"
+    },
+    {
+      "secId": null,
+      "phone": "9773202129",
+      "name": "Ayaz",
+      "storeId": "store_000325",
+      "region": "west"
+    },
+    {
+      "secId": null,
+      "phone": "9945111142",
+      "name": "Mohammed imran ahmed",
+      "storeId": "store_000044",
+      "region": "south"
+    },
+    {
+      "secId": "WEST56778",
+      "phone": "8237963992",
+      "name": "Yogesh Sonawane",
+      "storeId": "store_000643",
+      "region": "west"
+    },
+    {
+      "secId": null,
+      "phone": "9987161700",
+      "name": "Pritesh saini",
+      "storeId": "store_000331",
+      "region": "west"
+    },
+    {
+      "secId": null,
+      "phone": "9767414826",
+      "name": "Mohd Idrees Mohd Yunus",
+      "storeId": "store_000130",
+      "region": "west"
+    },
+    {
+      "secId": null,
+      "phone": "9676530082",
+      "name": "MOHAMMED AMER",
+      "storeId": "store_000204",
+      "region": "south"
+    },
+    {
+      "secId": "Weat83480",
+      "phone": "9637742857",
+      "name": "Vaibhav jalindar zambare",
+      "storeId": "store_000436",
+      "region": "west"
+    },
+    {
+      "secId": "NORTH27516",
+      "phone": "7838131652",
+      "name": "Imtiyaz",
+      "storeId": "store_000400",
+      "region": "east"
+    },
+    {
+      "secId": "North26840",
+      "phone": "9026788090",
+      "name": "Pavan Kumar dubey",
+      "storeId": "store_000186",
+      "region": "north"
+    },
+    {
+      "secId": "NORTH31879",
+      "phone": "9999404156",
+      "name": "Sandeep Kumar",
+      "storeId": "store_000407",
+      "region": "north"
+    },
+    {
+      "secId": "SOUTH1354",
+      "phone": "9663827863",
+      "name": "ALLAHBAKASH S",
+      "storeId": "store_000051",
+      "region": "south"
+    },
+    {
+      "secId": "SOUTH88438",
+      "phone": "9742934601",
+      "name": "Akshay Solanki",
+      "storeId": "store_000201",
+      "region": "south"
+    },
+    {
+      "secId": "WEST107158",
+      "phone": "7359544317",
+      "name": "Shivam Kushwaha",
+      "storeId": "store_000504",
+      "region": "west"
+    },
+    {
+      "secId": "N83243",
+      "phone": "9582576831",
+      "name": "Naveen dubey",
+      "storeId": "store_000183",
+      "region": "north"
+    },
+    {
+      "secId": "North68084",
+      "phone": "8882575369",
+      "name": "NITESH MISHRA",
+      "storeId": "store_000386",
+      "region": "north"
+    },
+    {
+      "secId": null,
+      "phone": "9718804101",
+      "name": "RITESH KUMAR",
+      "storeId": "store_000386",
+      "region": "north"
+    },
+    {
+      "secId": null,
+      "phone": "7600443523",
+      "name": "Dharmesh rathod",
+      "storeId": "store_000656",
+      "region": "west"
+    },
+    {
+      "secId": "NORTH33848",
+      "phone": "7503059272",
+      "name": "ANASH AFZAL",
+      "storeId": "store_000387",
+      "region": "north"
+    },
+    {
+      "secId": "SOUTH4088",
+      "phone": "9626983020",
+      "name": "K.VINOTHKUMAR",
+      "storeId": "store_000307",
+      "region": "south"
+    },
+    {
+      "secId": null,
+      "phone": "7982552640",
+      "name": "Praveen Kumar Singh",
+      "storeId": "store_000380",
+      "region": "north"
+    },
+    {
+      "secId": null,
+      "phone": "9327126229",
+      "name": "Anshu",
+      "storeId": "store_000502",
+      "region": "west"
+    },
+    {
+      "secId": null,
+      "phone": "7676060317",
+      "name": "Salman Khan",
+      "storeId": "store_000068",
+      "region": "south"
+    },
+    {
+      "secId": null,
+      "phone": "9690997663",
+      "name": "Varsha",
+      "storeId": "store_000147",
+      "region": "north"
+    },
+    {
+      "secId": null,
+      "phone": "9999678004",
+      "name": "Meena kumari",
+      "storeId": "store_000380",
+      "region": "north"
+    }
+  ]
+}

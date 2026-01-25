@@ -81,11 +81,6 @@ export const PitchSultanRewards = () => {
                             style={{ objectPosition: topWinner.objectPosition || "center" }}
                         />
                         
-                        {/* #1 Badge - Top Right */}
-                        <div className="absolute top-3 md:top-4 right-3 md:right-4 bg-gradient-to-r from-purple-500 to-pink-500 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
-                            <span className="text-white font-bold text-lg md:text-xl">#1</span>
-                        </div>
-                        
                         {/* Serial Number Badge */}
                         <div className="absolute bottom-3 md:bottom-4 left-3 md:left-4 bg-black/80 px-3 md:px-4 py-1 md:py-2 rounded-full">
                             <span className="text-white font-bold text-sm md:text-lg">Serial: {topWinner.serial_number}</span>
@@ -115,10 +110,6 @@ export const PitchSultanRewards = () => {
                                     style={{ objectPosition: winner.objectPosition || "center" }}
                                 />
 
-                                {/* Rank Badge */}
-                                <div className="absolute top-2 right-2 bg-gradient-to-r from-purple-500 to-pink-500 w-8 h-8 rounded-full flex items-center justify-center shadow-lg">
-                                    <span className="text-white font-bold text-sm">#{index + 2}</span>
-                                </div>
 
                                 {/* Serial Number */}
                                 <div className="absolute bottom-2 left-2 bg-black/80 px-2 py-1 rounded-lg">
