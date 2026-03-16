@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     MdHome, MdHomeFilled,
@@ -102,7 +102,7 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick, onAdU
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [isSearchActive, setIsSearchActive] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const { logout } = useAuth();
+    const { logout, isAuthenticated } = useAuth();
     const navigate = useNavigate();
     const adInputRef = useRef<HTMLInputElement>(null);
 
@@ -210,16 +210,18 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick, onAdU
                                                 </button>
                                             )}
 
-                                            {/* Logout Button */}
-                                            <button
-                                                onClick={handleLogout}
-                                                className="w-full px-4 py-2 text-left text-red-400 hover:bg-red-900/20 transition-colors flex items-center gap-2 text-sm"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                                </svg>
-                                                Logout
-                                            </button>
+                                            {/* Logout Button - Only for authenticated users */}
+                                            {isAuthenticated && (
+                                                <button
+                                                    onClick={handleLogout}
+                                                    className="w-full px-4 py-2 text-left text-red-400 hover:bg-red-900/20 transition-colors flex items-center gap-2 text-sm"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                                    </svg>
+                                                    Logout
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </>
@@ -970,77 +972,30 @@ export const PitchSultanBattle = () => {
         isSultanAdmin: false
     });
 
-    // Check authentication and load Pitch Sultan user
-    useEffect(() => {
-        const loadPitchSultanUser = async () => {
-            // 1. Check if user is authenticated as SEC
-            if (!isAuthenticated || !isSEC || !user || !('phone' in user)) {
-                navigate('/');
-                return;
-            }
-
-            // 2. Check if user has completed Pitch Sultan profile
-            // All three fields are required: name, storeId, region
-            console.log('✅ Using authenticated SEC user:', user);
-            console.log('🔍 Checking profile completion:', {
-                name: user.name,
-                storeId: 'storeId' in user ? user.storeId : null,
-                region: 'region' in user ? user.region : null
-            });
-
-            if (!user.name || !('storeId' in user) || !user.storeId || !('region' in user) || !user.region) {
-                // User needs to complete profile setup
-                console.log('⚠️ User profile incomplete, redirecting to setup');
-                navigate('/pitchsultan/setup');
-                return;
-            }
-
-            // 3. Set current user for display
-            const currentUserData = {
-                name: user.name || "SEC User",
-                handle: `@${(user.name || 'sec_user').toLowerCase().replace(/\s+/g, '_')}`,
-                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'SEC User')}&background=ffd700&color=000`,
-                subscribers: "1.2K",
-                role: (user as any).store?.storeName || "SEC",
-                store: (user as any).store?.storeName || "",
-                region: user.region || "",
-                phone: user.phone, // Add phone property
-                isSultanAdmin: user.isSultanAdmin || false
-            };
-            setCurrentUser(currentUserData);
-
-            // 4. Fetch videos
-            await fetchVideos();
-        };
-
-        loadPitchSultanUser();
-    }, [isAuthenticated, isSEC, user, navigate]);
-
-    const fetchVideos = async () => {
+    // Define fetchVideos BEFORE useEffect
+    const fetchVideos = useCallback(async () => {
         try {
             setLoading(true);
             console.log('📡 Fetching videos from:', `${API_BASE_URL}/pitch-sultan/videos`);
 
-            // Include authorization header for sultan admin
             const token = localStorage.getItem('token');
             const headers: any = {};
             if (token) {
                 headers.Authorization = `Bearer ${token}`;
             }
 
-            const viewerId = secUser?.id;
             const queryParams = new URLSearchParams();
             queryParams.append('limit', '10000');
             queryParams.append('_t', new Date().getTime().toString());
-            if (viewerId) queryParams.append('userId', viewerId);
 
             const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos?${queryParams.toString()}`, {
                 headers
             });
             const data = await response.json();
             if (data.success) {
+                console.log('✅ Videos fetched:', data.data.length);
                 setVideos(data.data);
-                setFilteredVideos(data.data); // Initialize filtered videos
+                setFilteredVideos(data.data);
             } else {
                 console.error('❌ Failed to fetch videos:', data.error);
             }
@@ -1049,7 +1004,61 @@ export const PitchSultanBattle = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    // Check authentication and load Pitch Sultan user
+    useEffect(() => {
+        const loadPitchSultanUser = async () => {
+            // Allow both authenticated and unauthenticated users
+            if (isAuthenticated && isSEC && user && 'phone' in user) {
+                // Authenticated SEC user
+                console.log('✅ Using authenticated SEC user:', user);
+                
+                // Check if user has completed Pitch Sultan profile
+                if (!user.name || !('storeId' in user) || !user.storeId || !('region' in user) || !user.region) {
+                    // User needs to complete profile setup
+                    console.log('⚠️ User profile incomplete, redirecting to setup');
+                    navigate('/pitchsultan/setup');
+                    return;
+                }
+
+                // Set current user for display
+                const currentUserData = {
+                    name: user.name || "SEC User",
+                    handle: `@${(user.name || 'sec_user').toLowerCase().replace(/\s+/g, '_')}`,
+                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'SEC User')}&background=ffd700&color=000`,
+                    subscribers: "1.2K",
+                    role: (user as any).store?.storeName || "SEC",
+                    store: (user as any).store?.storeName || "",
+                    region: user.region || "",
+                    phone: user.phone,
+                    isSultanAdmin: user.isSultanAdmin || false
+                };
+                setCurrentUser(currentUserData);
+            } else {
+                // Unauthenticated user - set guest user
+                console.log('👤 Guest user accessing PitchSultan');
+                const guestUserData = {
+                    name: "Guest",
+                    handle: "@guest",
+                    avatar: `https://ui-avatars.com/api/?name=Guest&background=gray&color=fff`,
+                    subscribers: "0",
+                    role: "Guest",
+                    store: "",
+                    region: "",
+                    phone: null,
+                    isSultanAdmin: false
+                };
+                setCurrentUser(guestUserData);
+            }
+
+            // Fetch videos
+            await fetchVideos();
+        };
+
+        loadPitchSultanUser();
+    }, [isAuthenticated, isSEC, user, navigate]);
+
 
     // Reset selected video when switching away from shorts
     useEffect(() => {

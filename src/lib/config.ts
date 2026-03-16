@@ -1,7 +1,5 @@
 // API configuration for different environments
-export const API_BASE_URL = import.meta.env.PROD 
-  ? '/api'  // Production - use relative URLs (Vercel will handle routing)
-  : 'http://localhost:3001/api'  // Development - use localhost
+export const API_BASE_URL = '/api'  // Always use relative URLs - Vite proxy handles dev, Vercel handles prod
 
 export const config = {
   apiUrl: API_BASE_URL,

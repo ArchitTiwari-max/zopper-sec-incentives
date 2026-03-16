@@ -17,25 +17,25 @@ interface Winner {
 }
 
 const WINNERS_DATA: Winner[] = [
-    { serial_number: "1018", id: "6963a4b5466906a319fdadd8", url: "https://d2f4sgw13r1zfn.cloudfront.net/videos/68f1c1880c5509d1d4467c65/WhatsApp+Image+2026-01-11+at+20.01.10.jpeg", secName: "Vaibhav Jalindar Zambare", storeName: "Croma- A115 -Pune-Seasons Mall", isTopWinner: true, objectPosition: "center 30%" },
-    { serial_number: "1001", id: "69613b962e53ebe5a5c7db85", url: "https://d2f4sgw13r1zfn.cloudfront.net/media/Pitchsultan_winners/1001.jpg", secName: "Meena kumari", storeName: "Croma- A055 -Delhi-Connaught Place", objectPosition: "center 70%" },
-    { serial_number: "1011", id: "69634b1c4d1f0bced79fc60e", url: "https://d2f4sgw13r1zfn.cloudfront.net/media/Pitchsultan_winners/1011.jpg", secName: "Naveen dubey", storeName: "Croma- A306 -Gurugram-Sector 86", objectPosition: "center 25%" },
-    { serial_number: "1012", id: "69634ebe0cd7dfc3ace6fbeb", url: "https://d2f4sgw13r1zfn.cloudfront.net/media/Pitchsultan_winners/1012.jpg", secName: "Shivam Kushwaha", storeName: "Croma- A297 -Surat-Katargam", objectPosition: "center 30%" },
-    { serial_number: "1019", id: "6963af34cdf3b44a07ee087e", url: "https://d2f4sgw13r1zfn.cloudfront.net/media/Pitchsultan_winners/1019.jpg", secName: "MOHAMMED AMER", storeName: "Croma- A091 -Hyderabad-Kondapur", objectPosition: "center 25%" },
-    { serial_number: "1030", id: "6966513179d7b30b36f217f6", url: "https://d2f4sgw13r1zfn.cloudfront.net/media/Pitchsultan_winners/1030.jpg", secName: "JUBER", storeName: "Croma- A259 -Lucknow-Vibhuti Khand", objectPosition: "center 35%" },
-    { serial_number: "1037", id: "69677652dd3c7f1a44c06427", url: "https://d2f4sgw13r1zfn.cloudfront.net/media/Pitchsultan_winners/1037.jpg", secName: "Nirmal makwana", storeName: "Croma- A348 -Indore-Bicholi Mardana", objectPosition: "center 1%" },
-    { serial_number: "1047", id: "6968f4d94889e19322c5e42a", url: "https://d2f4sgw13r1zfn.cloudfront.net/media/Pitchsultan_winners/1047.png", secName: "ABDUL MUBEEN KHAN", storeName: "VS- Belapur Br", objectPosition: "center 40%" },
-    { serial_number: "1048", id: "6969036692d1214238b0c125", url: "https://d2f4sgw13r1zfn.cloudfront.net/media/Pitchsultan_winners/1048.jpg", secName: "Altamash Miyabhai Shaikh", storeName: "Croma- A215 -Nashik-Nashik Road", objectPosition: "center 30%" },
-    { serial_number: "1053", id: "69691c816bcc83baed7ee4c6", url: "https://d2f4sgw13r1zfn.cloudfront.net/media/Pitchsultan_winners/1053.jpg", secName: "Anushikha Bose", storeName: "Croma- A197 -Kolkata-Rajarhat", objectPosition: "center 50%" },
-    { serial_number: "1059", id: "696a107a5340015c829eda00", url: "https://d2f4sgw13r1zfn.cloudfront.net/media/Pitchsultan_winners/1059.jpg", secName: "SOURAV KUMAR", storeName: "Croma- A163 -Jalandhar-Lajpat Nagar", objectPosition: "center 50%" }
+    { serial_number: "1018", id: "6963a4b5466906a319fdadd8", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1018.jpeg", secName: "Vaibhav Jalindar Zambare", storeName: "Croma- A115 -Pune-Seasons Mall", isTopWinner: true, objectPosition: "center 30%" },
+    { serial_number: "1001", id: "69613b962e53ebe5a5c7db85", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1001.jpg", secName: "Meena kumari", storeName: "Croma- A055 -Delhi-Connaught Place", objectPosition: "center 70%" },
+    { serial_number: "1011", id: "69634b1c4d1f0bced79fc60e", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1011.jpg", secName: "Naveen dubey", storeName: "Croma- A306 -Gurugram-Sector 86", objectPosition: "center 25%" },
+    { serial_number: "1012", id: "69634ebe0cd7dfc3ace6fbeb", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1012.jpg", secName: "Shivam Kushwaha", storeName: "Croma- A297 -Surat-Katargam", objectPosition: "center 30%" },
+    { serial_number: "1019", id: "6963af34cdf3b44a07ee087e", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1019.jpg", secName: "MOHAMMED AMER", storeName: "Croma- A091 -Hyderabad-Kondapur", objectPosition: "center 25%" },
+    { serial_number: "1030", id: "6966513179d7b30b36f217f6", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1030.jpg", secName: "JUBER", storeName: "Croma- A259 -Lucknow-Vibhuti Khand", objectPosition: "center 35%" },
+    { serial_number: "1037", id: "69677652dd3c7f1a44c06427", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1037.jpg", secName: "Nirmal makwana", storeName: "Croma- A348 -Indore-Bicholi Mardana", objectPosition: "center 1%" },
+    { serial_number: "1047", id: "6968f4d94889e19322c5e42a", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1047.jpg", secName: "ABDUL MUBEEN KHAN", storeName: "VS- Belapur Br", objectPosition: "center 40%" },
+    { serial_number: "1048", id: "6969036692d1214238b0c125", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1048.jpg", secName: "Altamash Miyabhai Shaikh", storeName: "Croma- A215 -Nashik-Nashik Road", objectPosition: "center 30%" },
+    { serial_number: "1053", id: "69691c816bcc83baed7ee4c6", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1053.jpg", secName: "Anushikha Bose", storeName: "Croma- A197 -Kolkata-Rajarhat", objectPosition: "center 50%" },
+    { serial_number: "1059", id: "696a107a5340015c829eda00", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1059.jpg", secName: "SOURAV KUMAR", storeName: "Croma- A163 -Jalandhar-Lajpat Nagar", objectPosition: "center 50%" }
 ];
 
 const EARLY_BIRD_DATA: Winner[] = [
-    { serial_number: "1001", id: "69613b962e53ebe5a5c7db85", url: "https://d2f4sgw13r1zfn.cloudfront.net/media/Pitchsultan_winners/1001.jpg", secName: "Meena kumari", storeName: "Croma- A055 -Delhi-Connaught Place", objectPosition: "center 70%" },
-    { serial_number: "1002", id: "69613db82e53ebe5a5c7db87", url: "/assets/winners/1002.png", secName: "Varsha", storeName: "Croma- A477 -Dehradun-Saharanpur Road", objectPosition: "center 20%" },
-    { serial_number: "1003", id: "69614063ff9b2af81c05e025", url: "/assets/winners/1003.png", secName: "Salman Khan", storeName: "Croma- A642 -Bangalore-Vega City", objectPosition: "center 20%" },
-    { serial_number: "1004", id: "69622c31b5a0f0bf575083bd", url: "/assets/winners/1004.png", secName: "Anshu", storeName: "Croma- A217 -Surat-VIP Road", objectPosition: "center 25%" },
-    { serial_number: "1005", id: "69623b3a9f05f41f1aaa6be3", url: "/assets/winners/1005.png", secName: "Praveen Kumar Singh", storeName: "Croma- A055 -Delhi-Connaught Place", objectPosition: "center 20%" }
+    { serial_number: "1001", id: "69613b962e53ebe5a5c7db85", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1001.jpg", secName: "Meena kumari", storeName: "Croma- A055 -Delhi-Connaught Place", objectPosition: "center 70%" },
+    { serial_number: "1002", id: "69613db82e53ebe5a5c7db87", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1002.jpg", secName: "Varsha", storeName: "Croma- A477 -Dehradun-Saharanpur Road", objectPosition: "center 20%" },
+    { serial_number: "1003", id: "69614063ff9b2af81c05e025", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1003.jpg", secName: "Salman Khan", storeName: "Croma- A642 -Bangalore-Vega City", objectPosition: "center 20%" },
+    { serial_number: "1004", id: "69622c31b5a0f0bf575083bd", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1004.jpg", secName: "Anshu", storeName: "Croma- A217 -Surat-VIP Road", objectPosition: "center 25%" },
+    { serial_number: "1005", id: "69623b3a9f05f41f1aaa6be3", url: "https://d3necgxvto7is.cloudfront.net/salesdost_sec/Events/PitchSultan/media/photos/1005.jpg", secName: "Praveen Kumar Singh", storeName: "Croma- A055 -Delhi-Connaught Place", objectPosition: "center 20%" }
 ];
 
 export const PitchSultanRewards = () => {

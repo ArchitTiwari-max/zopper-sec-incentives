@@ -11,28 +11,28 @@ export const PitchSultan = () => {
     const { user } = useAuth();
 
     const handleEnterBattle = async () => {
-        // Check if user is logged in as SEC
-        if (!user || !('phone' in user)) {
-            // Not logged in, redirect to login
-            navigate('/');
-            return;
-        }
+        // Allow both authenticated and unauthenticated users
+        if (user && 'phone' in user) {
+            // Authenticated user - check their status
+            try {
+                const res = await fetch(`${API_BASE_URL}/pitch-sultan/user?phone=${user.phone}`);
+                const data = await res.json();
 
-        try {
-            const res = await fetch(`${API_BASE_URL}/pitch-sultan/user?phone=${user.phone}`);
-            const data = await res.json();
-
-            if (data.success && data.data) {
-                // User exists, go to battle
-                setTimeout(() => navigate('/pitchsultan/battle'), 150);
-                return;
+                if (data.success && data.data) {
+                    // User exists, go to battle
+                    setTimeout(() => navigate('/pitchsultan/battle'), 150);
+                    return;
+                }
+            } catch (e) {
+                console.error("Failed to check user status:", e);
             }
-        } catch (e) {
-            console.error("Failed to check user status:", e);
-        }
 
-        // If no user found or error, go to setup
-        setTimeout(() => navigate('/pitchsultan/setup'), 150);
+            // If no user found or error, go to setup
+            setTimeout(() => navigate('/pitchsultan/setup'), 150);
+        } else {
+            // Guest user - go directly to battle
+            navigate('/pitchsultan/battle');
+        }
     };
 
     return (
