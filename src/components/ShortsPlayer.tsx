@@ -7,7 +7,7 @@ import {
 import { API_BASE_URL } from '@/lib/config';
 import { CommentsModal } from './CommentsModal';
 import { RatingModal } from './RatingModal';
-import { getThumbnailUrl, getOptimizedVideoUrl } from '@/utils/videoUtils';
+import { getThumbnailUrl, getOptimizedVideoUrl, getSignedVideoUrl } from '@/utils/videoUtils';
 
 // --- Types ---
 
@@ -102,6 +102,30 @@ const VideoSlide = ({
     const viewRecordedRef = useRef(false);
     const fetchedInteractionsRef = useRef<string | null>((video as any).hasLiked !== undefined ? video.id : null);
 
+    const [resolvedUrl, setResolvedUrl] = useState<string>('');
+
+    // Resolve S3 private URL dynamically on load
+    useEffect(() => {
+        let isCurrent = true;
+        const loadUrl = async () => {
+            try {
+                const signed = await getSignedVideoUrl(video.url);
+                if (isCurrent) {
+                    setResolvedUrl(signed);
+                }
+            } catch (err) {
+                console.error("Failed to load signed video URL:", err);
+                if (isCurrent) {
+                    setResolvedUrl(video.url);
+                }
+            }
+        };
+        loadUrl();
+        return () => {
+            isCurrent = false;
+        };
+    }, [video.url]);
+
     // Debug: Log when video element is created/destroyed
     useEffect(() => {
         console.log(`🎥 [${video.id.slice(-4)}] VideoSlide mounted, isActive=${isActive}`);
@@ -185,7 +209,7 @@ const VideoSlide = ({
             {isActive && (
                 <video
                     ref={videoRef}
-                    src={getOptimizedVideoUrl(video.url)}
+                    src={resolvedUrl || getOptimizedVideoUrl(video.url)}
                     poster={getThumbnailUrl(video.url, video.thumbnailUrl)}
                     className="w-full h-full object-cover"
                     loop
@@ -235,27 +259,46 @@ const VideoSlide = ({
             )}
 
             {/* Progress Bar */}
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-50">
-                <div className="h-full bg-white transition-all duration-100" style={{ width: `${progress}%` }} />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 z-50" style={{ background: 'rgba(255,255,255,0.15)' }}>
+                <div
+                    className="h-full transition-all duration-100"
+                    style={{
+                        width: `${progress}%`,
+                        background: 'linear-gradient(90deg, #f59e0b, #d97706)'
+                    }}
+                />
             </div>
 
             {/* Overlay UI */}
-            <div className="absolute inset-0 p-4 flex flex-col justify-between pointer-events-none">
-                <div className="flex justify-between items-start pointer-events-auto">
-                    <span className="text-white font-bold text-lg drop-shadow-md">Shorts</span>
+            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, transparent 30%, transparent 55%, rgba(0,0,0,0.75) 100%)' }}>
+                {/* Top bar */}
+                <div className="flex justify-between items-center px-4 pt-4 pointer-events-auto">
+                    <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
+                            <span className="text-black font-black text-[9px]">CA</span>
+                        </div>
+                        <span className="text-white font-bold text-sm tracking-tight drop-shadow">Shorts</span>
+                    </div>
                     {currentUser?.isSultanAdmin && (
                         <div className="relative">
-                            <button onClick={(e) => { e.stopPropagation(); setShowAdminMenu(!showAdminMenu); }} className="p-2 bg-black/20 rounded-full">
-                                <MdMoreVert className="text-white text-2xl" />
+                            <button onClick={(e) => { e.stopPropagation(); setShowAdminMenu(!showAdminMenu); }}
+                                className="w-9 h-9 flex items-center justify-center rounded-full"
+                                style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }}
+                            >
+                                <MdMoreVert className="text-white text-xl" />
                             </button>
                             {showAdminMenu && (
-                                <div className="absolute right-0 top-10 bg-[#282828] rounded-lg shadow-xl py-2 w-48 z-50 border border-gray-700">
-                                    <button onClick={() => onAdminAction('toggle', video)} className="w-full px-4 py-2 text-left text-white hover:bg-white/10 flex items-center gap-2">
-                                        {video.isActive !== false ? <MdVisibilityOff /> : <MdVisibility />}
+                                <div
+                                    className="absolute right-0 top-11 rounded-2xl shadow-2xl py-2 w-48 z-50 overflow-hidden"
+                                    style={{ background: 'rgba(20,20,22,0.97)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)' }}
+                                >
+                                    <button onClick={() => onAdminAction('toggle', video)} className="w-full px-4 py-2.5 text-left text-white flex items-center gap-2 text-sm hover:bg-white/10 transition-colors">
+                                        {video.isActive !== false ? <MdVisibilityOff className="text-amber-400" /> : <MdVisibility className="text-amber-400" />}
                                         {video.isActive !== false ? 'Deactivate' : 'Activate'}
                                     </button>
-                                    <button onClick={() => onAdminAction('delete', video)} className="w-full px-4 py-2 text-left text-red-500 hover:bg-white/10 flex items-center gap-2">
-                                        <MdDelete /> Delete
+                                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '0 12px' }} />
+                                    <button onClick={() => onAdminAction('delete', video)} className="w-full px-4 py-2.5 text-left text-red-400 flex items-center gap-2 text-sm">
+                                        <MdDelete className="text-red-400" /> Delete
                                     </button>
                                 </div>
                             )}
@@ -263,39 +306,96 @@ const VideoSlide = ({
                     )}
                 </div>
 
-                <div className="flex justify-between items-end mb-4 pointer-events-auto">
+                {/* Bottom info + actions */}
+                <div className="flex justify-between items-end px-4 pb-6 pointer-events-auto">
+                    {/* Left: uploader + title */}
                     <div className="flex-1 pr-4">
                         <div className="flex items-center gap-2 mb-2">
-                            <img src={`https://ui-avatars.com/api/?name=${video.secUser.name}&background=ffd700`} className="w-9 h-9 rounded-full border border-white/20" alt="avatar" />
-                            <span className="text-white font-bold">{getUploaderHandle(video)}</span>
+                            <img
+                                src={`https://ui-avatars.com/api/?name=${video.secUser.name}&background=d97706&color=000`}
+                                className="w-9 h-9 rounded-full border-2 shadow-lg"
+                                style={{ borderColor: 'rgba(245,158,11,0.6)' }}
+                                alt="avatar"
+                            />
+                            <span className="text-white font-bold text-sm drop-shadow" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
+                                {getUploaderHandle(video)}
+                            </span>
                         </div>
-                        <h3 className="text-white text-sm line-clamp-2 mb-2">{video.title || video.fileName}</h3>
-                        <div className="flex gap-3 text-white/80 text-xs">
-                            <span>{formatCount(video.views)} views</span>
-                            {video.secUser.store && <span>{video.secUser.store.storeName}</span>}
+                        <h3 className="text-white text-sm font-medium line-clamp-2 mb-2 leading-snug" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
+                            {video.title || video.fileName}
+                        </h3>
+                        <div className="flex items-center gap-3 text-xs" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                            <span>👁 {formatCount(video.views)}</span>
+                            {video.secUser.store && (
+                                <span className="flex items-center gap-1">
+                                    <span style={{ color: 'rgba(245,158,11,0.8)' }}>●</span>
+                                    {video.secUser.store.storeName}
+                                </span>
+                            )}
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-5 items-center">
-                        <button onClick={(e) => { e.stopPropagation(); handleLikeClick(); }} className="flex flex-col items-center">
-                            <div className={`p-3 rounded-full transition-colors ${localInteractions.hasLiked ? 'bg-red-500' : 'bg-black/40 backdrop-blur-md'}`}>
-                                <MdThumbUp className={`text-2xl ${localInteractions.hasLiked ? 'text-white' : 'text-white/90'}`} />
+                    {/* Right: Action buttons */}
+                    <div className="flex flex-col gap-4 items-center">
+                        {/* Like */}
+                        <button onClick={(e) => { e.stopPropagation(); handleLikeClick(); }} className="flex flex-col items-center gap-1">
+                            <div
+                                className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200"
+                                style={localInteractions.hasLiked ? {
+                                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                    boxShadow: '0 0 20px rgba(245,158,11,0.5)'
+                                } : {
+                                    background: 'rgba(0,0,0,0.5)',
+                                    backdropFilter: 'blur(12px)',
+                                    border: '1px solid rgba(255,255,255,0.15)'
+                                }}
+                            >
+                                <MdThumbUp className={`text-xl ${localInteractions.hasLiked ? 'text-black' : 'text-white'}`} />
                             </div>
-                            <span className="text-white text-xs mt-1 font-bold">{formatCount(video.likes)}</span>
+                            <span className="text-white text-xs font-bold drop-shadow">{formatCount(video.likes)}</span>
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); onComment(video.id); }} className="flex flex-col items-center">
-                            <div className="p-3 bg-black/40 backdrop-blur-md rounded-full"><MdComment className="text-2xl text-white" /></div>
-                            <span className="text-white text-xs mt-1 font-bold">{formatCount(video.commentsCount || 0)}</span>
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); onRating(video.id); }} className="flex flex-col items-center">
-                            <div className="p-3 bg-black/40 backdrop-blur-md rounded-full">
-                                {localInteractions.userRating ? <MdStar className="text-2xl text-yellow-400" /> : <MdStarOutline className="text-2xl text-white" />}
+
+                        {/* Comment */}
+                        <button onClick={(e) => { e.stopPropagation(); onComment(video.id); }} className="flex flex-col items-center gap-1">
+                            <div
+                                className="w-12 h-12 rounded-full flex items-center justify-center"
+                                style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.15)' }}
+                            >
+                                <MdComment className="text-white text-xl" />
                             </div>
-                            <span className="text-white text-xs mt-1 font-bold">{video.rating ? `${video.rating.toFixed(1)}★` : 'Rate'}</span>
+                            <span className="text-white text-xs font-bold drop-shadow">{formatCount(video.commentsCount || 0)}</span>
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); onShare(video); }} className="flex flex-col items-center">
-                            <div className="p-3 bg-black/40 backdrop-blur-md rounded-full"><MdShare className="text-2xl text-white" /></div>
-                            <span className="text-white text-xs mt-1 font-bold">Share</span>
+
+                        {/* Rating */}
+                        <button onClick={(e) => { e.stopPropagation(); onRating(video.id); }} className="flex flex-col items-center gap-1">
+                            <div
+                                className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200"
+                                style={localInteractions.userRating ? {
+                                    background: 'rgba(250,204,21,0.2)',
+                                    backdropFilter: 'blur(12px)',
+                                    border: '1px solid rgba(250,204,21,0.4)'
+                                } : {
+                                    background: 'rgba(0,0,0,0.5)',
+                                    backdropFilter: 'blur(12px)',
+                                    border: '1px solid rgba(255,255,255,0.15)'
+                                }}
+                            >
+                                {localInteractions.userRating
+                                    ? <MdStar className="text-yellow-400 text-xl" />
+                                    : <MdStarOutline className="text-white text-xl" />}
+                            </div>
+                            <span className="text-white text-xs font-bold drop-shadow">{video.rating ? `${video.rating.toFixed(1)}★` : 'Rate'}</span>
+                        </button>
+
+                        {/* Share */}
+                        <button onClick={(e) => { e.stopPropagation(); onShare(video); }} className="flex flex-col items-center gap-1">
+                            <div
+                                className="w-12 h-12 rounded-full flex items-center justify-center"
+                                style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.15)' }}
+                            >
+                                <MdShare className="text-white text-xl" />
+                            </div>
+                            <span className="text-white text-xs font-bold drop-shadow">Share</span>
                         </button>
                     </div>
                 </div>
@@ -307,10 +407,17 @@ const VideoSlide = ({
 const AdSlide = ({ data }: any) => (
     <div className="relative w-full h-full bg-black flex-shrink-0 snap-start flex items-center justify-center">
         <img src={data.imageUrl} className="w-full h-full object-fill" alt="Sponsored" />
-        <div className="absolute top-4 right-4 bg-yellow-500 text-black px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Sponsored</div>
+        {/* Dark overlay for readability */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.7) 100%)' }} />
+        <div
+            className="absolute top-4 right-4 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+            style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000' }}
+        >
+            Sponsored
+        </div>
         <div className="absolute bottom-10 left-4">
             <h4 className="text-white font-bold text-xl drop-shadow-lg">Featured Partner</h4>
-            <p className="text-white/80 text-sm">Swipe up to resume</p>
+            <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>Swipe up to resume</p>
         </div>
     </div>
 );

@@ -11,7 +11,7 @@ import {
     MdComment, MdShare,
     MdClose, MdUpload, MdRemoveRedEye, MdArrowBack,
     MdHelpOutline, MdHelp, MdEmail, MdPhone, MdQuestionAnswer, MdKeyboardArrowDown,
-    MdPlayArrow, MdVideocam
+    MdPlayArrow, MdVideocam, MdHistory
 } from 'react-icons/md';
 import { BiLike, BiDislike, BiCommentDetail, BiShare } from "react-icons/bi";
 import { VideoUploadModal } from '../components/VideoUploadModal';
@@ -23,6 +23,7 @@ import contestRulesImg from '../assets/contest-rules.jpg';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/lib/config';
 import { useUploadManager } from '../components/UploadManager';
+import { getSignedVideoUrl } from '@/utils/videoUtils';
 
 
 // --- Mock Data (REMOVED - Now using database) ---
@@ -64,6 +65,51 @@ const SHORTS_FEED = [
     }
 ];
 
+// Asynchronously resolves signed S3 URL for thumbnails
+const SafeThumbnailImage = ({ video, onClick, className }: { video: any; onClick?: () => void; className?: string }) => {
+    const [src, setSrc] = useState('');
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            const raw = getThumbnailUrl(video.thumbnailUrl || video.url);
+            try {
+                const signed = await getSignedVideoUrl(raw);
+                if (active) setSrc(signed);
+            } catch (e) {
+                if (active) setSrc(raw);
+            }
+        };
+        load();
+        return () => { active = false; };
+    }, [video.thumbnailUrl, video.url]);
+
+    const isVideo = src ? (src.toLowerCase().includes('.mp4') || src.toLowerCase().includes('.mov') || src.toLowerCase().includes('.webm')) : false;
+
+    if (isVideo) {
+        return (
+            <video
+                src={src}
+                preload="metadata"
+                muted
+                playsInline
+                className={className}
+                onClick={onClick}
+            />
+        );
+    }
+
+    return (
+        <img
+            src={src || getThumbnailUrl(video.thumbnailUrl || video.url)}
+            alt={video.title || 'Video thumbnail'}
+            className={className}
+            loading="lazy"
+            onClick={onClick}
+        />
+    );
+};
+
 // --- Helper Functions ---
 
 // Helper for video thumbnails (Shared)
@@ -92,12 +138,13 @@ const getThumbnailUrl = (url: string, thumbnailUrl?: string) => {
 
 // --- Components ---
 
-const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick, onAdUpload }: {
+const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick, onAdUpload, onHistoryClick }: {
     currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string, isSultanAdmin?: boolean },
     onSearch?: (query: string) => void,
     onNotificationClick?: () => void,
     onLogoClick?: () => void,
-    onAdUpload?: (files: FileList) => void
+    onAdUpload?: (files: FileList) => void,
+    onHistoryClick?: () => void
 }) => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [isSearchActive, setIsSearchActive] = useState(false);
@@ -134,95 +181,144 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick, onAdU
     };
 
     return (
-        <div className="fixed top-0 left-0 right-0 h-14 bg-[#0f0f0f] flex items-center justify-between px-4 z-50 border-b border-gray-800">
+        <div className="fixed top-0 left-0 right-0 z-50">
+            {/* Glassmorphism header */}
+            <div className="h-14 flex items-center justify-between px-4"
+                style={{
+                    background: 'rgba(10,10,10,0.92)',
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)',
+                    borderBottom: '1px solid rgba(255,255,255,0.07)',
+                    boxShadow: '0 2px 24px 0 rgba(0,0,0,0.45)'
+                }}
+            >
             {!isSearchActive ? (
                 <>
                     {/* Logo */}
                     <div
-                        className="flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity"
+                        className="flex items-center gap-2 cursor-pointer select-none"
                         onClick={onLogoClick}
                     >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center">
-                            <span className="text-black font-black text-xs">PS</span>
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg"
+                            style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 60%, #92400e 100%)' }}
+                        >
+                            <span className="text-black font-black text-sm tracking-tight">CA</span>
                         </div>
-                        <span className="text-white font-bold tracking-tighter text-lg ml-1 font-sans">PitchSultan</span>
+                        <div className="flex flex-col leading-none">
+                            <span className="text-white font-extrabold text-base tracking-tight" style={{ letterSpacing: '-0.02em' }}>Customer ki Awaz</span>
+                            <span className="text-amber-400 text-[9px] font-semibold tracking-widest uppercase" style={{ letterSpacing: '0.15em' }}>Sales Platform</span>
+                        </div>
                     </div>
 
                     {/* Right Icons */}
-                    <div className="flex items-center gap-4 text-white">
+                    <div className="flex items-center gap-1 text-white">
+                        {/* Bell */}
                         <button
-                            onClick={() => navigate('/welcome')}
-                            className="hidden md:flex items-center gap-1 text-xs font-bold text-white hover:bg-red-700 transition-colors bg-red-600 px-3 py-1.5 rounded-full shadow-sm mr-2"
-                        >
-                            <MdArrowBack className="text-sm" />
-                            Back
-                        </button>
-                        {/* Mobile Back Icon only */}
-                        <MdArrowBack
-                            className="md:hidden text-xl cursor-pointer text-red-500 hover:text-red-400"
-                            onClick={() => navigate('/welcome')}
-                        />
-                        <MdNotificationsNone
-                            className="text-xl cursor-pointer hover:text-gray-300"
                             onClick={onNotificationClick}
-                        />
-                        <MdSearch
-                            className="text-xl cursor-pointer hover:text-gray-300"
-                            onClick={() => setIsSearchActive(true)}
-                        />
+                            className="w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200"
+                            style={{ background: 'rgba(255,255,255,0.06)' }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                        >
+                            <MdNotificationsNone className="text-xl" />
+                        </button>
 
-                        {/* Profile Menu */}
-                        <div className="relative">
-                            <img
-                                src={currentUser.avatar}
-                                alt="Profile"
-                                className="w-6 h-6 rounded-full cursor-pointer hover:ring-2 hover:ring-gray-600 transition-all"
+                        {/* Search */}
+                        <button
+                            onClick={() => setIsSearchActive(true)}
+                            className="w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200"
+                            style={{ background: 'rgba(255,255,255,0.06)' }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                        >
+                            <MdSearch className="text-xl" />
+                        </button>
+
+                        {/* Profile Avatar + Menu */}
+                        <div className="relative ml-1">
+                            <button
                                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                            />
+                                className="w-9 h-9 flex items-center justify-center rounded-full overflow-hidden border-2 transition-all duration-200"
+                                style={{ borderColor: showProfileMenu ? '#f59e0b' : 'rgba(255,255,255,0.18)' }}
+                            >
+                                <img
+                                    src={currentUser.avatar}
+                                    alt="Profile"
+                                    className="w-full h-full object-cover"
+                                />
+                            </button>
 
                             {/* Dropdown Menu */}
                             {showProfileMenu && (
                                 <>
-                                    {/* Backdrop to close menu */}
+                                    <div className="fixed inset-0 z-10" onClick={() => setShowProfileMenu(false)} />
                                     <div
-                                        className="fixed inset-0 z-10"
-                                        onClick={() => setShowProfileMenu(false)}
-                                    />
-
-                                    {/* Menu */}
-                                    <div className="absolute right-0 top-8 mt-2 w-48 bg-[#282828] rounded-lg shadow-lg border border-gray-700 z-20 animate-in fade-in duration-200">
-                                        <div className="py-2">
-                                            {/* User Info */}
-                                            <div className="px-4 py-2 border-b border-gray-700">
-                                                <p className="text-white font-medium text-sm">{currentUser.name}</p>
-                                                <p className="text-gray-400 text-xs">{currentUser.handle}</p>
-                                                <p className="text-gray-500 text-xs">{currentUser.role}</p>
+                                        className="absolute right-0 mt-2 w-56 rounded-2xl z-20 overflow-hidden"
+                                        style={{
+                                            background: 'rgba(22,22,24,0.97)',
+                                            border: '1px solid rgba(255,255,255,0.10)',
+                                            boxShadow: '0 8px 40px rgba(0,0,0,0.7)',
+                                            backdropFilter: 'blur(20px)',
+                                            top: '42px'
+                                        }}
+                                    >
+                                        {/* User Info Header */}
+                                        <div className="px-4 pt-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                                            <div className="flex items-center gap-3">
+                                                <img src={currentUser.avatar} alt="avatar" className="w-10 h-10 rounded-full object-cover border-2 border-amber-400/40" />
+                                                <div>
+                                                    <p className="text-white font-semibold text-sm leading-tight">{currentUser.name}</p>
+                                                    <p className="text-amber-400 text-xs font-medium">{currentUser.handle}</p>
+                                                    <p className="text-gray-500 text-xs">{currentUser.role}</p>
+                                                </div>
                                             </div>
-
-                                            {/* Ad Upload for Sultan Admin */}
-                                            {currentUser.isSultanAdmin && (
-                                                <button
-                                                    onClick={() => adInputRef.current?.click()}
-                                                    className="w-full px-4 py-2 text-left text-blue-400 hover:bg-blue-900/20 transition-colors flex items-center gap-2 text-sm"
-                                                >
-                                                    <MdUpload className="text-lg" />
-                                                    <span>Upload Ad Images</span>
-                                                </button>
-                                            )}
-
-                                            {/* Logout Button - Only for authenticated users */}
-                                            {isAuthenticated && (
-                                                <button
-                                                    onClick={handleLogout}
-                                                    className="w-full px-4 py-2 text-left text-red-400 hover:bg-red-900/20 transition-colors flex items-center gap-2 text-sm"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                                    </svg>
-                                                    Logout
-                                                </button>
-                                            )}
                                         </div>
+
+                                        {/* Admin Upload */}
+                                        {currentUser.isSultanAdmin && (
+                                            <button
+                                                onClick={() => adInputRef.current?.click()}
+                                                className="w-full px-4 py-3 text-left flex items-center gap-3 text-sm transition-colors duration-150"
+                                                style={{ color: '#60a5fa' }}
+                                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(96,165,250,0.08)')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                            >
+                                                <MdUpload className="text-lg flex-shrink-0" />
+                                                <span>Upload Ad Images</span>
+                                            </button>
+                                        )}
+
+                                        {/* Divider */}
+                                        <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '0 12px' }} />
+
+                                        {/* PS Winner */}
+                                        <button
+                                            onClick={() => navigate('/pitchsultan/rewards')}
+                                            className="w-full px-4 py-3 text-left flex items-center gap-3 text-sm transition-colors duration-150"
+                                            style={{ color: '#f59e0b' }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(245,158,11,0.08)')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                        >
+                                            <MdLeaderboard className="text-lg flex-shrink-0 text-amber-400" />
+                                            <span>PS Winner</span>
+                                        </button>
+
+                                        {/* Divider */}
+                                        <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '0 12px' }} />
+
+                                        {/* Logout */}
+                                        <button
+                                            onClick={handleLogout}
+                                            className="w-full px-4 py-3 text-left flex items-center gap-3 text-sm transition-colors duration-150 rounded-b-2xl"
+                                            style={{ color: '#f87171' }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.08)')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                        >
+                                            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                            </svg>
+                                            Sign Out
+                                        </button>
                                     </div>
                                 </>
                             )}
@@ -230,26 +326,34 @@ const Navbar = ({ currentUser, onSearch, onNotificationClick, onLogoClick, onAdU
                     </div>
                 </>
             ) : (
-                /* Search Mode - Expanded */
+                /* Search Mode */
                 <form onSubmit={handleSearchSubmit} className="flex items-center w-full gap-3">
-                    <MdSearch className="text-white text-xl flex-shrink-0" />
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search videos by title..."
-                        className="flex-1 bg-transparent text-white placeholder-gray-400 outline-none text-sm"
-                        autoFocus
-                    />
-                    <button
-                        type="button"
-                        onClick={handleSearchClose}
-                        className="text-gray-400 hover:text-white transition-colors flex-shrink-0"
-                    >
-                        <MdClose className="text-xl" />
+                    <button type="button" onClick={handleSearchClose} className="text-amber-400 flex-shrink-0">
+                        <MdArrowBack className="text-xl" />
                     </button>
+                    <div className="flex-1 flex items-center rounded-full px-4 py-1.5" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                        <MdSearch className="text-gray-400 text-lg mr-2 flex-shrink-0" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search videos..."
+                            className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none text-sm"
+                            autoFocus
+                        />
+                        {searchQuery && (
+                            <button type="button" onClick={() => setSearchQuery('')}>
+                                <MdClose className="text-gray-400 text-base" />
+                            </button>
+                        )}
+                    </div>
+                    <button type="submit" className="text-amber-400 font-semibold text-sm flex-shrink-0">Go</button>
                 </form>
             )}
+            </div>
+            {/* Thin gradient accent line below header */}
+            <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent 0%, #f59e0b 30%, #d97706 70%, transparent 100%)', opacity: 0.5 }} />
+
             {/* Hidden Ad Input */}
             <input
                 type="file"
@@ -273,30 +377,72 @@ const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTa
     ];
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 h-[60px] bg-[#0f0f0f] border-t border-gray-800 flex items-center justify-around z-50 px-2 pb-1">
-            {navItems.map((item) => {
-                const isActive = activeTab === item.id;
-                const Icon = isActive ? item.activeIcon : item.icon;
+        <div
+            className="fixed bottom-0 left-0 right-0 z-50"
+            style={{
+                background: 'rgba(8,8,10,0.97)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderTop: '1px solid rgba(255,255,255,0.07)',
+                boxShadow: '0 -4px 32px rgba(0,0,0,0.6)',
+                height: '62px',
+            }}
+        >
+            <div className="flex items-center justify-around h-full px-1">
+                {navItems.map((item) => {
+                    const isActive = activeTab === item.id;
+                    const Icon = isActive ? item.activeIcon : item.icon;
 
-                if (item.isAction) {
+                    if (item.isAction) {
+                        return (
+                            <div key={item.id} className="flex flex-col items-center justify-center" onClick={() => setActiveTab(item.id)}>
+                                <div
+                                    className="w-12 h-12 rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 active:scale-95"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                        boxShadow: '0 0 20px rgba(245,158,11,0.35)',
+                                    }}
+                                >
+                                    <MdAddCircle className="text-2xl text-black" />
+                                </div>
+                            </div>
+                        );
+                    }
+
                     return (
-                        <div key={item.id} className="flex flex-col items-center justify-center cursor-pointer" onClick={() => setActiveTab(item.id)}>
-                            <Icon className="text-4xl text-gray-200 font-light" />
+                        <div
+                            key={item.id}
+                            className="flex flex-col items-center justify-center w-14 h-full cursor-pointer relative transition-all duration-200 active:scale-95"
+                            onClick={() => setActiveTab(item.id)}
+                        >
+                            {/* Active pill indicator */}
+                            {isActive && (
+                                <div
+                                    className="absolute top-0 w-8"
+                                    style={{
+                                        height: '2px',
+                                        background: 'linear-gradient(90deg, #f59e0b, #d97706)',
+                                        borderRadius: '0 0 4px 4px',
+                                        boxShadow: '0 0 8px rgba(245,158,11,0.6)'
+                                    }}
+                                />
+                            )}
+                            <Icon
+                                className="text-2xl mb-0.5 transition-all duration-200"
+                                style={{ color: isActive ? '#f59e0b' : 'rgba(255,255,255,0.45)' }}
+                            />
+                            {item.label && (
+                                <span
+                                    className="text-[10px] font-medium transition-all duration-200"
+                                    style={{ color: isActive ? '#f59e0b' : 'rgba(255,255,255,0.4)' }}
+                                >
+                                    {item.label}
+                                </span>
+                            )}
                         </div>
                     );
-                }
-
-                return (
-                    <div
-                        key={item.id}
-                        className="flex flex-col items-center justify-center w-full h-full cursor-pointer"
-                        onClick={() => setActiveTab(item.id)}
-                    >
-                        <Icon className={`text-2xl mb-1 ${isActive ? 'text-white' : 'text-gray-400'}`} />
-                        <span className={`text-[10px] ${isActive ? 'text-white' : 'text-gray-400'}`}>{item.label}</span>
-                    </div>
-                );
-            })}
+                })}
+            </div>
         </div>
     );
 };
@@ -337,34 +483,53 @@ const VideoCard = ({ video, onVideoClick, currentUser }: { video: any, onVideoCl
     };
 
     return (
-        <div className="flex flex-col mb-6 cursor-pointer group" onClick={handleVideoClick}>
-            <div className="relative w-full aspect-video bg-gray-800 overflow-hidden">
+        <div
+            className="flex flex-col mb-4 cursor-pointer group rounded-xl overflow-hidden transition-all duration-200"
+            onClick={handleVideoClick}
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.border = '1px solid rgba(245,158,11,0.25)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.border = '1px solid rgba(255,255,255,0.07)'; }}
+        >
+            <div className="relative w-full aspect-video bg-gray-900 overflow-hidden">
                 <img
                     src={getThumbnailUrl(videoSource)}
                     alt={video.title || video.fileName || 'Video thumbnail'}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     style={{ objectPosition: 'center 20%' }}
                 />
+                {/* Play button overlay */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    style={{ background: 'rgba(0,0,0,0.3)' }}
+                >
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center"
+                        style={{ background: 'rgba(245,158,11,0.85)' }}
+                    >
+                        <MdPlayArrow className="text-2xl text-black ml-0.5" />
+                    </div>
+                </div>
 
                 {/* Sultan Admin Status Banner */}
                 {currentUser && currentUser.isSultanAdmin === true && (
-                    <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${video.isActive === false
-                        ? 'bg-red-600 text-white'
-                        : 'bg-green-600 text-white'
-                        }`}>
-                        {video.isActive === false ? 'INACTIVE' : 'ACTIVE'}
+                    <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-bold shadow-lg ${
+                        video.isActive === false
+                            ? 'bg-red-600 text-white'
+                            : 'bg-emerald-500 text-white'
+                    }`}>
+                        {video.isActive === false ? '● INACTIVE' : '● ACTIVE'}
                     </div>
                 )}
-
             </div>
-            <div className="flex gap-3 mt-3 px-3 md:px-0">
-                <img src={uploaderAvatar} alt="" className="w-9 h-9 rounded-full mt-1 flex-shrink-0" />
-                <div className="flex flex-col">
-                    <h3 className="text-white text-sm md:text-base font-semibold line-clamp-2 leading-tight">
+
+            <div className="flex gap-3 p-3">
+                <img src={uploaderAvatar} alt="" className="w-9 h-9 rounded-full mt-0.5 flex-shrink-0 border border-amber-400/20" />
+                <div className="flex flex-col flex-1 min-w-0">
+                    <h3 className="text-white text-sm font-semibold line-clamp-2 leading-tight">
                         {video.title || video.fileName || 'Untitled Video'}
                     </h3>
-                    <div className="text-gray-400 text-xs mt-1">
-                        {uploaderName} • {formatTimeAgo(video.uploadedAt)}
+                    <div className="text-gray-500 text-xs mt-1 flex items-center gap-1">
+                        <span className="text-amber-400/80 font-medium">{uploaderName}</span>
+                        <span>•</span>
+                        <span>{formatTimeAgo(video.uploadedAt)}</span>
                     </div>
                     <VideoStats
                         views={video.views || 0}
@@ -372,7 +537,7 @@ const VideoCard = ({ video, onVideoClick, currentUser }: { video: any, onVideoCl
                         comments={video.commentsCount || 0}
                         rating={video.rating}
                         ratingCount={video.ratingCount}
-                        className="mt-2"
+                        className="mt-1.5"
                     />
                 </div>
             </div>
@@ -394,36 +559,56 @@ const CreateView = ({ onUploadClick, onRecordClick }: { onUploadClick: () => voi
     const [accepted, setAccepted] = useState(false);
 
     return (
-        <div className="flex flex-col items-center justify-center h-[80vh] text-white p-6">
-            <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mb-6 animate-bounce">
-                <MdUpload className="text-5xl text-gray-400" />
+        <div className="flex flex-col items-center justify-center min-h-[80vh] text-white p-6">
+            {/* Icon */}
+            <div
+                className="w-24 h-24 rounded-3xl flex items-center justify-center mb-6 shadow-xl"
+                style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.2) 0%, rgba(217,119,6,0.1) 100%)', border: '1px solid rgba(245,158,11,0.3)' }}
+            >
+                <MdUpload className="text-5xl" style={{ color: '#f59e0b' }} />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Create Content</h2>
-            <p className="text-gray-400 text-center mb-8 max-w-xs">Share your sales pitch with the Sultan community. Upload a video to get started.</p>
+
+            <h2 className="text-2xl font-bold mb-2">Share Your Pitch</h2>
+            <p className="text-gray-400 text-center mb-8 max-w-xs text-sm leading-relaxed">
+                Showcase your sales talent with the Sultan community. Upload a portrait video to get started.
+            </p>
 
             <div className="flex flex-col gap-4 w-full max-w-sm">
-                <div className="bg-gray-800/80 p-4 rounded-lg border border-gray-700 mb-2 backdrop-blur-sm">
-                    <label className="flex items-start gap-3 cursor-pointer group select-none">
-                        <div className="relative flex items-center pt-0.5">
+                {/* Consent card */}
+                <div
+                    className="p-4 rounded-2xl"
+                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}
+                >
+                    <label className="flex items-start gap-3 cursor-pointer select-none">
+                        <div className="relative flex items-center pt-0.5 flex-shrink-0">
                             <input
                                 type="checkbox"
                                 checked={accepted}
                                 onChange={(e) => setAccepted(e.target.checked)}
-                                className="w-5 h-5 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-900 border-2"
+                                className="w-5 h-5 rounded border-gray-600 bg-gray-700 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-900 border-2"
                             />
                         </div>
-                        <p className="text-xs text-gray-400 leading-relaxed group-hover:text-gray-300 transition-colors">
-                            I agree that by uploading this video, I grant <strong>Zopper</strong> full and exclusive rights to use, reproduce, modify, and distribute this content anywhere, in perpetuity, for any purpose.
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            I agree that by uploading this video, I grant <strong className="text-white">Zopper</strong> full and exclusive rights to use, reproduce, modify, and distribute this content anywhere, in perpetuity, for any purpose.
                         </p>
                     </label>
                 </div>
 
                 <button
-                    onClick={onUploadClick}
-                    disabled={true}
-                    className={`font-semibold py-3 px-6 rounded-full w-full flex items-center justify-center gap-2 transition-all bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700 opacity-50`}
+                    onClick={accepted ? onUploadClick : undefined}
+                    disabled={!accepted}
+                    className={`font-bold py-3.5 px-6 rounded-2xl w-full flex items-center justify-center gap-2 transition-all duration-200 text-sm ${
+                        accepted
+                            ? 'text-black cursor-pointer active:scale-95'
+                            : 'text-gray-600 cursor-not-allowed opacity-40'
+                    }`}
+                    style={accepted ? {
+                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                        boxShadow: '0 4px 20px rgba(245,158,11,0.35)'
+                    } : { background: 'rgba(255,255,255,0.06)' }}
                 >
-                    <MdUpload className="text-xl" /> Upload Video
+                    <MdUpload className="text-xl" />
+                    Upload Video
                 </button>
             </div>
         </div>
@@ -452,16 +637,22 @@ const HelpSupportView = () => {
     };
 
     return (
-        <div className="min-h-screen text-white md:p-4 max-w-4xl mx-auto pb-20">
+        <div className="min-h-screen text-white md:p-6 max-w-4xl mx-auto pb-24">
             <div className="p-4">
-                <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
-                    <MdHelp className="text-3xl text-blue-400" /> Help & Support
-                </h2>
-                <p className="text-gray-400 text-sm mb-6">Get answers to your questions and reach out for support</p>
+                {/* Header Section */}
+                <div className="mb-8">
+                    <h2 className="text-2xl font-bold flex items-center gap-3" style={{ letterSpacing: '-0.02em' }}>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.2) 0%, rgba(217,119,6,0.1) 100%)', border: '1px solid rgba(245,158,11,0.3)' }}>
+                            <MdHelp className="text-2xl text-amber-400" />
+                        </div>
+                        <span>Help & Support</span>
+                    </h2>
+                    <p className="text-gray-400 text-sm mt-2 ml-13">Get answers to your questions and reach out to the team</p>
+                </div>
 
                 {/* FAQ Section */}
-                <div className="mb-8">
-                    <h3 className="text-lg font-semibold mb-4 text-gray-200">Frequently Asked Questions</h3>
+                <div className="mb-10">
+                    <h3 className="text-base font-semibold mb-4 text-gray-300 uppercase tracking-wider ml-1" style={{ fontSize: '12px', letterSpacing: '0.05em' }}>Frequently Asked Questions</h3>
                     <div className="space-y-3">
                         {HELP_TOPICS.map((topic) => {
                             const Icon = topic.icon;
@@ -469,89 +660,119 @@ const HelpSupportView = () => {
                             return (
                                 <div
                                     key={topic.id}
-                                    className={`bg-gray-900 overflow-hidden rounded-xl transition-all duration-300 ${isExpanded ? 'ring-1 ring-blue-500/50' : 'hover:bg-gray-800 cursor-pointer'}`}
+                                    className="overflow-hidden rounded-2xl transition-all duration-300 cursor-pointer"
+                                    style={{
+                                        background: isExpanded ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)',
+                                        border: isExpanded ? '1px solid rgba(245,158,11,0.3)' : '1px solid rgba(255,255,255,0.06)',
+                                    }}
                                     onClick={() => toggleExpand(topic.id)}
                                 >
-                                    <div className="p-4 flex items-start gap-3">
-                                        <Icon className="text-2xl text-blue-400 mt-1 flex-shrink-0" />
-                                        <div className="flex-1">
-                                            <h4 className="font-semibold text-white mb-1">{topic.title}</h4>
-                                            <p className="text-sm text-gray-400">{topic.description}</p>
+                                    <div className="p-4 flex items-center gap-4">
+                                        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                                             style={{ background: isExpanded ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.04)' }}>
+                                            <Icon className={`text-lg transition-colors ${isExpanded ? 'text-amber-400' : 'text-gray-400'}`} />
                                         </div>
-                                        <MdKeyboardArrowDown className={`text-2xl text-gray-500 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-semibold text-white text-sm leading-tight">{topic.title}</h4>
+                                            <p className="text-xs text-gray-400 mt-0.5 truncate">{topic.description}</p>
+                                        </div>
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/5 transition-colors">
+                                            <MdKeyboardArrowDown className={`text-xl text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-amber-400' : ''}`} />
+                                        </div>
                                     </div>
 
                                     {/* Expanded Content */}
                                     <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                                         <div className="overflow-hidden">
-                                            <div className="px-4 pb-4 pt-0">
+                                            <div className="px-4 pb-5 pt-1 pl-17">
                                                 {topic.id === 1 ? (
-                                                    <div className="pl-9 text-sm text-gray-400 space-y-2">
-                                                        <p className="font-semibold text-white">Required Format:</p>
-                                                        <ul className="list-disc pl-4 space-y-1">
-                                                            <li>Hold phone vertically (9:16 ratio)</li>
-                                                            <li>Portrait mode only</li>
-                                                            <li className="text-red-400">Landscape videos rejected</li>
+                                                    <div className="text-sm text-gray-400 space-y-3">
+                                                        <p className="font-bold text-white text-xs uppercase tracking-wider text-amber-400/80">Required Format:</p>
+                                                        <ul className="space-y-2">
+                                                            <li className="flex items-center gap-2">
+                                                                <span className="text-emerald-400">📱</span>
+                                                                <span>Hold phone vertically (<strong className="text-white">9:16 ratio</strong>)</span>
+                                                            </li>
+                                                            <li className="flex items-center gap-2">
+                                                                <span className="text-emerald-400">👤</span>
+                                                                <span>Portrait mode only</span>
+                                                            </li>
+                                                            <li className="flex items-center gap-2">
+                                                                <span className="text-red-400">⚠️</span>
+                                                                <span className="text-red-300 font-medium">Landscape videos will be rejected</span>
+                                                            </li>
                                                         </ul>
                                                     </div>
                                                 ) : topic.id === 3 ? (
-                                                    <div className="pl-9 text-sm text-gray-400 space-y-2">
-                                                        <ul className="list-disc pl-4 space-y-2">
-                                                            <li>Record your <strong>40secs to 2mins</strong> video pitching any one PROTECMAX plan.</li>
-                                                            <li>You are supposed to explain the plan in the same way you explain it to the customers. (Basically we want to see your dealing skills with your customers)</li>
-                                                            <li>Language can be of your choice.</li>
-                                                            <li>Your phone camera is enough to record yourself and make you a star! We don't need high quality videos, we just want to see your pitching talent.</li>
+                                                    <div className="text-sm text-gray-400 space-y-3">
+                                                        <ul className="space-y-3">
+                                                            <li className="flex items-start gap-2.5">
+                                                                <span className="text-amber-400 mt-0.5 flex-shrink-0">⏱</span>
+                                                                <span>Video duration should be <strong className="text-white">minimum 35 seconds</strong> and <strong className="text-white">maximum 2 minutes</strong>.</span>
+                                                            </li>
+                                                            <li className="flex items-start gap-2.5">
+                                                                <span className="text-amber-400 mt-0.5 flex-shrink-0">✅</span>
+                                                                <span>Make sure the customers whose videos are submitted have <strong className="text-white">raised a claim</strong>.</span>
+                                                            </li>
+                                                            <li className="flex items-start gap-2.5">
+                                                                <span className="text-amber-400 mt-0.5 flex-shrink-0">🏆</span>
+                                                                <span>Only <strong className="text-white">verified entries</strong> will be eligible for rewards.</span>
+                                                            </li>
+                                                            <li className="flex items-start gap-2.5">
+                                                                <span className="text-red-400 mt-0.5 flex-shrink-0">❌</span>
+                                                                <span><strong className="text-white">Fake entries</strong> will be <strong className="text-red-400">disqualified</strong>.</span>
+                                                            </li>
+                                                            <li className="flex items-start gap-2.5">
+                                                                <span className="text-amber-400 mt-0.5 flex-shrink-0">🎬</span>
+                                                                <span>An individual SEC can upload <strong className="text-white">as many videos as they want</strong> — each <strong className="text-white">verified video</strong> will be rewarded.</span>
+                                                            </li>
                                                         </ul>
                                                     </div>
                                                 ) : topic.id === 6 ? (
-                                                    <div className="pl-9 text-sm text-gray-400 space-y-3">
-                                                        <div className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 p-3 rounded-lg border border-amber-500/20">
-                                                            <h5 className="text-amber-400 font-bold mb-1 flex items-center gap-2">
-                                                                🚀 Early Bird Reward
+                                                    <div className="text-sm text-gray-400 space-y-4">
+                                                        {/* Top 10 */}
+                                                        <div className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 p-4 rounded-2xl border border-amber-500/20">
+                                                            <h5 className="text-amber-400 font-bold mb-1.5 flex items-center gap-2 text-xs uppercase tracking-wider">
+                                                                🏆 Top 10 Verified Entries
                                                             </h5>
-                                                            <p className="text-gray-300">The first 5 competitors who will submit their videos are going to get <span className="text-white font-bold">500/- Rs</span> Amazon vouchers!</p>
+                                                            <p className="text-gray-300 leading-relaxed text-xs sm:text-sm">Each of the <span className="text-white font-bold">Top 10 verified entries</span> will receive an Amazon voucher worth <span className="text-amber-400 font-bold text-base">₹500/-</span></p>
                                                         </div>
 
-                                                        <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 p-3 rounded-lg border border-blue-500/20">
-                                                            <h5 className="text-blue-400 font-bold mb-1 flex items-center gap-2">
-                                                                🏆 Top Performers
+                                                        {/* Rest */}
+                                                        <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 p-4 rounded-2xl border border-blue-500/20">
+                                                            <h5 className="text-blue-400 font-bold mb-1.5 flex items-center gap-2 text-xs uppercase tracking-wider">
+                                                                🎁 All Other Verified Entries
                                                             </h5>
-                                                            <p className="text-gray-300">Top 9 winners will get <span className="text-white font-bold">1000/- Rs</span> Amazon vouchers!</p>
+                                                            <p className="text-gray-300 leading-relaxed text-xs sm:text-sm">Every remaining verified entry will receive an Amazon voucher worth <span className="text-blue-300 font-bold text-base">₹300/-</span></p>
                                                         </div>
 
-                                                        <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 p-3 rounded-lg border border-purple-500/20">
-                                                            <h5 className="text-purple-400 font-bold mb-1 flex items-center gap-2">
-                                                                👑 The ULTIMATE SULTAN
-                                                            </h5>
-                                                            <p className="text-gray-300">The ULTIMATE SULTAN will receive <span className="text-white font-bold">5000/- Rs</span> Amazon voucher!</p>
-                                                        </div>
-
-                                                        <div className="mt-4 p-3 bg-gray-800 rounded-lg">
-                                                            <p className="text-gray-400 text-xs italic">
-                                                                Note: The best videos will be used for training purposes all over India along with credits.
+                                                        {/* Note */}
+                                                        <div className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                                                            <p className="text-gray-400 text-xs italic leading-relaxed">
+                                                                ⚠️ Only <span className="text-white font-semibold">verified entries</span> qualify for rewards. Fake or unverified entries will be disqualified. Best videos may be used for training purposes across India (with credits).
                                                             </p>
                                                         </div>
                                                     </div>
                                                 ) : topic.id === 5 ? (
-                                                    <div className="pl-9 text-sm text-gray-400 space-y-3">
-                                                        <p className="mb-2">For any technical issues, feel free to contact:</p>
-                                                        <div className="grid gap-2 sm:grid-cols-2">
-                                                            <div className="bg-gray-800 p-3 rounded-lg border border-gray-700">
-                                                                <p className="font-semibold text-white">Archit Tiwari</p>
-                                                                <a href="mailto:archit.tiwari@zopper.com" className="text-blue-400 text-xs hover:underline">archit.tiwari@zopper.com</a>
+                                                    <div className="text-sm text-gray-400 space-y-4">
+                                                        <p className="mb-2 text-xs uppercase tracking-wider text-gray-400 font-bold">For any technical issues, feel free to contact:</p>
+                                                        <div className="grid gap-3 sm:grid-cols-2">
+                                                            <div className="p-4 rounded-2xl transition-all duration-200 hover:bg-white/[0.04]" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                                                                <p className="font-semibold text-white text-sm">Archit Tiwari</p>
+                                                                <a href="mailto:archit.tiwari@zopper.com" className="text-amber-400 text-xs hover:underline mt-1 block">archit.tiwari@zopper.com</a>
                                                             </div>
-                                                            <div className="bg-gray-800 p-3 rounded-lg border border-gray-700">
-                                                                <p className="font-semibold text-white">Vishal Shukla</p>
-                                                                <a href="mailto:vishal.shukla@zopper.com" className="text-blue-400 text-xs hover:underline">vishal.shukla@zopper.com</a>
+                                                            <div className="p-4 rounded-2xl transition-all duration-200 hover:bg-white/[0.04]" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                                                                <p className="font-semibold text-white text-sm">Vishal Shukla</p>
+                                                                <a href="mailto:vishal.shukla@zopper.com" className="text-amber-400 text-xs hover:underline mt-1 block">vishal.shukla@zopper.com</a>
                                                             </div>
-                                                            <div className="bg-gray-800 p-3 rounded-lg border border-gray-700 sm:col-span-2">
-                                                                <p className="font-semibold text-white">Harshdeep Singh</p>
-                                                                <a href="mailto:harshdeep.singh@zopper.com" className="text-blue-400 text-xs hover:underline">harshdeep.singh@zopper.com</a>
+                                                            <div className="p-4 rounded-2xl transition-all duration-200 hover:bg-white/[0.04] sm:col-span-2" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                                                                <p className="font-semibold text-white text-sm">Harshdeep Singh</p>
+                                                                <a href="mailto:harshdeep.singh@zopper.com" className="text-amber-400 text-xs hover:underline mt-1 block">harshdeep.singh@zopper.com</a>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <p className="text-sm text-gray-400 pl-9">
+                                                    <p className="text-sm text-gray-400">
                                                         Detailed information about {topic.title.toLowerCase()} will be available here.
                                                     </p>
                                                 )}
@@ -564,44 +785,58 @@ const HelpSupportView = () => {
                     </div>
                 </div>
 
-                {/* Contact Support */}
-                <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 p-6 rounded-xl border border-blue-800/30">
-                    <h3 className="text-lg font-semibold mb-4 text-gray-200">Contact Support</h3>
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3 text-gray-300">
-                            <div className="w-10 h-10 bg-blue-600/20 rounded-full flex items-center justify-center">
-                                <MdEmail className="text-xl text-blue-400" />
+                {/* Contact Support Container */}
+                <div
+                    className="p-6 rounded-2xl overflow-hidden shadow-2xl relative"
+                    style={{
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid rgba(255,255,255,0.07)',
+                        backdropFilter: 'blur(10px)'
+                    }}
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full filter blur-3xl pointer-events-none" />
+                    <h3 className="text-base font-semibold mb-5 text-gray-200 uppercase tracking-wider" style={{ fontSize: '12px', letterSpacing: '0.05em' }}>Contact Support</h3>
+                    <div className="grid gap-6 sm:grid-cols-2">
+                        {/* Email */}
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(245,158,11,0.1)' }}>
+                                <MdEmail className="text-xl text-amber-400" />
                             </div>
                             <div className="flex-1">
-                                <p className="text-sm text-gray-400">Email Support</p>
-                                <div className="flex flex-col gap-0.5 text-sm font-medium mt-0.5">
-                                    <a href="mailto:archit.tiwari@zopper.com" className="hover:text-blue-400 text-xs sm:text-sm transition-colors">archit.tiwari@zopper.com</a>
-                                    <a href="mailto:vishal.shukla@zopper.com" className="hover:text-blue-400 text-xs sm:text-sm transition-colors">vishal.shukla@zopper.com</a>
-                                    <a href="mailto:harshdeep.singh@zopper.com" className="hover:text-blue-400 text-xs sm:text-sm transition-colors">harshdeep.singh@zopper.com</a>
+                                <p className="text-xs text-gray-400 font-medium">Email Support</p>
+                                <div className="flex flex-col gap-1.5 mt-1.5">
+                                    <a href="mailto:archit.tiwari@zopper.com" className="text-white hover:text-amber-400 text-sm transition-colors break-all leading-none font-medium">archit.tiwari@zopper.com</a>
+                                    <a href="mailto:vishal.shukla@zopper.com" className="text-white hover:text-amber-400 text-sm transition-colors break-all leading-none font-medium">vishal.shukla@zopper.com</a>
+                                    <a href="mailto:harshdeep.singh@zopper.com" className="text-white hover:text-amber-400 text-sm transition-colors break-all leading-none font-medium">harshdeep.singh@zopper.com</a>
                                 </div>
                             </div>
                         </div>
-                        <div className="flex items-start gap-3 text-gray-300">
-                            <div className="w-10 h-10 bg-green-600/20 rounded-full flex items-center justify-center flex-shrink-0">
-                                <MdPhone className="text-xl text-green-400" />
+
+                        {/* Phone */}
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(245,158,11,0.1)' }}>
+                                <MdPhone className="text-xl text-amber-400" />
                             </div>
                             <div>
-                                <p className="text-sm text-gray-400">Phone Support</p>
-                                <div className="flex flex-col gap-0.5 text-sm font-medium mt-0.5">
-                                    <a href="tel:9569310917" className="hover:text-green-400 transition-colors">9569310917</a>
-                                    <a href="tel:7408108617" className="hover:text-green-400 transition-colors">7408108617</a>
+                                <p className="text-xs text-gray-400 font-medium">Phone Support</p>
+                                <div className="flex flex-col gap-2 mt-2">
+                                    <a href="tel:9569310917" className="text-white hover:text-amber-400 text-sm font-semibold transition-colors flex items-center gap-1.5">
+                                        <span>9569310917</span>
+                                    </a>
+                                    <a href="tel:7408108617" className="text-white hover:text-amber-400 text-sm font-semibold transition-colors flex items-center gap-1.5">
+                                        <span>7408108617</span>
+                                    </a>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <button className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-full transition-colors">
-                        Send us a message
-                    </button>
                 </div>
             </div>
         </div>
     );
 };
+
+const OLD_VIDEO_CUTOFF = new Date('2026-07-08T12:30:00.000Z');
 
 const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideoDelete }: {
     currentUser: { name: string; handle: string; avatar: string; subscribers: string; role: string; store: string; region: string; isSultanAdmin: boolean },
@@ -610,7 +845,7 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
     onVideoUpdate?: (videoId: string, updates: { title?: string, description?: string }) => void,
     onVideoDelete?: (videoId: string) => void
 }) => {
-    const [profileTab, setProfileTab] = useState<'analytics' | 'manage'>('analytics');
+    const [profileTab, setProfileTab] = useState<'analytics' | 'manage' | 'history'>('analytics');
     const [editingVideo, setEditingVideo] = useState<any>(null);
     const [newTitle, setNewTitle] = useState('');
     const [newDescription, setNewDescription] = useState('');
@@ -709,7 +944,7 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
             </div>
 
             {/* Content Tabs */}
-            <div className="flex border-b border-gray-800 text-white text-sm font-medium sticky top-14 bg-[#0f0f0f]">
+            <div className="flex border-b border-gray-800 text-white text-sm font-medium sticky top-14 bg-[#0f0f0f] z-10">
                 <div
                     className={`flex-1 py-3 text-center cursor-pointer ${profileTab === 'analytics' ? 'border-b-2 border-white' : 'text-gray-500'}`}
                     onClick={() => setProfileTab('analytics')}
@@ -721,6 +956,12 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
                     onClick={() => setProfileTab('manage')}
                 >
                     Manage
+                </div>
+                <div
+                    className={`flex-1 py-3 text-center cursor-pointer ${profileTab === 'history' ? 'border-b-2 border-white' : 'text-gray-500'}`}
+                    onClick={() => setProfileTab('history')}
+                >
+                    History
                 </div>
             </div>
 
@@ -766,11 +1007,9 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
                                     {userVideos.map(video => (
                                         <div key={video.id} className="bg-gray-800 p-3 rounded-lg">
                                             <div className="flex items-start gap-3">
-                                                <img
-                                                    src={getThumbnailUrl(video.thumbnailUrl || video.url)}
-                                                    alt={video.title}
+                                                <SafeThumbnailImage
+                                                    video={video}
                                                     className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded flex-shrink-0 bg-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
-                                                    loading="lazy"
                                                     onClick={() => onVideoClick && onVideoClick(video)}
                                                 />
                                                 <div className="flex-1 min-w-0">
@@ -822,11 +1061,9 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
                             {userVideos.map(video => (
                                 <div key={video.id} className="bg-gray-800 p-3 sm:p-4 rounded-lg">
                                     <div className="flex items-start gap-3 sm:gap-4">
-                                        <img
-                                            src={getThumbnailUrl(video.thumbnailUrl || video.url)}
-                                            alt={video.title}
+                                        <SafeThumbnailImage
+                                            video={video}
                                             className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded flex-shrink-0 bg-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
-                                            loading="lazy"
                                             onClick={() => onVideoClick && onVideoClick(video)}
                                         />
                                         <div className="flex-1 min-w-0">
@@ -928,6 +1165,44 @@ const ProfileView = ({ currentUser, videos, onVideoClick, onVideoUpdate, onVideo
                     )}
                 </div>
             )}
+
+            {profileTab === 'history' && (
+                <div className="p-4 text-white">
+                    <h3 className="text-xl font-bold mb-6">All Uploaded Videos (History)</h3>
+                    
+                    {videos.filter(v => new Date(v.uploadedAt) < OLD_VIDEO_CUTOFF).length > 0 ? (
+                        <div className="space-y-4">
+                            {videos.filter(v => new Date(v.uploadedAt) < OLD_VIDEO_CUTOFF).map(video => (
+                                <div key={video.id} className="bg-gray-800 p-3 sm:p-4 rounded-lg">
+                                    <div className="flex items-start gap-3 sm:gap-4">
+                                        <SafeThumbnailImage
+                                            video={video}
+                                            className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded flex-shrink-0 bg-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
+                                            onClick={() => onVideoClick && onVideoClick(video)}
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <h5 className="font-medium text-white mb-2 text-sm sm:text-base break-words">
+                                                {video.title || video.fileName}
+                                            </h5>
+                                            <div className="text-gray-400 text-xs sm:text-sm mb-2">
+                                                {video.description || "No description provided"}
+                                            </div>
+                                            <div className="text-gray-500 text-xs">
+                                                {video.views || 0} views • {video.likes || 0} likes • {new Date(video.uploadedAt).toLocaleDateString()}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center text-gray-400 py-10">
+                            <div className="text-6xl mb-4">📜</div>
+                            <p className="text-lg">No history found</p>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
@@ -994,8 +1269,11 @@ export const PitchSultanBattle = () => {
             const data = await response.json();
             if (data.success) {
                 console.log('✅ Videos fetched:', data.data.length);
-                setVideos(data.data);
-                setFilteredVideos(data.data);
+                const newVideos: any[] = data.data;
+                setVideos(newVideos);
+                // Apply cutoff filter immediately so old videos never flash on screen
+                const initialFiltered = newVideos.filter((v: any) => new Date(v.uploadedAt) >= OLD_VIDEO_CUTOFF);
+                setFilteredVideos(initialFiltered);
             } else {
                 console.error('❌ Failed to fetch videos:', data.error);
             }
@@ -1014,14 +1292,6 @@ export const PitchSultanBattle = () => {
                 // Authenticated SEC user
                 console.log('✅ Using authenticated SEC user:', user);
                 
-                // Check if user has completed Pitch Sultan profile
-                if (!user.name || !('storeId' in user) || !user.storeId || !('region' in user) || !user.region) {
-                    // User needs to complete profile setup
-                    console.log('⚠️ User profile incomplete, redirecting to setup');
-                    navigate('/pitchsultan/setup');
-                    return;
-                }
-
                 // Set current user for display
                 const currentUserData = {
                     name: user.name || "SEC User",
@@ -1140,10 +1410,8 @@ export const PitchSultanBattle = () => {
 
     const handleVideoClick = (video: any) => {
         console.log('🎬 Video clicked:', video.id);
-        //   console.log('🎬 Current selectedVideoId:', selectedVideoId);
-
-        // setSelectedVideoId(video.id);
-        // Removed: setActiveTab('shorts'); - no direct jump to shorts player
+        setSelectedVideoId(video.id);
+        setActiveTab('shorts');
         console.log('🎬 Set selectedVideoId to:', video.id);
     };
 
@@ -1227,7 +1495,8 @@ export const PitchSultanBattle = () => {
     };
 
     const applyFilter = (filter: string, videosToFilter: any[] = videos, searchTerm: string = searchQuery) => {
-        let filtered = [...videosToFilter];
+        // Filter out old videos for the main feed
+        let filtered = videosToFilter.filter(v => new Date(v.uploadedAt) >= OLD_VIDEO_CUTOFF);
 
         // Apply search filter first if there's a search term
         if (searchTerm.trim()) {
@@ -1300,12 +1569,12 @@ export const PitchSultanBattle = () => {
         );
     };
 
-    // Apply filter when videos change
+    // Re-apply filter when filter or search changes (NOT on initial videos load — that's handled in fetchVideos)
     useEffect(() => {
-        if (videos.length > 0) {
+        if (videos.length > 0 && (activeFilter !== 'All' || searchQuery.trim())) {
             applyFilter(activeFilter, videos, searchQuery);
         }
-    }, [videos, activeFilter, searchQuery]);
+    }, [activeFilter, searchQuery]);
 
     const handleUploadClick = () => {
         // Direct check from localStorage
@@ -1335,25 +1604,26 @@ export const PitchSultanBattle = () => {
 
     return (
         <div className="min-h-screen bg-[#0f0f0f] text-white">
-            {currentUser && <Navbar currentUser={currentUser} onSearch={handleSearch} onNotificationClick={handleNotificationClick} onLogoClick={handleLogoClick} onAdUpload={handleAdUpload} />}
+            {currentUser && <Navbar currentUser={currentUser} onSearch={handleSearch} onNotificationClick={handleNotificationClick} onLogoClick={handleLogoClick} onAdUpload={handleAdUpload} onHistoryClick={() => { setActiveTab('profile'); window.scrollTo(0, 0); }} />}
 
             <div className="pt-14 pb-16 md:pl-0">
                 <div className={`${activeTab === 'home' ? 'block' : 'hidden'}`}>
                     <div className="max-w-4xl mx-auto md:p-4">
-                        {/* Back Button */}
-
-                        {/* Chips */}
-                        <div className="flex gap-2 overflow-x-auto p-4 md:px-0 no-scrollbar">
+                        {/* Filter chips */}
+                        <div className="flex gap-2 overflow-x-auto px-4 py-3 md:px-0 no-scrollbar">
                             {/* Search indicator */}
                             {searchQuery && (
-                                <span className="whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white flex items-center gap-2">
+                                <span
+                                    className="whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 flex-shrink-0"
+                                    style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}
+                                >
                                     <MdSearch className="text-sm" />
                                     "{searchQuery}"
                                     <button
                                         onClick={() => handleSearch('')}
-                                        className="hover:bg-blue-700 rounded-full p-0.5"
+                                        className="ml-1 rounded-full"
                                     >
-                                        <MdClose className="text-sm" />
+                                        <MdClose className="text-xs" />
                                     </button>
                                 </span>
                             )}
@@ -1363,31 +1633,44 @@ export const PitchSultanBattle = () => {
                                 <span
                                     key={i}
                                     onClick={() => handleFilterChange(chip)}
-                                    className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition-colors ${activeFilter === chip
-                                        ? 'bg-white text-black'
-                                        : 'bg-gray-800 text-white hover:bg-gray-700'
-                                        }`}
+                                    className="whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all duration-200 flex-shrink-0 active:scale-95"
+                                    style={activeFilter === chip ? {
+                                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                        color: '#000',
+                                        boxShadow: '0 2px 12px rgba(245,158,11,0.3)'
+                                    } : {
+                                        background: 'rgba(255,255,255,0.07)',
+                                        color: 'rgba(255,255,255,0.7)',
+                                        border: '1px solid rgba(255,255,255,0.1)'
+                                    }}
                                 >
-                                    {chip}
+                                    {chip === 'Trending' ? '🔥 ' : chip === 'Recently Uploaded' ? '🆕 ' : ''}{chip}
                                 </span>
                             ))}
                         </div>
 
                         {/* Loading State */}
                         {loading && (
-                            <div className="flex justify-center items-center py-20">
-                                <div className="w-12 h-12 border-4 border-gray-700 border-t-white rounded-full animate-spin"></div>
+                            <div className="flex flex-col items-center justify-center py-24 gap-4">
+                                <div
+                                    className="w-12 h-12 rounded-full border-4 animate-spin"
+                                    style={{ borderColor: 'rgba(245,158,11,0.2)', borderTopColor: '#f59e0b' }}
+                                />
+                                <p className="text-gray-500 text-sm">Loading videos...</p>
                             </div>
                         )}
 
-                        {/* Empty State */}
+                        {/* Empty State - filter mismatch */}
                         {!loading && filteredVideos.length === 0 && videos.length > 0 && (
-                            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                                <MdOutlineSlowMotionVideo className="text-6xl mb-4" />
-                                <p className="text-lg">
-                                    {searchQuery ? 'No videos found' : 'No videos found'}
-                                </p>
-                                <p className="text-sm">
+                            <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+                                <div
+                                    className="w-20 h-20 rounded-2xl flex items-center justify-center mb-5"
+                                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+                                >
+                                    <MdOutlineSlowMotionVideo className="text-4xl text-gray-600" />
+                                </div>
+                                <p className="text-base font-semibold text-gray-300 mb-1">No videos found</p>
+                                <p className="text-sm text-center max-w-xs">
                                     {searchQuery
                                         ? `No videos match "${searchQuery}". Try a different search term.`
                                         : 'Try a different filter or upload new content'
@@ -1398,9 +1681,14 @@ export const PitchSultanBattle = () => {
 
                         {/* Empty State - No videos at all */}
                         {!loading && videos.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                                <MdOutlineSlowMotionVideo className="text-6xl mb-4" />
-                                <p className="text-lg">No videos yet</p>
+                            <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+                                <div
+                                    className="w-20 h-20 rounded-2xl flex items-center justify-center mb-5"
+                                    style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(217,119,6,0.06) 100%)', border: '1px solid rgba(245,158,11,0.2)' }}
+                                >
+                                    <MdPlayArrow className="text-4xl" style={{ color: '#f59e0b' }} />
+                                </div>
+                                <p className="text-base font-semibold text-white mb-1">No videos yet</p>
                                 <p className="text-sm">Be the first to upload a pitch!</p>
                             </div>
                         )}
@@ -1445,6 +1733,11 @@ export const PitchSultanBattle = () => {
                                                 onVideoClick={handleVideoClick}
                                                 showMenu={true}
                                                 currentUser={currentUser}
+                                                onVideoStatsUpdate={handleVideoStatsUpdate}
+                                                onVideoDelete={(id) => {
+                                                    setVideos(prev => prev.filter(v => v.id !== id));
+                                                    setFilteredVideos(prev => prev.filter(v => v.id !== id));
+                                                }}
                                             />
                                         </div>
                                     );
@@ -1457,7 +1750,22 @@ export const PitchSultanBattle = () => {
                 {/* Shorts View - Only mount when active */}
                 {activeTab === 'shorts' && (
                     <div className="fixed inset-0 bg-black z-40">
-                        <ShortsView videos={videos} startingVideoId={selectedVideoId} onVideoStatsUpdate={handleVideoStatsUpdate} currentUserId={secUser?.id} currentUser={currentUser} />
+                        <ShortsView 
+                            videos={(() => {
+                                const activeVideos = videos.filter(v => new Date(v.uploadedAt) >= OLD_VIDEO_CUTOFF);
+                                if (selectedVideoId && !activeVideos.some(v => v.id === selectedVideoId)) {
+                                    const historyVideo = videos.find(v => v.id === selectedVideoId);
+                                    if (historyVideo) {
+                                        return [historyVideo, ...activeVideos];
+                                    }
+                                }
+                                return activeVideos;
+                            })()} 
+                            startingVideoId={selectedVideoId} 
+                            onVideoStatsUpdate={handleVideoStatsUpdate} 
+                            currentUserId={secUser?.id} 
+                            currentUser={currentUser} 
+                        />
                     </div>
                 )}
 

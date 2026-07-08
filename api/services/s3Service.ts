@@ -64,8 +64,14 @@ export class S3Service {
     // Remove existing extension and add the correct one
     sanitizedFilename = sanitizedFilename.replace(/\.[^.]+$/, '') + extension;
     
-    // Create S3 key with format: videos/{userId}/{timestamp}-{filename}
-    const s3Key = `videos/${userId}/${timestamp}-${sanitizedFilename}`;
+    // Determine folder path based on whether the file is a video or image
+    const isVideo = mimeType.startsWith('video/');
+    const folder = isVideo 
+      ? 'salesdost_sec/Events/cutomer_ki_awaaz/media/video'
+      : 'salesdost_sec/Events/cutomer_ki_awaaz/media/images';
+
+    // Create S3 key
+    const s3Key = `${folder}/${timestamp}-${sanitizedFilename}`;
 
     // Create the put object command
     const command = new PutObjectCommand({

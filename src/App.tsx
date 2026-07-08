@@ -41,7 +41,7 @@ import { ComingSoon } from './pages/ComingSoon'
 export default function App() {
   const location = useLocation()
   const showFooter = location.pathname !== '/' && location.pathname !== '/leaderboard' && location.pathname !== '/admin/leaderboard' && location.pathname !== '/welcome'
-  const isFullScreenPage = location.pathname === '/leaderboard' || location.pathname === '/admin/leaderboard' || location.pathname === '/pitchsultan' || location.pathname === '/pitchsultan/setup' || location.pathname === '/pitchsultan/battle' || location.pathname === '/pitchsultan/rules' || location.pathname === '/pitchsultan/rewards' || location.pathname === '/welcome'
+  const isFullScreenPage = location.pathname === '/leaderboard' || location.pathname === '/admin/leaderboard' || location.pathname === '/pitchsultan' || location.pathname === '/pitchsultan/battle' || location.pathname === '/pitchsultan/rules' || location.pathname === '/pitchsultan/rewards' || location.pathname === '/welcome'
 
   return (
     <AuthProvider>
@@ -58,7 +58,6 @@ export default function App() {
             </AdminRoute>
           } />
           <Route path="/pitchsultan" element={<PitchSultan />} />
-          <Route path="/pitchsultan/setup" element={<PitchSultanSetup />} />
           <Route path="/pitchsultan/battle" element={<PitchSultanBattle />} />
           <Route path="/pitchsultan/rules" element={<PitchSultanRules />} />
           <Route path="/pitchsultan/rewards" element={<PitchSultanRewards />} />

@@ -67,7 +67,7 @@ export function SecLanding() {
                         `}</style>
                         <div
                             style={{ animation: 'float 3s ease-in-out infinite' }}
-                            onClick={() => navigate('/pitchsultan/rewards')}
+                            onClick={() => navigate('/pitchsultan')}
                             className="cursor-pointer relative rounded-2xl overflow-hidden aspect-[3/4] shadow-lg border border-white/10 group bg-black"
                         >
                             <img src={pitchSultanImg} alt="Pitch Sultan" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />

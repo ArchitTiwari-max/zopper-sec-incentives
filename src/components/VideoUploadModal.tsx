@@ -20,9 +20,30 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [videoTitle, setVideoTitle] = useState('');
   const [videoDescription, setVideoDescription] = useState('');
+  const [soldDeviceImei, setSoldDeviceImei] = useState('');
   const [isConverting, setIsConverting] = useState(false);
   const [needsConversion, setNeedsConversion] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Luhn Algorithm helper to validate 15-digit IMEI
+  const validateLuhnIMEI = (val: string): boolean => {
+    const clean = val.trim();
+    if (!/^\d{15}$/.test(clean)) return false;
+    let sum = 0;
+    for (let i = 0; i < 15; i++) {
+      let digit = parseInt(clean[i], 10);
+      if (i % 2 === 1) {
+        digit *= 2;
+        if (digit > 9) {
+          digit -= 9;
+        }
+      }
+      sum += digit;
+    }
+    return sum % 10 === 0;
+  };
+
+  const isImeiValid = validateLuhnIMEI(soldDeviceImei);
 
   // Use our new hooks
   const { detectFormat, convertVideo, needsConversion: checkNeedsConversion, initError } = useVideoConverter();
@@ -37,6 +58,7 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
     setProgress(0);
     setIsConverting(false);
     setNeedsConversion(false);
+    setSoldDeviceImei('');
 
     // Check for initialization errors
     if (initError) {
@@ -322,7 +344,8 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
         title: videoTitle,
         description: videoDescription,
         fileSize: selectedFile.size,
-        thumbnailUrl: thumbnailUrl // Include the generated thumbnail URL
+        thumbnailUrl: thumbnailUrl, // Include the generated thumbnail URL
+        imei: soldDeviceImei.trim() // Send Luhn-validated IMEI to save against video
       }, currentUserId);
 
       setProgress(100);
@@ -373,6 +396,7 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
       setUploadSuccess(false);
       setVideoTitle('');
       setVideoDescription('');
+      setSoldDeviceImei('');
       setIsConverting(false);
       setNeedsConversion(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -469,6 +493,45 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
             </div>
           )}
 
+          {/* Sold Device IMEI Input */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-300">
+              Sold Device IMEI *
+            </label>
+            <div className="relative">
+              <input
+                type="tel"
+                inputMode="numeric"
+                maxLength={15}
+                value={soldDeviceImei}
+                onChange={(e) => setSoldDeviceImei(e.target.value.replace(/\D/g, ''))}
+                disabled={uploading || isConverting || !!selectedFile}
+                placeholder="Enter 15-digit IMEI of sold device"
+                className={`w-full p-3 bg-gray-800 text-white rounded-xl border focus:outline-none text-sm font-mono tracking-wider ${
+                  soldDeviceImei.length === 15 
+                    ? isImeiValid 
+                      ? 'border-green-500 focus:border-green-500' 
+                      : 'border-red-500 focus:border-red-500'
+                    : 'border-gray-700 focus:border-blue-500'
+                }`}
+              />
+              {soldDeviceImei.length > 0 && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs">
+                  {soldDeviceImei.length < 15 ? (
+                    <span className="text-gray-400 font-mono">{soldDeviceImei.length}/15</span>
+                  ) : isImeiValid ? (
+                    <span className="text-green-500 font-bold">✓ Valid</span>
+                  ) : (
+                    <span className="text-red-500 font-bold">✗ Invalid Luhn</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <p className="text-[11px] text-gray-500 leading-relaxed">
+              ⚠️ You must enter the 15-digit IMEI of the sold device. We validate this IMEI to process rewards.
+            </p>
+          </div>
+
           {/* File Upload */}
           <div className="space-y-4">
             <div>
@@ -478,17 +541,27 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
               
               {!selectedFile ? (
                 <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-500/5 transition-all"
+                  onClick={() => {
+                    if (isImeiValid) {
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                  className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+                    isImeiValid 
+                      ? 'border-gray-600 cursor-pointer hover:border-amber-500 hover:bg-amber-500/5' 
+                      : 'border-gray-800 bg-gray-900/50 cursor-not-allowed opacity-50'
+                  }`}
                 >
-                  <MdUpload className="text-3xl text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-300 text-sm mb-1">Tap to select video</p>
+                  <MdUpload className={`text-3xl mx-auto mb-3 ${isImeiValid ? 'text-gray-400' : 'text-gray-600'}`} />
+                  <p className={`text-sm mb-1 ${isImeiValid ? 'text-gray-300' : 'text-gray-500 font-medium'}`}>
+                    {isImeiValid ? 'Tap to select video' : 'Enter a valid IMEI above to unlock'}
+                  </p>
                   <p className="text-gray-500 text-xs">Portrait mode • Max 50MB</p>
                 </div>
               ) : (
                 <div className="bg-gray-800 rounded-xl p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <MdVideoCall className="text-white text-lg" />
+                  <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <MdVideoCall className="text-black text-lg" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-sm font-medium truncate">{selectedFile.name}</p>
@@ -513,7 +586,7 @@ export const VideoUploadModal = ({ isOpen, onClose, onUploadSuccess, currentUser
                 type="file"
                 accept="video/*"
                 onChange={handleFileSelect}
-                disabled={uploading || isConverting}
+                disabled={uploading || isConverting || !isImeiValid}
                 className="hidden"
               />
             </div>

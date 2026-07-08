@@ -127,6 +127,10 @@ export class UploadManager {
     onProgress: (progress: UploadProgress) => void,
     maxRetries: number = 2
   ): Promise<string> {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required. Please log in.');
+    }
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -140,10 +144,60 @@ export class UploadManager {
         }
 
         // Attempt upload
-        await this.uploadToS3(file, uploadUrl, mimeType, onProgress);
-        
-        // Success!
-        return finalFileUrl;
+        try {
+          await this.uploadToS3(file, uploadUrl, mimeType, onProgress);
+          // Success!
+          return finalFileUrl;
+        } catch (s3Error) {
+          console.warn('⚠️ S3 direct upload failed (possibly CORS). Retrying via backend proxy upload...', s3Error);
+          
+          // Show progress simulation
+          onProgress({ loaded: 10, total: 100, percentage: 10 });
+          
+          // Convert file to base64
+          const base64Data = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              if (typeof reader.result === 'string') {
+                resolve(reader.result);
+              } else {
+                reject(new Error('Failed to convert file to base64'));
+              }
+            };
+            reader.onerror = () => reject(reader.error || new Error('FileReader error'));
+            reader.readAsDataURL(file);
+          });
+          
+          onProgress({ loaded: 40, total: 100, percentage: 40 });
+
+          // Upload to /api/upload-proxy
+          const proxyRes = await fetch(`${API_BASE_URL}/upload-proxy`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              fileData: base64Data,
+              filename,
+              mimeType
+            })
+          });
+
+          if (!proxyRes.ok) {
+            const errJson = await proxyRes.json().catch(() => ({}));
+            throw new Error(errJson.message || `Proxy upload failed with status: ${proxyRes.status}`);
+          }
+
+          const proxyData = await proxyRes.json();
+          if (!proxyData.success) {
+            throw new Error(proxyData.message || 'Proxy upload failed');
+          }
+
+          // Complete progress
+          onProgress({ loaded: 100, total: 100, percentage: 100 });
+          return proxyData.finalFileUrl;
+        }
 
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown upload error');
@@ -177,6 +231,7 @@ export class UploadManager {
     description: string;
     fileSize?: number;
     thumbnailUrl?: string;
+    imei?: string;
   }, userId?: string): Promise<any> {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -188,6 +243,9 @@ export class UploadManager {
     if (!currentUserId) {
       throw new Error('User ID not found. Please log in again.');
     }
+
+    // Retrieve IMEI from localStorage if saved during setup
+    const deviceImei = localStorage.getItem('sec_device_imei');
 
     const response = await fetch(`${API_BASE_URL}/pitch-sultan/videos`, {
       method: 'POST',
@@ -203,7 +261,8 @@ export class UploadManager {
         description: videoData.description,
         fileSize: videoData.fileSize,
         thumbnailUrl: videoData.thumbnailUrl,
-        tags: ['pitch-sultan', 'battle']
+        tags: ['pitch-sultan', 'battle'],
+        imei: videoData.imei || deviceImei || null
         // Note: No fileId for S3 uploads (only ImageKit had fileId)
       })
     });

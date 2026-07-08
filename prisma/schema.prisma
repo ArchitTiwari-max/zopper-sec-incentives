@@ -78,6 +78,7 @@ model SECUser {
   storeId         String?
   store           Store?               @relation(fields: [storeId], references: [id])
   region          String? // Optional - Region for Pitch Sultan (north/south/east/west)
+  imei            String? // Device IMEI for video validation
   isActive        Boolean              @default(true)
   lastLoginAt     DateTime?
   salesReports    SalesReport[] // SEC sales reports
@@ -312,6 +313,7 @@ model PitchSultanVideo {
   ratings      UserVideoRating[] // Individual user ratings
   likesList    UserVideoLike[]
   comments     VideoComment[]
+  imei         String? // Device IMEI captured at upload time (for validation)
   commentsCount Int              @default(0)
 
   @@index([secUserId])

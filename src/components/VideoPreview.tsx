@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { MdPlayArrow, MdMoreVert, MdShare, MdFlag } from 'react-icons/md';
 import { VideoStats } from './VideoStats';
-import { getThumbnailUrl } from '@/utils/videoUtils';
+import { getThumbnailUrl, getSignedVideoUrl } from '@/utils/videoUtils';
+import { API_BASE_URL } from '@/lib/config';
 
 interface VideoPreviewProps {
   video: {
@@ -32,15 +33,44 @@ interface VideoPreviewProps {
   onVideoClick?: (video: any) => void;
   showMenu?: boolean;
   currentUser?: any; // Add currentUser prop
+  onVideoStatsUpdate?: (videoId: string, updates: any) => void;
+  onVideoDelete?: (videoId: string) => void;
 }
 
 export const VideoPreview: React.FC<VideoPreviewProps> = ({
   video,
   onVideoClick,
   showMenu = false,
-  currentUser
+  currentUser,
+  onVideoStatsUpdate,
+  onVideoDelete
 }) => {
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [resolvedThumbnailUrl, setResolvedThumbnailUrl] = useState<string>('');
+
+  // Resolve signed S3 URL for thumbnail dynamically
+  React.useEffect(() => {
+    let isCurrent = true;
+    const loadThumbnail = async () => {
+      const rawThumbnail = getThumbnailUrl(video.url, video.thumbnailUrl);
+      try {
+        const signed = await getSignedVideoUrl(rawThumbnail);
+        if (isCurrent) {
+          setResolvedThumbnailUrl(signed);
+        }
+      } catch (err) {
+        console.error("Failed to load signed thumbnail URL:", err);
+        if (isCurrent) {
+          setResolvedThumbnailUrl(rawThumbnail);
+        }
+      }
+    };
+    loadThumbnail();
+    return () => {
+      isCurrent = false;
+    };
+  }, [video.url, video.thumbnailUrl]);
 
   const uploaderName = video.secUser?.name || `SEC ${video.secUser?.phone?.slice(-4) || 'User'}`;
   const uploaderAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(uploaderName)}&background=ffd700&color=000`;
@@ -88,28 +118,68 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
     setShowOptionsMenu(false);
   };
 
+  const handleAdminAction = async (type: 'delete' | 'toggle') => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    if (type === 'delete' && !window.confirm('Are you sure you want to delete this video?')) return;
+
+    setAdminLoading(true);
+    const url = `${API_BASE_URL}/pitch-sultan/videos/${video.id}${type === 'toggle' ? '/toggle-active' : ''}`;
+    const method = type === 'delete' ? 'DELETE' : 'PATCH';
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (type === 'delete') {
+          onVideoDelete?.(video.id);
+          alert('Video deleted successfully');
+        } else {
+          onVideoStatsUpdate?.(video.id, { isActive: data.data.isActive });
+          alert(`Video ${data.data.isActive ? 'activated' : 'deactivated'} successfully`);
+        }
+      } else {
+        alert(data.error || 'Action failed');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Action failed due to server error');
+    } finally {
+      setAdminLoading(false);
+      setShowOptionsMenu(false);
+    }
+  };
+
   return (
     <div className="flex flex-col mb-6 cursor-pointer group" onClick={handleVideoClick}>
       <div className="relative w-full aspect-video bg-gray-800 overflow-hidden rounded-lg">
-        {/* Use img tag for JPG thumbnails - much better for mobile */}
-        <img
-          src={getThumbnailUrl(video.url, video.thumbnailUrl)}
-          alt={video.title || 'Video thumbnail'}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-          style={{ objectPosition: 'center 20%' }}
-          loading="lazy"
-          onError={(e) => {
-            // Fallback: if thumbnail fails, try using video URL
-            console.error('Thumbnail failed to load, trying video URL');
-            const target = e.currentTarget;
-            if (!target.src.includes('.mp4')) {
-              target.src = video.url;
-            } else {
-              // If video URL also fails, hide the image
+        {/* Render video tag as preview if the thumbnail is an MP4/MOV, otherwise render an image */}
+        {resolvedThumbnailUrl && (resolvedThumbnailUrl.toLowerCase().includes('.mp4') || resolvedThumbnailUrl.toLowerCase().includes('.mov') || resolvedThumbnailUrl.toLowerCase().includes('.webm')) ? (
+          <video
+            src={resolvedThumbnailUrl}
+            preload="metadata"
+            muted
+            playsInline
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+            style={{ objectPosition: 'center 20%' }}
+          />
+        ) : (
+          <img
+            src={resolvedThumbnailUrl || getThumbnailUrl(video.url, video.thumbnailUrl)}
+            alt={video.title || 'Video thumbnail'}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+            style={{ objectPosition: 'center 20%' }}
+            loading="lazy"
+            onError={(e) => {
+              const target = e.currentTarget;
               target.style.display = 'none';
-            }
-          }}
-        />
+            }}
+          />
+        )}
 
         {/* Sultan Admin Status Banner */}
         {currentUser && currentUser.isSultanAdmin === true && (
@@ -187,6 +257,34 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
                           <MdFlag className="text-base" />
                           Report
                         </button>
+
+                        {/* Admin Controls */}
+                        {currentUser?.isSultanAdmin && (
+                          <div className="border-t border-gray-700 mt-1 pt-1">
+                            <button
+                              disabled={adminLoading}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAdminAction('toggle');
+                              }}
+                              className="w-full px-4 py-2 text-left text-amber-400 hover:bg-amber-950/20 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50"
+                            >
+                              <span>⚙️</span>
+                              {video.isActive === false ? 'Activate Video' : 'Deactivate Video'}
+                            </button>
+                            <button
+                              disabled={adminLoading}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAdminAction('delete');
+                              }}
+                              className="w-full px-4 py-2 text-left text-red-500 hover:bg-red-950/20 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50"
+                            >
+                              <span>🗑️</span>
+                              Delete Video
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </>

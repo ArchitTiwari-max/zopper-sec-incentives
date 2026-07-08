@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
@@ -64,7 +65,8 @@ const uploadQuestions = multer({
 
 // Middleware
 app.use(cors({ credentials: true, origin: true }))
-app.use(express.json())
+app.use(express.json({ limit: '100mb' }))
+app.use(express.urlencoded({ limit: '100mb', extended: true }))
 app.use(cookieParser())
 
 // Helper functions
@@ -4513,7 +4515,7 @@ function shuffleArrayWithSeed<T>(array: T[], seed: string): T[] {
  */
 app.post('/api/pitch-sultan/user', async (req, res) => {
   try {
-    const { name, storeId, region, phone } = req.body
+    const { name, storeId, region, phone, imei } = req.body
 
     if (!name || !region || !phone) {
       return res.status(400).json({ success: false, error: "Missing required fields: name, region, phone" })
@@ -4525,7 +4527,8 @@ app.post('/api/pitch-sultan/user', async (req, res) => {
       data: {
         name,
         region,
-        storeId: storeId || undefined
+        storeId: storeId || undefined,
+        ...(imei ? { imei } : {}) // Store IMEI if provided
       },
       include: {
         store: true
@@ -4545,9 +4548,9 @@ app.post('/api/pitch-sultan/user', async (req, res) => {
  */
 app.post('/api/pitch-sultan/videos', async (req, res) => {
   try {
-    const { secUserId, fileId, url, fileName, title, description, thumbnailUrl, fileSize, duration, tags } = req.body
+    const { secUserId, fileId, url, fileName, title, description, thumbnailUrl, fileSize, duration, tags, imei } = req.body
 
-    console.log('🔍 POST /api/pitch-sultan/videos received:', { secUserId, fileId, fileName });
+    console.log('🔍 POST /api/pitch-sultan/videos received:', { secUserId, fileId, fileName, imei: imei ? '✅ provided' : '❌ missing' });
     console.log('🔍 secUserId type:', typeof secUserId, 'length:', secUserId?.length);
 
     if (!secUserId || !url || !fileName) {
@@ -4583,7 +4586,8 @@ app.post('/api/pitch-sultan/videos', async (req, res) => {
         fileSize: fileSize || null,
         duration: duration || null,
         tags: tags || [],
-        serialNumber: nextSerialNumber
+        serialNumber: nextSerialNumber,
+        imei: imei || null // Store IMEI for validation
       },
       include: {
         secUser: {
@@ -4593,6 +4597,14 @@ app.post('/api/pitch-sultan/videos', async (req, res) => {
         }
       }
     })
+
+    // Also update SECUser imei if not set yet
+    if (imei) {
+      await prisma.sECUser.updateMany({
+        where: { id: secUserId, imei: null },
+        data: { imei }
+      })
+    }
 
     res.json({ success: true, data: video })
   } catch (error) {
@@ -4605,6 +4617,41 @@ app.post('/api/pitch-sultan/videos', async (req, res) => {
     })
   }
 })
+
+// Helper function to execute database queries with automatic reconnect and retries on I/O timeouts
+async function queryWithRetry<T>(queryFn: () => Promise<T>, retries = 3): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await queryFn();
+    } catch (error: any) {
+      console.error(`⚠️ Database query failed (attempt ${i + 1}/${retries}):`, error.message || error);
+      if (i === retries - 1) throw error;
+      
+      const isTimeout = error.message && (
+        error.message.includes('timed out') || 
+        error.message.includes('Operation timed out') || 
+        error.message.includes('os error 60') || 
+        error.code === 'P2010' || 
+        error.code === 'P2024'
+      );
+      
+      if (isTimeout) {
+        console.log('🔌 Database connection timed out. Attempting to disconnect and reconnect Prisma Client...');
+        try {
+          await prisma.$disconnect();
+          await new Promise(r => setTimeout(r, 500));
+          await prisma.$connect();
+          console.log('🔌 Prisma Client successfully reconnected.');
+        } catch (connErr) {
+          console.error('🔌 Failed to reconnect Prisma:', connErr);
+        }
+      }
+      // Wait before retrying (exponential backoff)
+      await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
+  throw new Error('Query failed after retries');
+}
 
 /**
  * GET /api/pitch-sultan/videos
@@ -4624,7 +4671,7 @@ app.get('/api/pitch-sultan/videos', async (req, res) => {
       const token = authHeader.split(' ')[1]
       try {
         const decoded = jwt.verify(token, JWT_SECRET) as any
-        isSultanAdminUser = decoded.isSultanAdmin === true
+        isSultanAdminUser = decoded.phone ? isSultanAdmin(decoded.phone) : (decoded.isSultanAdmin === true)
         currentUserId = decoded.userId || null
       } catch (e) {
         // Token invalid, continue as regular user
@@ -4656,7 +4703,7 @@ app.get('/api/pitch-sultan/videos', async (req, res) => {
       where = { secUserId }
     }
 
-    const videos = await prisma.pitchSultanVideo.findMany({
+    const videos = await queryWithRetry(() => prisma.pitchSultanVideo.findMany({
       where,
       select: {
         id: true,
@@ -4694,7 +4741,7 @@ app.get('/api/pitch-sultan/videos', async (req, res) => {
       },
       take: limit,
       skip
-    })
+    }))
 
     // --- Optimization: Batch fetch interactions for the current viewer ---
     const viewerUserId = (req.query.userId as string) || currentUserId;
@@ -4703,7 +4750,7 @@ app.get('/api/pitch-sultan/videos', async (req, res) => {
     if (viewerUserId && videos.length > 0) {
       const videoIds = videos.map(v => v.id);
 
-      const [userLikes, userRatings] = await Promise.all([
+      const [userLikes, userRatings] = await queryWithRetry(() => Promise.all([
         prisma.userVideoLike.findMany({
           where: {
             userId: viewerUserId,
@@ -4718,7 +4765,7 @@ app.get('/api/pitch-sultan/videos', async (req, res) => {
           },
           select: { videoId: true, rating: true }
         })
-      ]);
+      ]));
 
       const likedVideoIds = new Set(userLikes.map(l => l.videoId));
       const ratingMap = new Map(userRatings.map(r => [r.videoId, r.rating]));
@@ -4830,10 +4877,10 @@ app.put('/api/pitch-sultan/videos/:id', async (req, res) => {
     }
 
     // Check permissions: must be Sultan Admin or video owner
-    const isSultanAdmin = decoded.isSultanAdmin === true
+    const isSultanAdminUser = decoded.phone ? isSultanAdmin(decoded.phone) : (decoded.isSultanAdmin === true)
     const isVideoOwner = decoded.userId === video.secUserId
 
-    if (!isSultanAdmin && !isVideoOwner) {
+    if (!isSultanAdminUser && !isVideoOwner) {
       return res.status(403).json({ success: false, error: 'You do not have permission to edit this video' })
     }
 
@@ -4896,10 +4943,10 @@ app.delete('/api/pitch-sultan/videos/:id', async (req, res) => {
     }
 
     // Check permissions: must be Sultan Admin or video owner
-    const isSultanAdmin = decoded.isSultanAdmin === true
+    const isSultanAdminUser = decoded.phone ? isSultanAdmin(decoded.phone) : (decoded.isSultanAdmin === true)
     const isVideoOwner = decoded.userId === video.secUserId
 
-    if (!isSultanAdmin && !isVideoOwner) {
+    if (!isSultanAdminUser && !isVideoOwner) {
       return res.status(403).json({ success: false, error: 'You do not have permission to delete this video' })
     }
 
@@ -4971,9 +5018,17 @@ app.patch('/api/pitch-sultan/videos/:id/toggle-active', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Invalid or expired token' })
     }
 
-    // Check if user is sultan admin
-    if (!decoded.isSultanAdmin) {
-      return res.status(403).json({ success: false, error: 'Sultan admin access required' })
+    // Check if user is sultan admin (check dynamically using env)
+    const isSultanAdminUser = decoded.phone ? isSultanAdmin(decoded.phone) : (decoded.isSultanAdmin === true)
+    
+    console.log('📡 Toggle-Active Admin Validation Log:');
+    console.log('  - Decoded Phone:', decoded.phone);
+    console.log('  - JWT isSultanAdmin:', decoded.isSultanAdmin);
+    console.log('  - SULTAN_ADMIN_PHONES in Env:', process.env.SULTAN_ADMIN_PHONES);
+    console.log('  - Validation Result (isSultanAdminUser):', isSultanAdminUser);
+
+    if (!isSultanAdminUser) {
+      return res.status(403).json({ success: false, error: `Sultan admin access required. Verified phone ${decoded.phone} is not in admin list.` })
     }
 
     const { id } = req.params
@@ -5267,10 +5322,23 @@ app.post('/api/upload-proxy', async (req, res) => {
       buffer = Buffer.from(fileData)
     }
 
-    // Generate S3 key
+    // Determine folder path and extension based on mimeType
+    const isVideo = mimeType.startsWith('video/');
+    const folder = isVideo 
+      ? 'salesdost_sec/Events/cutomer_ki_awaaz/media/video'
+      : 'salesdost_sec/Events/cutomer_ki_awaaz/media/images';
+
+    let extension = isVideo ? '.mp4' : '.jpg';
+    if (mimeType === 'image/png') {
+      extension = '.png';
+    }
+
     const timestamp = Date.now()
-    const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const s3Key = `videos/${decoded.userId}/${timestamp}-${sanitizedFilename}.mp4`
+    let sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_')
+    // Remove existing extension and append correct one to prevent double extensions (e.g. video.mp4.mp4)
+    sanitizedFilename = sanitizedFilename.replace(/\.[^.]+$/, '') + extension;
+
+    const s3Key = `${folder}/${timestamp}-${sanitizedFilename}`
 
     // Upload directly to S3 via backend
     const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3')
@@ -5287,7 +5355,7 @@ app.post('/api/upload-proxy', async (req, res) => {
       Bucket: process.env.AWS_S3_BUCKET_NAME!,
       Key: s3Key,
       Body: buffer,
-      ContentType: 'video/mp4',
+      ContentType: mimeType,
     })
 
     await s3Client.send(command)
@@ -5439,8 +5507,9 @@ app.delete('/api/pitch-sultan/comments/:id', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Invalid or expired token' })
     }
 
-    // Check if user is sultan admin
-    if (!decoded.isSultanAdmin) {
+    // Check if user is sultan admin (check dynamically using env)
+    const isSultanAdminUser = decoded.phone ? isSultanAdmin(decoded.phone) : (decoded.isSultanAdmin === true)
+    if (!isSultanAdminUser) {
       return res.status(403).json({ success: false, error: 'Sultan admin access required' })
     }
 
